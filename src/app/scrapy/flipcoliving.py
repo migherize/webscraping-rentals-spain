@@ -2,17 +2,12 @@ import os
 import re
 import ast
 import json
-import pandas as pd
 import logging
-from enum import Enum
+from app.models.enums import ScrapinBeeParams
 from scrapingbee import ScrapingBeeClient
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-class ScrapinBeeParams(str, Enum):
-    RENDER_JS = "render_js"
-    EXTRACT_RULES = "extract_rules"
 
 def get_information_response(
     client: ScrapingBeeClient, url: str, extract_rules: dict
@@ -209,7 +204,7 @@ def parse_coliving(
             response.url,
             {
                 "space_images": {
-                    "selector": "//a[contains(@class, 'plotHasHoverEffect')]//img",
+                    "selector": "//div[contains(@class, 'carouselBanner__imageWrap')]/a/img/@src",
                     "type": "list",
                     "clean": True,
                 },
@@ -270,14 +265,13 @@ def parse_coliving(
         data["the_floor_plan"] = ""
         data["take_a_tour"] = ""
 
-        json_file_path = os.path.join(
-                "/app/data/", 
-                "items.json"
-            )
-            
-        with open(json_file_path, 'w') as json_file:
-            json.dump(data, json_file, indent=4)
-
+        current_dir = os.getcwd()
+        json_file_path = os.path.join(current_dir, "data", "items.json")
+        os.makedirs(os.path.dirname(json_file_path), exist_ok=True)
+        if not os.path.exists(json_file_path):
+            with open(json_file_path, 'w') as json_file:
+                json_file.write('{}')
+        print(f"El archivo JSON se encuentra en: {json_file_path}")
     except Exception as e:
         logger.error(
             "Error while parsing coliving data from URL %s: %s", coliving_url, e
@@ -286,13 +280,34 @@ def parse_coliving(
 
 def extract_features(all_data: list):
     neighborhood = all_data[0]
-    precio_min = ""
-    precio_max = ""
-    area_sqm = ""
-    bedrooms = ""
 
-    # TODO: Revisar
+    # Extraer precios
+    price_pattern = r'From (\d+)[€] to (\d+)[€]'
+    price_match = re.search(price_pattern, all_data[1])
+    if price_match:
+        precio_min = price_match.group(1)
+        precio_max = price_match.group(2)
+    else:
+        precio_min = ""
+        precio_max = ""
 
+    # Extraer área en metros cuadrados
+    area_pattern = r'(\d+)\s*sqm'
+    area_match = re.search(area_pattern, all_data[2])
+    if area_match:
+        area_sqm = area_match.group(1)
+    else:
+        area_sqm = ""
+
+    # Extraer número de habitaciones
+    bedrooms_pattern = r'(\d+)\s*bedrooms'
+    bedrooms_match = re.search(bedrooms_pattern, all_data[3])
+    if bedrooms_match:
+        bedrooms = bedrooms_match.group(1)
+    else:
+        bedrooms = ""
+
+    print(f"Vecindario: {neighborhood}, Precio Mínimo: {precio_min}, Precio Máximo: {precio_max}, Área: {area_sqm} sqm, Habitaciones: {bedrooms}")
     return neighborhood, precio_min, precio_max, area_sqm, bedrooms
 
 
@@ -303,18 +318,19 @@ def main():
     from dotenv import load_dotenv
     load_dotenv()
 
-    url = "XSU4FUMILTDH4LMC46PTNI8B3YLXIV0CFM32KAMCMDRTTJJEENHC6G1PYBZAKY77P16RCBV5567Y8550"
-    api_key = "https://flipcoliving.com/"
+    url = os.environ.get("FLIPCOLIVING_URL")
+    api_key = os.environ.get("SCRAPINGBEE_API_KEY")
 
     scraped_data = scrape_flipcoliving(api_key, url)
-    
-    json_file_path = os.path.join(
-        "/data/", 
-        "output_document.json"
-    )
-    
+
+    current_dir = os.getcwd()
+    json_file_path = os.path.join(current_dir, "data", "output_document.json")
+    os.makedirs(os.path.dirname(json_file_path), exist_ok=True)
+
     with open(json_file_path, 'w') as json_file:
         json.dump(scraped_data, json_file, indent=4)
+
+    print(f"Datos guardados en: {json_file_path}")
 
 if __name__ == "__main__":
     main()
