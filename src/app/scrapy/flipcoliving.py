@@ -1,13 +1,125 @@
 import os
+from pickle import TRUE
 import re
 import ast
 import json
 import logging
-from app.models.enums import ScrapinBeeParams
+from enum import Enum
 from scrapingbee import ScrapingBeeClient
+from app.models.enums import ScrapingBeeParams, ModelInternalLodgerin, LocationAddress, Description, Image
 
-logging.basicConfig(level=logging.INFO)
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    handlers=[logging.StreamHandler()],
+)
 logger = logging.getLogger(__name__)
+
+class PathDocument(Enum):
+    PATH_DOCUMENT = "data"
+    DOCUMENT_JS = "output_document.json"
+
+class RegexPatterns(str, Enum):
+    PRECIO = r"[\d,.]+€"
+    BEDROOMS = r"habitaciones|bedrooms"
+    AREA_SQM = r"[Mm]2|[Ss][Qq][Mm]"
+    NON_DIGITS = r"[^\d.,]+"
+
+class XpathParseData(Enum):
+
+    CITIES_URL = {
+        "selector": '//ul[contains(@id, "menu-locations-menu-1")]//@href',
+        "type": "list",
+        "clean": True,
+    }
+
+    COLIVING_URL = {
+        "selector": "//a[contains(@class, 'card__textBottom')]//@href",
+        "type": "list",
+        "clean": True,
+    }
+
+    SPACE_IMAGENES = {
+        "selector": (
+            "//div[contains(@class, 'carouselBanner__imageWrap slide')]//img/@src | "
+            "//div[contains(@class, 'carouselBanner__imageWrap slide')]//img/@data-flickity-lazyload-src | "
+            "//div[contains(@class, 'carouselBanner__imageWrap slide')]//img/@srcset"
+        ),
+        "type": "list",
+        "clean": True,
+    }
+
+    THE_UNIT = {
+        "selector": (
+            "//div[contains(@class, 'plotHasHoverEffect card__modalTrigger')]//img/@src | "
+            "//div[contains(@class, 'plotHasHoverEffect card__modalTrigger')]//img/@data-flickity-lazyload-src | "
+            "//div[contains(@class, 'plotHasHoverEffect card__modalTrigger')]//img/@srcset"
+        ),
+        "type": "list",
+        "clean": True,
+    }
+
+    THE_FLOOR_PLAN = {
+        "selector": (
+            "//div[contains(@class, 'floorPlan__imageWrap')]//img/@src | "
+            "//div[contains(@class, 'floorPlan__imageWrap')]//img/@data-flickity-lazyload-src | "
+            "//div[contains(@class, 'floorPlan__imageWrap')]//img/@srcset"
+        ),
+        "type": "list",
+        "clean": True,
+    }
+
+    COLIVING_NAME = {
+        "selector": "//h2[contains(@class, 'carouselBanner__title')]",
+    }
+    BANNER_FEATURES = {
+        "selector": "//ul[contains(@class, 'carouselBanner__features')]//li",
+        "type": "list",
+        "clean": True,
+    }
+    ABOUT_THE_HOME = {
+        "selector": "//div[contains(@class, 'sectionIntro__text')]//p",
+    }
+    FEATURE = {
+        "selector": "//span[contains(@class, 'homesFeatures__text')]",
+        "type": "list",
+        "clean": True,
+    }
+    NEIGHBORHOOD_DESCRIPTION = {
+        "selector": "//div[contains(@class, 'localAreaMap__imageText')]//p",
+    }
+    BATHROOM_SQUARE_METERS = {
+        "selector": "//div[contains(@class, 'card__features')]/span",
+        "type": "list",
+        "clean": True,
+    }
+    AVAILABLE = {
+        "selector": "//span[contains(@class, 'card__label')]//text()",
+        "clean": True,
+    }
+    LATITUDE = {
+        "selector": "//div[contains(@class, 'localAreaMap__half localAreaMap__map mapboxgl-map')]//@data-lng"
+    }
+    LONGITUDE = {
+        "selector": "//div[contains(@class, 'localAreaMap__half localAreaMap__map mapboxgl-map')]//@data-lat"
+    }
+
+
+def remove_duplicate_urls(url_list: list) -> list:
+    # Lista para almacenar las URLs limpias
+    cleaned_urls = []
+
+    # Expresión regular para reemplazar el sufijo de tamaño de la imagen por .jpg
+    for url in url_list:
+        # Limpiar la URL de cualquier tamaño (-380x253.jpg -> .jpg)
+        clean_url = re.sub(r"-\d+x\d+\.jpg", ".jpg", url.split()[0])
+        cleaned_urls.append(clean_url)
+
+    # Convertir la lista a un set para eliminar duplicados y luego convertirla de nuevo a lista
+    return list(set(cleaned_urls))
+
 
 def get_information_response(
     client: ScrapingBeeClient, url: str, extract_rules: dict
@@ -30,8 +142,8 @@ def get_information_response(
         response = client.get(
             url,
             params={
-                ScrapinBeeParams.RENDER_JS.value: "true",
-                ScrapinBeeParams.EXTRACT_RULES.value: extract_rules,
+                ScrapingBeeParams.RENDER_JS.value: "true",
+                ScrapingBeeParams.EXTRACT_RULES.value: extract_rules,
             },
         )
 
@@ -102,11 +214,7 @@ def scrape_flipcoliving(api_key: str, url: str) -> dict:
             client,
             response.url,
             {
-                "cities_url": {
-                    "selector": '//ul[contains(@id, "menu-locations-menu-1")]//@href',
-                    "type": "list",
-                    "clean": True,
-                },
+                "cities_url": XpathParseData.CITIES_URL.value,
             },
         )
 
@@ -157,11 +265,7 @@ def parse_all_coliving(
             client,
             response.url,
             {
-                "coliving_url": {
-                    "selector": "//a[contains(@class, 'card__textBottom')]//@href",
-                    "type": "list",
-                    "clean": True,
-                },
+                "coliving_url": XpathParseData.COLIVING_URL.value,
             },
         )
 
@@ -172,6 +276,7 @@ def parse_all_coliving(
         for coliving_url in data.get("coliving_url", []):
             meta["coliving_url"] = coliving_url
             parse_coliving(client=client, coliving_url=coliving_url, meta=meta)
+            break
 
     except Exception as e:
         logger.error(
@@ -203,35 +308,18 @@ def parse_coliving(
             client,
             response.url,
             {
-                "space_images": {
-                    "selector": "//div[contains(@class, 'carouselBanner__imageWrap')]/a/img/@src",
-                    "type": "list",
-                    "clean": True,
-                },
-                "coliving_name": {
-                    "selector": "//h2[contains(@class, 'carouselBanner__title')]",
-                },
-                "Banner__features": {
-                    "selector": "//ul[contains(@class, 'carouselBanner__features')]//li",
-                    "type": "list",
-                    "clean": True,
-                },
-                "about_the_home": {
-                    "selector": "//div[contains(@class, 'sectionIntro__text')]//p",
-                },
-                "features": {
-                    "selector": "//span[contains(@class, 'homesFeatures__text')]",
-                    "type": "list",
-                    "clean": True,
-                },
-                "neighborhood_description": {
-                    "selector": "//div[contains(@class, 'localAreaMap__imageText')]//p",
-                },
-                "bathroom_square_meters": {
-                    "selector": "//div[contains(@class, 'card__features')]/span",
-                    "type": "list",
-                    "clean": True,
-                },
+                "space_images": XpathParseData.SPACE_IMAGENES.value,
+                "coliving_name": XpathParseData.COLIVING_NAME.value,
+                "Banner__features": XpathParseData.BANNER_FEATURES.value,
+                "about_the_home": XpathParseData.ABOUT_THE_HOME.value,
+                "features": XpathParseData.FEATURE.value,
+                "neighborhood_description": XpathParseData.BATHROOM_SQUARE_METERS.value,
+                "bathroom_square_meters": XpathParseData.BATHROOM_SQUARE_METERS.value,
+                "the_unit": XpathParseData.THE_UNIT.value,
+                "the_floor_plan": XpathParseData.THE_FLOOR_PLAN.value,
+                "available": XpathParseData.AVAILABLE.value,
+                "latitude": XpathParseData.LATITUDE.value,
+                "longitude": XpathParseData.LONGITUDE.value,
             },
         )
 
@@ -239,13 +327,15 @@ def parse_coliving(
             logger.error("Failed to extract data: %s", data)
             return
 
-        for key, value in data.items():
-            logger.info("%s -> %s", key, value)
+        logger.info("%s -> %s", "the_unit", data["the_unit"])
+        logger.info("%s -> %s", "the_floor_plan", data["the_floor_plan"])
 
-        (neighborhood, min_price, max_price, area_sqm, bedrooms) = (
-            extract_features(
-                data["Banner__features"]
-            )
+        data["space_images"] = remove_duplicate_urls(data["space_images"])
+        data["the_unit"] = remove_duplicate_urls(data["the_unit"])
+        data["the_floor_plan"] = remove_duplicate_urls(data["the_floor_plan"])
+
+        neighborhood, min_price, max_price, area_sqm, bedrooms = extract_features(
+            data["Banner__features"]
         )
 
         data["neighborhood"] = neighborhood
@@ -259,19 +349,75 @@ def parse_coliving(
             else None
         )
 
-        #TODO: Placeholder for additional data
-        data["the_unit"] = ""
-        data["Available"] = ""
-        data["the_floor_plan"] = ""
+        # TODO: Placeholder for additional data
         data["take_a_tour"] = ""
 
+        item = ModelInternalLodgerin(
+            name=data['coliving_name'],
+            description=data['about_the_home'],
+            # referenceCode=data,
+            # PropertyTypeId=data,
+            # provider=data,
+            # providerId=data,
+            # providerRef=data,
+            # cancellationPolicy=data,
+            maxOccupancy=data['bedrooms'],
+            # minAge=data,
+            # maxAge=data,
+            # rentalType=data,
+            # tenantGender=data,
+            # PensionTypeId=data,
+            # videoUrl=data,
+            tourUrl='',
+            isActive=False,
+            # isPublished=data,
+            Descriptions= [Description(
+                LanguagesId = 1,
+                title = "",
+                description = data['about_the_home'],
+            ).dict()
+            ],
+            Features=[0,1,2,3,4], # data['features']
+            Images=[
+                {
+                    "image": "https://lodgerin-archives-production.s3.amazonaws.com/uploads/archive/name/34564/10.jpg",
+                    "isCover": True
+                },
+                {
+                    "image": "https://lodgerin-archives-production.s3.amazonaws.com/uploads/archive/name/34564/10.jpg",
+                    "isCover": False
+                },
+                {
+                    "image": "https://lodgerin-archives-production.s3.amazonaws.com/uploads/archive/name/34564/10.jpg",
+                    "isCover": False
+                },
+            ],
+            Languages=[
+                1,
+                2
+            ],
+            Location = LocationAddress(
+                lat = data['latitude'],
+                lon = data['longitude'],
+                country = "Spain",
+                countryCode = "ES",
+                city = "Madrid"
+            )
+            # createdAt=data,
+            # updatedAt=data,
+        )
+
         current_dir = os.getcwd()
-        json_file_path = os.path.join(current_dir, "data", "items.json")
+        json_file_path = os.path.join(
+            current_dir,PathDocument.PATH_DOCUMENT.value, PathDocument.DOCUMENT_JS.value
+        )
         os.makedirs(os.path.dirname(json_file_path), exist_ok=True)
-        if not os.path.exists(json_file_path):
-            with open(json_file_path, 'w') as json_file:
-                json_file.write('{}')
-        print(f"El archivo JSON se encuentra en: {json_file_path}")
+
+        with open(json_file_path, "a", encoding="utf-8-sig") as json_file:
+            json.dump(item.dict(), json_file, indent=4)
+
+        print(f"Datos guardados en: {json_file_path}")
+
     except Exception as e:
         logger.error(
             "Error while parsing coliving data from URL %s: %s", coliving_url, e
@@ -280,34 +426,23 @@ def parse_coliving(
 
 def extract_features(all_data: list):
     neighborhood = all_data[0]
+    precio_min = ""
+    precio_max = ""
+    area_sqm = ""
+    bedrooms = ""
 
-    # Extraer precios
-    price_pattern = r'From (\d+)[€] to (\d+)[€]'
-    price_match = re.search(price_pattern, all_data[1])
-    if price_match:
-        precio_min = price_match.group(1)
-        precio_max = price_match.group(2)
-    else:
-        precio_min = ""
-        precio_max = ""
+    for data in all_data:
+        if re.findall(RegexPatterns.PRECIO.value, data):
+            precios = re.findall(RegexPatterns.PRECIO.value, data)
+            print("precios:", precios)
+            precio_min, precio_max = precios
 
-    # Extraer área en metros cuadrados
-    area_pattern = r'(\d+)\s*sqm'
-    area_match = re.search(area_pattern, all_data[2])
-    if area_match:
-        area_sqm = area_match.group(1)
-    else:
-        area_sqm = ""
+        if re.search(RegexPatterns.BEDROOMS.value, data):
+            bedrooms = re.sub(RegexPatterns.NON_DIGITS.value, "", data).strip()
 
-    # Extraer número de habitaciones
-    bedrooms_pattern = r'(\d+)\s*bedrooms'
-    bedrooms_match = re.search(bedrooms_pattern, all_data[3])
-    if bedrooms_match:
-        bedrooms = bedrooms_match.group(1)
-    else:
-        bedrooms = ""
+        if re.search(RegexPatterns.AREA_SQM.value, data):
+            area_sqm = re.sub(RegexPatterns.AREA_SQM.value, "", data).strip()
 
-    print(f"Vecindario: {neighborhood}, Precio Mínimo: {precio_min}, Precio Máximo: {precio_max}, Área: {area_sqm} sqm, Habitaciones: {bedrooms}")
     return neighborhood, precio_min, precio_max, area_sqm, bedrooms
 
 
@@ -318,19 +453,18 @@ def main():
     from dotenv import load_dotenv
     load_dotenv()
 
-    url = os.environ.get("FLIPCOLIVING_URL")
-    api_key = os.environ.get("SCRAPINGBEE_API_KEY")
+    url = os.getenv("FLIPCOLIVING_URL")
+    api_key = os.getenv("SCRAPINGBEE_API_KEY")
+    url_test = os.getenv("URL_TEST")
 
-    scraped_data = scrape_flipcoliving(api_key, url)
+    client = ScrapingBeeClient(api_key=api_key)
 
-    current_dir = os.getcwd()
-    json_file_path = os.path.join(current_dir, "data", "output_document.json")
-    os.makedirs(os.path.dirname(json_file_path), exist_ok=True)
-
-    with open(json_file_path, 'w') as json_file:
-        json.dump(scraped_data, json_file, indent=4)
-
-    print(f"Datos guardados en: {json_file_path}")
+    # Entrada directa
+    parse_coliving(
+        client=client,
+        coliving_url=url_test,
+        meta={},
+    )
 
 if __name__ == "__main__":
     main()

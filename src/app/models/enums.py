@@ -10,39 +10,39 @@ class URLs(str, Enum):
     nodis = "https://nodis.es/"
 
 
-class ScrapinBeeParams(str, Enum):
+class ScrapingBeeParams(str, Enum):
     RENDER_JS = "render_js"
     EXTRACT_RULES = "extract_rules"
 
 
 # Internal lodgerin
 class Description(BaseModel):
-    LanguagesId: int
-    title: str
-    description: str
+    LanguagesId: Optional[int] = None
+    title: Optional[str] = None
+    description: Optional[str] = None
 
 
 class Image(BaseModel):
-    image: str
-    isCover: bool
+    image: Optional[str] = None
+    isCover: Optional[bool] = None
 
 
-class Location(BaseModel):
-    lat: str
-    lon: str
-    address: str
-    fullAddress: str
-    number: str
-    country: str
-    countryCode: str
-    state: str
-    city: str
-    street: str
-    postalCode: str
-    prefixPhone: str
+class LocationAddress(BaseModel):
+    lat: Optional[str] = None
+    lon: Optional[str] = None
+    address: Optional[str] = None
+    fullAddress: Optional[str] = None
+    number: Optional[str] = None
+    country: Optional[str] = None
+    countryCode: Optional[str] = None
+    state: Optional[str] = None
+    city: Optional[str] = None
+    street: Optional[str] = None
+    postalCode: Optional[str] = None
+    prefixPhone: Optional[str] = None
 
 
-class Model(BaseModel):
+class ModelInternalLodgerin(BaseModel):
     oldId: Optional[int] = None
     userOldId: Optional[int] = None
     name: Optional[str] = None
@@ -67,6 +67,6 @@ class Model(BaseModel):
     Features: Optional[List[int]] = None
     Images: Optional[List[Image]] = None
     Languages: Optional[List[int]] = None
-    Location: Optional[Location] = None
+    Location: Optional[LocationAddress] = None
     createdAt: Optional[str] = None
     updatedAt: Optional[str] = None
