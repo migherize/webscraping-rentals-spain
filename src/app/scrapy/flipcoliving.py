@@ -1,10 +1,11 @@
 import os
-from pickle import TRUE
 import re
 import ast
 import json
 import logging
+import calendar
 from enum import Enum
+from datetime import datetime
 from scrapingbee import ScrapingBeeClient
 from app.models.enums import (
     ScrapingBeeParams, 
@@ -13,7 +14,7 @@ from app.models.enums import (
     Description, 
     Image
 )
-
+from pprint import pprint
 
 logging.basicConfig(
     level=logging.INFO,
@@ -132,6 +133,42 @@ def remove_duplicate_urls(url_list: list) -> list:
     return list(set(cleaned_urls))
 
 
+def get_month_dates(text: str) -> tuple:
+    """
+    Extracts the month and year from a string and returns the start and end 
+    dates of the corresponding month in the "%Y-%m-%d" format.
+    
+    If the month is misspelled or the format is incorrect,
+    it issues a warning and returns (None, None).
+    
+    Parameters:
+    text (str): String in the format "Available from <Month> <Year>".
+    
+    Returns:
+    tuple: Start and end dates of the month as strings in "%Y-%m-%d" format,
+           or (None, None) if there is an error in the input.
+    """
+    
+    try:
+        # Extract month and year from the text
+        date_str = text.replace('Available from ', '')
+        date_obj = datetime.strptime(date_str, '%B %Y')
+
+        # Get the last day of the month
+        _, last_day = calendar.monthrange(date_obj.year, date_obj.month)
+
+        # Create the start and end dates
+        start_date = date_obj.replace(day=1).strftime('%Y-%m-%d')
+        end_date = date_obj.replace(day=last_day).strftime('%Y-%m-%d')
+
+        return start_date, end_date
+    
+    except ValueError:
+        # Handle the case where the month or format is incorrect
+        logger.error("Warning: The month or input format '%s' is incorrect.", text)
+        return None, None
+
+
 def get_information_response(
     client: ScrapingBeeClient, url: str, extract_rules: dict
 ) -> dict:
@@ -225,10 +262,13 @@ def extract_features(all_data: list):
 
 
 def refine_extractor_data(data: dict, items_description_with_language_code: dict) -> dict:
-    logger.info("%s -> %s", "the_unit", data["the_unit"])
-    logger.info("%s -> %s", "the_floor_plan", data["the_floor_plan"])
 
-    logger.info("Este es el diccionario con los descriptions: %s", items_description_with_language_code)
+    # logger.info("%s -> %s", "the_unit", data["the_unit"])
+    # logger.info("%s -> %s", "the_floor_plan", data["the_floor_plan"])
+
+    # logger.info("Este es el diccionario con los descriptions: %s", items_description_with_language_code)
+
+    pprint('\t - items_description_with_language_code:\n', items_description_with_language_code)
 
     data["space_images"] = remove_duplicate_urls(data["space_images"])
     data["the_unit"] = remove_duplicate_urls(data["the_unit"])
@@ -252,15 +292,52 @@ def refine_extractor_data(data: dict, items_description_with_language_code: dict
     # TODO: Placeholder for additional data
     data["take_a_tour"] = ""
 
+    data['Descriptions'] = get_all_descriptions(items_description_with_language_code)
+
     return data
 
 
-def save_data(data: dict) -> ModelInternalLodgerin:
+def get_all_descriptions(items_description_with_language_code: dict):
+    all_descriptions = []
+    for id_language, info_description in items_description_with_language_code.items():
+        info_description: list
+        # url_language = info_description[0]
+        descriptions = {
+            "LanguagesId": '',
+            "title": '',
+            "description": '',
+        }
+        descriptions["LanguagesId"] = id_language
+
+        try:
+            descriptions["description"] = info_description[1]['about_the_home']
+        except:
+            pass
+
+        if descriptions["description"] == '':
+            continue
+
+        all_descriptions.append(descriptions)
+    
+    return all_descriptions
+
+
+def get_id_coliving(city_name: str, coliving_name: str):
+    
+    id_coliving = ''
+    id_coliving = f"{city_name}-{coliving_name}-0001"
+    
+    # TODO: request id in API
+
+    return id_coliving
+
+
+def save_data(data: dict, id_coliving: str) -> ModelInternalLodgerin:
 
     item = ModelInternalLodgerin(
         name=data['coliving_name'],
-        description=data['about_the_home'],
-        # referenceCode=data,
+        description=data['Descriptions'][0]['description'],
+        referenceCode=id_coliving,
         # PropertyTypeId=data,
         # provider=data,
         # providerId=data,
@@ -277,10 +354,11 @@ def save_data(data: dict) -> ModelInternalLodgerin:
         isActive=False,
         # isPublished=data,
         Descriptions= [Description(
-            LanguagesId = 1,
-            title = "",
-            description = data['about_the_home'],
-        ).dict()
+            LanguagesId = data_description["LanguagesId"],
+            title = data_description["title"],
+            description = data_description["description"],
+            ).dict()
+            for data_description in data['Descriptions']
         ],
         Features=[0,1,2,3,4], # data['features']
         Images=[
@@ -426,6 +504,7 @@ def parse_coliving(
     coliving_url: str,
     meta: dict,
 ) -> None:
+    
     """
     Parses information about a coliving space from a given coliving URL.
 
@@ -484,9 +563,16 @@ def parse_coliving(
             ]
             for index_language, url in enumerate(data_language["language_url"])
         }
-        
+
+        print('hola mundo')
+
+        id_coliving = get_id_coliving(
+            city_name=meta["city_name"], 
+            coliving_name=data['coliving_name']
+        )
+
         data = refine_extractor_data(data, items_description_with_language_code)
-        item = save_data(data)
+        item = save_data(data, id_coliving)
         create_json(item)
 
     except Exception as e:
@@ -513,7 +599,9 @@ def main():
     parse_coliving(
         client=client,
         coliving_url=url_test,
-        meta={},
+        meta={
+            "city_name": 'Madrid',
+        },
     )
 
 if __name__ == "__main__":
