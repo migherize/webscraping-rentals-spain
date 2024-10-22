@@ -1,13 +1,13 @@
 import os
-from pickle import TRUE
 import re
 import ast
 import json
 import logging
 from enum import Enum
 from scrapingbee import ScrapingBeeClient
-from app.models.enums import ScrapingBeeParams, ModelInternalLodgerin, LocationAddress, Description, Image
-
+from app.models.enums import ScrapingBeeParams, feature_map
+from app.models.schemas import Description, LocationAddress, Property
+from app.utils.funcs import find_feature_keys
 
 logging.basicConfig(
     level=logging.INFO,
@@ -17,17 +17,20 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-class PathDocument(Enum):
-    PATH_DOCUMENT = "data"
-    DOCUMENT_JS = "output_document.json"
 
 class RegexPatterns(str, Enum):
-    PRECIO = r"[\d,.]+€"
+    RATE = r"[\d,.]+€"
     BEDROOMS = r"habitaciones|bedrooms"
     AREA_SQM = r"[Mm]2|[Ss][Qq][Mm]"
     NON_DIGITS = r"[^\d.,]+"
 
+
 class XpathParseData(Enum):
+    LANGUAGE_URL = {
+        "selector": '//div[contains(@class, "languageDropdown")]//a/@href',
+        "type": "list",
+        "clean": True,
+    }
 
     CITIES_URL = {
         "selector": '//ul[contains(@id, "menu-locations-menu-1")]//@href',
@@ -108,16 +111,12 @@ class XpathParseData(Enum):
 
 
 def remove_duplicate_urls(url_list: list) -> list:
-    # Lista para almacenar las URLs limpias
     cleaned_urls = []
 
-    # Expresión regular para reemplazar el sufijo de tamaño de la imagen por .jpg
     for url in url_list:
-        # Limpiar la URL de cualquier tamaño (-380x253.jpg -> .jpg)
         clean_url = re.sub(r"-\d+x\d+\.jpg", ".jpg", url.split()[0])
         cleaned_urls.append(clean_url)
 
-    # Convertir la lista a un set para eliminar duplicados y luego convertirla de nuevo a lista
     return list(set(cleaned_urls))
 
 
@@ -191,6 +190,174 @@ def byte_string_to_dict(byte_string: bytes) -> dict:
         raise ValueError(f"Invalid byte string provided: {str(e)}")
 
 
+def extract_features(all_data: list):
+    neighborhood = all_data[0]
+    rate_min = ""
+    rate_max = ""
+    area_sqm = ""
+    bedrooms = ""
+
+    for data in all_data:
+        if re.findall(RegexPatterns.RATE.value, data):
+            rates = re.findall(RegexPatterns.RATE.value, data)
+            print("rates:", rates)
+            rate_min, rate_max = rates
+
+        if re.search(RegexPatterns.BEDROOMS.value, data):
+            bedrooms = re.sub(RegexPatterns.NON_DIGITS.value, "", data).strip()
+
+        if re.search(RegexPatterns.AREA_SQM.value, data):
+            area_sqm = re.sub(RegexPatterns.AREA_SQM.value, "", data).strip()
+
+    return neighborhood, rate_min, rate_max, area_sqm, bedrooms
+
+
+def refine_extractor_data(
+    data: dict, items_description_with_language_code: dict
+) -> dict:
+    data["space_images"] = remove_duplicate_urls(data["space_images"])
+    data["the_unit"] = remove_duplicate_urls(data["the_unit"])
+    data["the_floor_plan"] = remove_duplicate_urls(data["the_floor_plan"])
+    data["features"] = find_feature_keys(data["features"], feature_map)
+
+    neighborhood, min_price, max_price, area_sqm, bedrooms = extract_features(
+        data["Banner__features"]
+    )
+
+    data["neighborhood"] = neighborhood
+    data["min_price"] = min_price
+    data["max_price"] = max_price
+    data["area_sqm"] = area_sqm
+    data["bedrooms"] = bedrooms
+    data["bathroom_square_meters"] = (
+        data["bathroom_square_meters"][1]
+        if len(data["bathroom_square_meters"]) > 1
+        else None
+    )
+
+    # TODO: Placeholder for additional data
+    data["take_a_tour"] = ""
+
+    data["Descriptions"] = get_all_descriptions(items_description_with_language_code)
+
+    return data
+
+
+def get_all_descriptions(items_description_with_language_code: dict):
+    all_descriptions = []
+    for id_language, info_description in items_description_with_language_code.items():
+        info_description: list
+        # url_language = info_description[0]
+        descriptions = {
+            "LanguagesId": "",
+            "title": "",
+            "description": "",
+        }
+        descriptions["LanguagesId"] = id_language
+
+        try:
+            descriptions["description"] = info_description[1]["about_the_home"]
+        except:
+            pass
+
+        if descriptions["description"] == "":
+            continue
+
+        all_descriptions.append(descriptions)
+
+    return all_descriptions
+
+
+def get_default_values() -> dict:
+    """
+    Retorna un diccionario con los valores por defecto (hardcoded).
+    """
+    return {
+        "cancellationPolicy": "standard",
+        "rentalType": "individual",
+        "isActive": True,
+        "Languages": [1, 2],
+        "videoUrl": "",
+        "tourUrl": "",
+        "PropertyTypeId": 4,
+        "Images": [
+            {
+                "image": "https://lodgerin-archives-production.s3.amazonaws.com/uploads/archive/name/34564/10.jpg",
+                "isCover": True,
+            },
+            {
+                "image": "https://lodgerin-archives-production.s3.amazonaws.com/uploads/archive/name/34564/10.jpg",
+                "isCover": False,
+            },
+            {
+                "image": "https://lodgerin-archives-production.s3.amazonaws.com/uploads/archive/name/34564/10.jpg",
+                "isCover": False,
+            },
+        ],
+        "country": "Spain",
+        "countryCode": "ES",
+    }
+
+
+def save_data(data: dict, id_coliving: str) -> Property:
+
+    defaults = get_default_values()
+
+    item = Property(
+        id=id_coliving,
+        name=data["coliving_name"],
+        description=data["Descriptions"][0]["description"],
+        referenceCode=id_coliving,
+        areaM2=data["area_sqm"],
+        areaM2Available=data["area_sqm"],
+        maxOccupancy=data["bedrooms"],
+        cancellationPolicy=defaults["cancellationPolicy"],
+        rentalType=defaults["rentalType"],
+        isActive=defaults["isActive"],
+        Features=data["features"],
+        Languages=defaults["Languages"],
+        videoUrl=defaults["videoUrl"],
+        tourUrl=defaults["tourUrl"],
+        PropertyTypeId=defaults["PropertyTypeId"],
+        Descriptions=[
+            Description(
+                LanguagesId=data_description["LanguagesId"],
+                title=data_description["title"],
+                description=data_description["description"],
+            ).dict()
+            for data_description in data["Descriptions"]
+        ],
+        Images=defaults["Images"],
+        Location=LocationAddress(
+            lat=data["latitude"],
+            lon=data["longitude"],
+            country=defaults["country"],
+            countryCode=defaults["countryCode"],
+            city=data["city_name"],
+        ),
+    )
+
+    return item
+
+
+def create_json(item: Property) -> None:
+    class PathDocument(Enum):
+        PATH_DOCUMENT = "data"
+        DOCUMENT_JS = "output_document.json"
+
+    current_dir = os.getcwd()
+    json_file_path = os.path.join(
+        current_dir, PathDocument.PATH_DOCUMENT.value, PathDocument.DOCUMENT_JS.value
+    )
+    os.makedirs(os.path.dirname(json_file_path), exist_ok=True)
+
+    with open(json_file_path, "a", encoding="utf-8-sig") as json_file:
+        json.dump(item.dict(), json_file, indent=4)
+
+    print(f"Datos guardados en: {json_file_path}")
+
+
+#TODO: split Webscraping
 def scrape_flipcoliving(api_key: str, url: str) -> dict:
     """
     Scrapes the FlipColiving website for city URLs using the ScrapingBee API.
@@ -327,96 +494,38 @@ def parse_coliving(
             logger.error("Failed to extract data: %s", data)
             return
 
-        logger.info("%s -> %s", "the_unit", data["the_unit"])
-        logger.info("%s -> %s", "the_floor_plan", data["the_floor_plan"])
-
-        data["space_images"] = remove_duplicate_urls(data["space_images"])
-        data["the_unit"] = remove_duplicate_urls(data["the_unit"])
-        data["the_floor_plan"] = remove_duplicate_urls(data["the_floor_plan"])
-
-        neighborhood, min_price, max_price, area_sqm, bedrooms = extract_features(
-            data["Banner__features"]
+        # Extracting information from the coliving page to decription
+        data_language = get_information_response(
+            client,
+            response.url,
+            {
+                "language_url": XpathParseData.LANGUAGE_URL.value,
+            },
         )
 
-        data["neighborhood"] = neighborhood
-        data["min_price"] = min_price
-        data["max_price"] = max_price
-        data["area_sqm"] = area_sqm
-        data["bedrooms"] = bedrooms
-        data["bathroom_square_meters"] = (
-            data["bathroom_square_meters"][1]
-            if len(data["bathroom_square_meters"]) > 1
-            else None
-        )
+        if isinstance(data, str):
+            logger.error("Failed to extract data: %s", data)
+            return
 
-        # TODO: Placeholder for additional data
-        data["take_a_tour"] = ""
+        items_description_with_language_code = {
+            index_language: [
+                url,
+                get_information_response(
+                    client,
+                    url,
+                    {
+                        "about_the_home": XpathParseData.ABOUT_THE_HOME.value,
+                    },
+                ),
+            ]
+            for index_language, url in enumerate(data_language["language_url"])
+        }
+        data["city_name"] = meta["city_name"]
+        id_coliving = id_coliving = f'{data["city_name"]}-{data["coliving_name"]}-0001'
 
-        item = ModelInternalLodgerin(
-            name=data['coliving_name'],
-            description=data['about_the_home'],
-            # referenceCode=data,
-            # PropertyTypeId=data,
-            # provider=data,
-            # providerId=data,
-            # providerRef=data,
-            # cancellationPolicy=data,
-            maxOccupancy=data['bedrooms'],
-            # minAge=data,
-            # maxAge=data,
-            # rentalType=data,
-            # tenantGender=data,
-            # PensionTypeId=data,
-            # videoUrl=data,
-            tourUrl='',
-            isActive=False,
-            # isPublished=data,
-            Descriptions= [Description(
-                LanguagesId = 1,
-                title = "",
-                description = data['about_the_home'],
-            ).dict()
-            ],
-            Features=[0,1,2,3,4], # data['features']
-            Images=[
-                {
-                    "image": "https://lodgerin-archives-production.s3.amazonaws.com/uploads/archive/name/34564/10.jpg",
-                    "isCover": True
-                },
-                {
-                    "image": "https://lodgerin-archives-production.s3.amazonaws.com/uploads/archive/name/34564/10.jpg",
-                    "isCover": False
-                },
-                {
-                    "image": "https://lodgerin-archives-production.s3.amazonaws.com/uploads/archive/name/34564/10.jpg",
-                    "isCover": False
-                },
-            ],
-            Languages=[
-                1,
-                2
-            ],
-            Location = LocationAddress(
-                lat = data['latitude'],
-                lon = data['longitude'],
-                country = "Spain",
-                countryCode = "ES",
-                city = "Madrid"
-            )
-            # createdAt=data,
-            # updatedAt=data,
-        )
-
-        current_dir = os.getcwd()
-        json_file_path = os.path.join(
-            current_dir,PathDocument.PATH_DOCUMENT.value, PathDocument.DOCUMENT_JS.value
-        )
-        os.makedirs(os.path.dirname(json_file_path), exist_ok=True)
-
-        with open(json_file_path, "a", encoding="utf-8-sig") as json_file:
-            json.dump(item.dict(), json_file, indent=4)
-
-        print(f"Datos guardados en: {json_file_path}")
+        data = refine_extractor_data(data, items_description_with_language_code)
+        item = save_data(data, id_coliving)
+        create_json(item)
 
     except Exception as e:
         logger.error(
@@ -424,33 +533,9 @@ def parse_coliving(
         )
 
 
-def extract_features(all_data: list):
-    neighborhood = all_data[0]
-    precio_min = ""
-    precio_max = ""
-    area_sqm = ""
-    bedrooms = ""
-
-    for data in all_data:
-        if re.findall(RegexPatterns.PRECIO.value, data):
-            precios = re.findall(RegexPatterns.PRECIO.value, data)
-            print("precios:", precios)
-            precio_min, precio_max = precios
-
-        if re.search(RegexPatterns.BEDROOMS.value, data):
-            bedrooms = re.sub(RegexPatterns.NON_DIGITS.value, "", data).strip()
-
-        if re.search(RegexPatterns.AREA_SQM.value, data):
-            area_sqm = re.sub(RegexPatterns.AREA_SQM.value, "", data).strip()
-
-    return neighborhood, precio_min, precio_max, area_sqm, bedrooms
-
-
-def main():
-    """
-    Función principal para iniciar el scraping.
-    """
+if __name__ == "__main__":
     from dotenv import load_dotenv
+
     load_dotenv()
 
     url = os.getenv("FLIPCOLIVING_URL")
@@ -459,12 +544,10 @@ def main():
 
     client = ScrapingBeeClient(api_key=api_key)
 
-    # Entrada directa
     parse_coliving(
         client=client,
         coliving_url=url_test,
-        meta={},
+        meta={
+            "city_name": "Madrid",
+        },
     )
-
-if __name__ == "__main__":
-    main()
