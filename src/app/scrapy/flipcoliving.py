@@ -7,14 +7,9 @@ import calendar
 from enum import Enum
 from datetime import datetime
 from scrapingbee import ScrapingBeeClient
-from app.models.enums import (
-    ScrapingBeeParams, 
-    ModelInternalLodgerin, 
-    LocationAddress, 
-    Description, 
-    Image
-)
-from pprint import pprint
+from app.models.enums import ScrapingBeeParams, feature_map
+from app.models.schemas import Description, LocationAddress, Property
+from app.utils.funcs import find_feature_keys
 
 logging.basicConfig(
     level=logging.INFO,
@@ -24,15 +19,13 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-class PathDocument(Enum):
-    PATH_DOCUMENT = "data"
-    DOCUMENT_JS = "output_document.json"
 
 class RegexPatterns(str, Enum):
-    PRECIO = r"[\d,.]+€"
+    RATE = r"[\d,.]+€"
     BEDROOMS = r"habitaciones|bedrooms"
     AREA_SQM = r"[Mm]2|[Ss][Qq][Mm]"
     NON_DIGITS = r"[^\d.,]+"
+
 
 class XpathParseData(Enum):
     LANGUAGE_URL = {
@@ -120,16 +113,12 @@ class XpathParseData(Enum):
 
 
 def remove_duplicate_urls(url_list: list) -> list:
-    # Lista para almacenar las URLs limpias
     cleaned_urls = []
 
-    # Expresión regular para reemplazar el sufijo de tamaño de la imagen por .jpg
     for url in url_list:
-        # Limpiar la URL de cualquier tamaño (-380x253.jpg -> .jpg)
         clean_url = re.sub(r"-\d+x\d+\.jpg", ".jpg", url.split()[0])
         cleaned_urls.append(clean_url)
 
-    # Convertir la lista a un set para eliminar duplicados y luego convertirla de nuevo a lista
     return list(set(cleaned_urls))
 
 
@@ -241,16 +230,16 @@ def byte_string_to_dict(byte_string: bytes) -> dict:
 
 def extract_features(all_data: list):
     neighborhood = all_data[0]
-    precio_min = ""
-    precio_max = ""
+    rate_min = ""
+    rate_max = ""
     area_sqm = ""
     bedrooms = ""
 
     for data in all_data:
-        if re.findall(RegexPatterns.PRECIO.value, data):
-            precios = re.findall(RegexPatterns.PRECIO.value, data)
-            print("precios:", precios)
-            precio_min, precio_max = precios
+        if re.findall(RegexPatterns.RATE.value, data):
+            rates = re.findall(RegexPatterns.RATE.value, data)
+            print("rates:", rates)
+            rate_min, rate_max = rates
 
         if re.search(RegexPatterns.BEDROOMS.value, data):
             bedrooms = re.sub(RegexPatterns.NON_DIGITS.value, "", data).strip()
@@ -258,21 +247,16 @@ def extract_features(all_data: list):
         if re.search(RegexPatterns.AREA_SQM.value, data):
             area_sqm = re.sub(RegexPatterns.AREA_SQM.value, "", data).strip()
 
-    return neighborhood, precio_min, precio_max, area_sqm, bedrooms
+    return neighborhood, rate_min, rate_max, area_sqm, bedrooms
 
 
-def refine_extractor_data(data: dict, items_description_with_language_code: dict) -> dict:
-
-    # logger.info("%s -> %s", "the_unit", data["the_unit"])
-    # logger.info("%s -> %s", "the_floor_plan", data["the_floor_plan"])
-
-    # logger.info("Este es el diccionario con los descriptions: %s", items_description_with_language_code)
-
-    pprint('\t - items_description_with_language_code:\n', items_description_with_language_code)
-
+def refine_extractor_data(
+    data: dict, items_description_with_language_code: dict
+) -> dict:
     data["space_images"] = remove_duplicate_urls(data["space_images"])
     data["the_unit"] = remove_duplicate_urls(data["the_unit"])
     data["the_floor_plan"] = remove_duplicate_urls(data["the_floor_plan"])
+    data["features"] = find_feature_keys(data["features"], feature_map)
 
     neighborhood, min_price, max_price, area_sqm, bedrooms = extract_features(
         data["Banner__features"]
@@ -292,7 +276,7 @@ def refine_extractor_data(data: dict, items_description_with_language_code: dict
     # TODO: Placeholder for additional data
     data["take_a_tour"] = ""
 
-    data['Descriptions'] = get_all_descriptions(items_description_with_language_code)
+    data["Descriptions"] = get_all_descriptions(items_description_with_language_code)
 
     return data
 
@@ -303,100 +287,105 @@ def get_all_descriptions(items_description_with_language_code: dict):
         info_description: list
         # url_language = info_description[0]
         descriptions = {
-            "LanguagesId": '',
-            "title": '',
-            "description": '',
+            "LanguagesId": "",
+            "title": "",
+            "description": "",
         }
         descriptions["LanguagesId"] = id_language
 
         try:
-            descriptions["description"] = info_description[1]['about_the_home']
+            descriptions["description"] = info_description[1]["about_the_home"]
         except:
             pass
 
-        if descriptions["description"] == '':
+        if descriptions["description"] == "":
             continue
 
         all_descriptions.append(descriptions)
-    
+
     return all_descriptions
 
 
-def get_id_coliving(city_name: str, coliving_name: str):
-    
-    id_coliving = ''
-    id_coliving = f"{city_name}-{coliving_name}-0001"
-    
-    # TODO: request id in API
+def get_default_values() -> dict:
+    """
+    Retorna un diccionario con los valores por defecto (hardcoded).
+    """
+    return {
+        "cancellationPolicy": "standard",
+        "rentalType": "individual",
+        "isActive": True,
+        "Languages": [1, 2],
+        "videoUrl": "",
+        "tourUrl": "",
+        "PropertyTypeId": 4,
+        "Images": [
+            {
+                "image": "https://lodgerin-archives-production.s3.amazonaws.com/uploads/archive/name/34564/10.jpg",
+                "isCover": True,
+            },
+            {
+                "image": "https://lodgerin-archives-production.s3.amazonaws.com/uploads/archive/name/34564/10.jpg",
+                "isCover": False,
+            },
+            {
+                "image": "https://lodgerin-archives-production.s3.amazonaws.com/uploads/archive/name/34564/10.jpg",
+                "isCover": False,
+            },
+        ],
+        "country": "Spain",
+        "countryCode": "ES",
+    }
 
-    return id_coliving
 
+def save_data(data: dict, id_coliving: str) -> Property:
 
-def save_data(data: dict, id_coliving: str) -> ModelInternalLodgerin:
+    defaults = get_default_values()
 
-    item = ModelInternalLodgerin(
-        name=data['coliving_name'],
-        description=data['Descriptions'][0]['description'],
+    item = Property(
+        id=id_coliving,
+        name=data["coliving_name"],
+        description=data["Descriptions"][0]["description"],
         referenceCode=id_coliving,
-        # PropertyTypeId=data,
-        # provider=data,
-        # providerId=data,
-        # providerRef=data,
-        # cancellationPolicy=data,
-        maxOccupancy=data['bedrooms'],
-        # minAge=data,
-        # maxAge=data,
-        # rentalType=data,
-        # tenantGender=data,
-        # PensionTypeId=data,
-        # videoUrl=data,
-        tourUrl='',
-        isActive=False,
-        # isPublished=data,
-        Descriptions= [Description(
-            LanguagesId = data_description["LanguagesId"],
-            title = data_description["title"],
-            description = data_description["description"],
+        areaM2=data["area_sqm"],
+        areaM2Available=data["area_sqm"],
+        maxOccupancy=data["bedrooms"],
+        cancellationPolicy=defaults["cancellationPolicy"],
+        rentalType=defaults["rentalType"],
+        isActive=defaults["isActive"],
+        Features=data["features"],
+        Languages=defaults["Languages"],
+        videoUrl=defaults["videoUrl"],
+        tourUrl=defaults["tourUrl"],
+        PropertyTypeId=defaults["PropertyTypeId"],
+        Descriptions=[
+            Description(
+                LanguagesId=data_description["LanguagesId"],
+                title=data_description["title"],
+                description=data_description["description"],
             ).dict()
-            for data_description in data['Descriptions']
+            for data_description in data["Descriptions"]
         ],
-        Features=[0,1,2,3,4], # data['features']
-        Images=[
-            {
-                "image": "https://lodgerin-archives-production.s3.amazonaws.com/uploads/archive/name/34564/10.jpg",
-                "isCover": True
-            },
-            {
-                "image": "https://lodgerin-archives-production.s3.amazonaws.com/uploads/archive/name/34564/10.jpg",
-                "isCover": False
-            },
-            {
-                "image": "https://lodgerin-archives-production.s3.amazonaws.com/uploads/archive/name/34564/10.jpg",
-                "isCover": False
-            },
-        ],
-        Languages=[
-            1,
-            2
-        ],
-        Location = LocationAddress(
-            lat = data['latitude'],
-            lon = data['longitude'],
-            country = "Spain",
-            countryCode = "ES",
-            city = "Madrid"
-        )
-        # createdAt=data,
-        # updatedAt=data,
+        Images=defaults["Images"],
+        Location=LocationAddress(
+            lat=data["latitude"],
+            lon=data["longitude"],
+            country=defaults["country"],
+            countryCode=defaults["countryCode"],
+            city=data["city_name"],
+        ),
     )
 
     return item
 
 
-def create_json(item: ModelInternalLodgerin) -> None:
+def create_json(item: Property) -> None:
+    class PathDocument(Enum):
+        PATH_DOCUMENT = "data"
+        DOCUMENT_JS = "output_document.json"
+
     current_dir = os.getcwd()
     json_file_path = os.path.join(
-        current_dir,PathDocument.PATH_DOCUMENT.value, PathDocument.DOCUMENT_JS.value
+        current_dir, PathDocument.PATH_DOCUMENT.value, PathDocument.DOCUMENT_JS.value
     )
     os.makedirs(os.path.dirname(json_file_path), exist_ok=True)
 
@@ -406,6 +395,7 @@ def create_json(item: ModelInternalLodgerin) -> None:
     print(f"Datos guardados en: {json_file_path}")
 
 
+#TODO: split Webscraping
 def scrape_flipcoliving(api_key: str, url: str) -> dict:
     """
     Scrapes the FlipColiving website for city URLs using the ScrapingBee API.
@@ -542,34 +532,34 @@ def parse_coliving(
         if isinstance(data, str):
             logger.error("Failed to extract data: %s", data)
             return
-        
         # Extracting information from the coliving page to decription
         data_language = get_information_response(
             client,
             response.url,
-            {"language_url": XpathParseData.LANGUAGE_URL.value,}
+            {
+                "language_url": XpathParseData.LANGUAGE_URL.value,
+            },
         )
 
         if isinstance(data, str):
             logger.error("Failed to extract data: %s", data)
             return
-        
+
         items_description_with_language_code = {
             index_language: [
                 url,
                 get_information_response(
-                    client, url, {"about_the_home": XpathParseData.ABOUT_THE_HOME.value,}
-                )
+                    client,
+                    url,
+                    {
+                        "about_the_home": XpathParseData.ABOUT_THE_HOME.value,
+                    },
+                ),
             ]
             for index_language, url in enumerate(data_language["language_url"])
         }
-
-        print('hola mundo')
-
-        id_coliving = get_id_coliving(
-            city_name=meta["city_name"], 
-            coliving_name=data['coliving_name']
-        )
+        data["city_name"] = meta["city_name"]
+        id_coliving = id_coliving = f'{data["city_name"]}-{data["coliving_name"]}-0001'
 
         data = refine_extractor_data(data, items_description_with_language_code)
         item = save_data(data, id_coliving)
@@ -581,12 +571,9 @@ def parse_coliving(
         )
 
 
-
-def main():
-    """
-    Función principal para iniciar el scraping.
-    """
+if __name__ == "__main__":
     from dotenv import load_dotenv
+
     load_dotenv()
 
     url = os.getenv("FLIPCOLIVING_URL")
@@ -595,14 +582,10 @@ def main():
 
     client = ScrapingBeeClient(api_key=api_key)
 
-    # Entrada directa
     parse_coliving(
         client=client,
         coliving_url=url_test,
         meta={
-            "city_name": 'Madrid',
+            "city_name": "Madrid",
         },
     )
-
-if __name__ == "__main__":
-    main()
