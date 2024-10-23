@@ -115,78 +115,52 @@ class Property(BaseModel):
     )
 
 
-# class Extra(BaseModel):
-#     name: str = Field(..., description="Etiqueta del precio extra.")
-#     currency: str = Field(..., description="Código de moneda.")
-#     amount: float = Field(..., description="Monto del precio extra.")
+class Extra(BaseModel):
+    name: str = Field(..., description="Etiqueta del precio extra.")
+    currency: str = Field(..., description="Código de moneda.")
+    amount: int = Field(..., description="Monto del precio extra.")
 
 
-# class ContractModel(BaseModel):
-#     PropertyBusinessModelId: int = Field(
-#         ..., description="ID del modelo de contratación."
-#     )
-#     currency: str = Field(
-#         ..., description="Código de moneda. Ejemplo: 'EUR', 'USD', ..."
-#     )
-#     amount: float = Field(..., description="Monto de alquiler.")
-#     depositAmount: float = Field(..., description="Monto de depósito.")
-#     reservationAmount: float = Field(..., description="Monto de reserva.")
-#     minPeriod: int = Field(..., description="Mínimo de periodo de reservación.")
-#     paymentCycle: str = Field(
-#         ...,
-#         description="Ciclo de pago modalidades. Valores: unknown = Diario, daily = Diario, fortnightly = Quincenal, monthly = Mensual.",
-#     )
-#     extras: Optional[List[Extra]] = Field([], description="Listado de precios extras.")
+class ContractModel(BaseModel):
+    PropertyBusinessModelId: int = Field(
+        ..., description="ID del modelo de contratación."
+    )
+    currency: str = Field(
+        ..., description="Código de moneda. Ejemplo: 'EUR', 'USD', ..."
+    )
+    amount: int = Field(..., description="Monto de alquiler.")
+    depositAmount: int = Field(..., description="Monto de depósito.")
+    reservationAmount: int = Field(..., description="Monto de reserva.")
+    minPeriod: int = Field(..., description="Mínimo de periodo de reservación.")
+    paymentCycle: str = Field(
+        ...,
+        description="Ciclo de pago modalidades. Valores: unknown = Diario, daily = Diario, fortnightly = Quincenal, monthly = Mensual.",
+    )
+    extras: Optional[List[Extra]] = Field([], description="Listado de precios extras.")
 
 
-# class RentalUnits(BaseModel):
-#     oldId: int = Field(..., description="ID de la rental unit en Legacy.")
-#     oldPropertyId: int = Field(..., description="ID de la propiedad en Legacy.")
-#     SpaceId: Optional[str] = Field(
-#         None, description="ID (de arrento) del espacio a asociar a la rental unit."
-#     )
-#     referenceCode: str = Field(
-#         ..., min_length=3, description="Código de referencia (min: 3 caracteres)."
-#     )
-#     urlICalSync: Optional[str] = Field(..., description="URL iCal de la rental unit.")
-
-#     bedType: str = Field(
-#         ...,
-#         description="Tipo de cama. Valores: individual = Cama individual, double = Cama doble, queen = Cama queen, king = Cama rey.",
-#     )
-
-#     isActive: Optional[bool] = Field(
-#         ..., description="Indica si la rental unit se encuentra activa para su gestión."
-#     )
-#     isPublished: Optional[bool] = Field(
-#         ..., description="Indica si la rental unit se publicada a los usuarios."
-#     )
-
-#     Features: List[int] = Field(
-#         ..., description="Listado de características asociadas."
-#     )
-#     Furnitures: List[int] = Field(..., description="Listado de mobiliario asociadas.")
-
-#     # Campo añadido para la capacidad máxima
-#     maxCapacity: int = Field(
-#         ..., description="Capacidad máxima de la unidad de alquiler."
-#     )
-
-#     createdAt: Optional[str] = Field(
-#         ...,
-#         description="Fecha de creación de la rental unit en la base de datos Legacy.",
-#     )
-#     updatedAt: Optional[str] = Field(
-#         ...,
-#         description="Fecha de la última actualización de la rental unit en la base de datos Legacy.",
-#     )
-
-#     ContractsModels: List[ContractModel] = Field(
-#         ..., description="Listado de modelos de contratación asociados."
-#     )
-#     Descriptions: Optional[List[Description]] = Field(
-#         [], description="Listado de títulos y descripciones."
-#     )
-#     Images: Optional[List[Image]] = Field(
-#         [], description="Listado de imágenes de la rental unit."
-#     )
+class RentalUnits(BaseModel):
+    id: Optional[str] = Field(None, description="ID de la rental unit. Null si es una nueva unidad.")
+    PropertyId: str = Field(..., description="ID de la propiedad a la que pertenece la rental unit.")
+    description: Optional[str] = Field(None, description="Descripción de la rental unit.")
+    referenceCode: str = Field(
+        ..., min_length=3, description="Código de referencia de la rental unit (mínimo 3 caracteres)."
+    )
+    areaM2: Optional[float] = Field(None, description="Área total de la rental unit en metros cuadrados.")
+    areaM2Available: Optional[float] = Field(None, description="Área disponible de la rental unit en metros cuadrados.")
+    maxCapacity: Optional[int] = Field(None, description="Capacidad máxima (número de personas) en la rental unit.")
+    urlICalSync: str = Field(..., description="URL de sincronización iCal de la rental unit.")
+    bedType: str = Field(
+        ..., description="Tipo de cama. Valores posibles: 'individual', 'double', 'queen', 'king'."
+    )
+    Features: Optional[List[int]] = Field(
+        default_factory=list, description="Lista de IDs de características asociadas a la rental unit."
+    )
+    Furnitures: Optional[List[int]] = Field(
+        default_factory=list, description="Lista de IDs de mobiliario asociados a la rental unit."
+    )
+    isActive: Optional[bool] = Field(..., description="Indica si la rental unit está activa o archivada.")
+    isPublished: Optional[bool] = Field(..., description="Indica si la rental unit está publicada y visible para los usuarios.")
+    ContractsModels: List[ContractModel] = Field(
+        default_factory=list, description="Lista de modelos de contratación asociados a la rental unit."
+    )

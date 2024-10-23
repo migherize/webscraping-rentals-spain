@@ -1,7 +1,5 @@
 from __future__ import annotations
 from enum import Enum
-from pydantic import BaseModel
-from typing import List, Optional
 
 class URLs(str, Enum):
     flipcoliving = "https://flipcoliving.com/"
@@ -12,6 +10,43 @@ class URLs(str, Enum):
 class ScrapingBeeParams(str, Enum):
     RENDER_JS = "render_js"
     EXTRACT_RULES = "extract_rules"
+
+
+class TenantGenderEnum(Enum):
+    INDIFFERENT = "indifferent"
+    MALE = "male"
+    FEMALE = "female"
+    OTHER = "other"
+
+
+class CancellationPolicyEnum(Enum):
+    FLEXIBLE = "flexible"
+    STANDARD = "standard"
+    STRICT = "strict"
+
+
+class RentalTypeEnum(Enum):
+    COMPLETE = "complete"
+    INDIVIDUAL = "individual"
+
+
+class BedTypeEnum(Enum):
+    INDIVIDUAL = "individual"
+    DOUBLE = "double"
+    QUEEN = "queen"
+    KING = "king"
+
+
+class PaymentCycleEnum(Enum):
+    DAILY = "daily"
+    FORTNIGHTLY = "fortnightly"
+    MONTHLY = "monthly"
+
+
+class LanguagesEnum(Enum):
+    SPANISH = 1
+    ENGLISH = 2
+
 
 class Month(Enum):
     JANUARY = 1
@@ -39,8 +74,9 @@ class Month(Enum):
     NOVIEMBRE = 11
     DICIEMBRE = 12
 
+
 feature_map = {
-    "1": ["air conditioning", "aire acondicionado"],
+    "1": ["air conditioning", "air", "conditioning"],
     "2": ["bed linen", "ropa de cama", "sábanas"],
     "3": ["census", "registro en el censo", "inscripción censal"],
     "4": ["cleaning common areas", "limpieza de áreas comunes"],
@@ -86,62 +122,3 @@ feature_map = {
     "44": ["playing music", "reproducción de música"],
     "45": ["couples", "parejas"],
 }
-
-
-
-
-# Internal lodgerin
-class Description(BaseModel):
-    LanguagesId: Optional[int] = None
-    title: Optional[str] = None
-    description: Optional[str] = None
-
-
-class Image(BaseModel):
-    image: Optional[str] = None
-    isCover: Optional[bool] = None
-
-
-class LocationAddress(BaseModel):
-    lat: Optional[str] = None
-    lon: Optional[str] = None
-    address: Optional[str] = None
-    fullAddress: Optional[str] = None
-    number: Optional[str] = None
-    country: Optional[str] = None
-    countryCode: Optional[str] = None
-    state: Optional[str] = None
-    city: Optional[str] = None
-    street: Optional[str] = None
-    postalCode: Optional[str] = None
-    prefixPhone: Optional[str] = None
-
-
-class ModelInternalLodgerin(BaseModel):
-    oldId: Optional[int] = None
-    userOldId: Optional[int] = None
-    name: Optional[str] = None
-    description: Optional[str] = None
-    referenceCode: Optional[str] = None
-    PropertyTypeId: Optional[int] = None
-    provider: Optional[str] = None
-    providerId: Optional[int] = None
-    providerRef: Optional[str] = None
-    cancellationPolicy: Optional[str] = None
-    maxOccupancy: Optional[int] = None
-    minAge: Optional[int] = None
-    maxAge: Optional[int] = None
-    rentalType: Optional[str] = None
-    tenantGender: Optional[str] = None
-    PensionTypeId: Optional[int] = None
-    videoUrl: Optional[str] = None
-    tourUrl: Optional[str] = None
-    isActive: Optional[bool] = None
-    isPublished: Optional[bool] = None
-    Descriptions: Optional[List[Description]] = None
-    Features: Optional[List[int]] = None
-    Images: Optional[List[Image]] = None
-    Languages: Optional[List[int]] = None
-    Location: Optional[LocationAddress] = None
-    createdAt: Optional[str] = None
-    updatedAt: Optional[str] = None
