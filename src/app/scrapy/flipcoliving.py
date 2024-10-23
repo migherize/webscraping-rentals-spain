@@ -276,10 +276,11 @@ def get_default_values() -> dict:
         "cancellationPolicy": "standard",
         "rentalType": "individual",
         "isActive": True,
+        "isPublished": True,
         "Languages": [1, 2],
         "videoUrl": "",
         "tourUrl": "",
-        "PropertyTypeId": 4,
+        "PropertyTypeId": 4, # Coliving
         "Images": [
             {
                 "image": "https://lodgerin-archives-production.s3.amazonaws.com/uploads/archive/name/34564/10.jpg",
@@ -304,18 +305,14 @@ def save_data(data: dict, id_coliving: str) -> Property:
     defaults = get_default_values()
 
     item = Property(
-        id=id_coliving,
         name=data["coliving_name"],
         description=data["Descriptions"][0]["description"],
         referenceCode=id_coliving,
         areaM2=data["area_sqm"],
-        areaM2Available=data["area_sqm"],
-        maxOccupancy=data["bedrooms"],
-        cancellationPolicy=defaults["cancellationPolicy"],
         rentalType=defaults["rentalType"],
         isActive=defaults["isActive"],
+        isPublished=defaults["isPublished"],
         Features=data["features"],
-        Languages=defaults["Languages"],
         videoUrl=defaults["videoUrl"],
         tourUrl=defaults["tourUrl"],
         PropertyTypeId=defaults["PropertyTypeId"],
@@ -525,6 +522,7 @@ def parse_coliving(
 
         data = refine_extractor_data(data, items_description_with_language_code)
         item = save_data(data, id_coliving)
+        # Rentail
         create_json(item)
 
     except Exception as e:
