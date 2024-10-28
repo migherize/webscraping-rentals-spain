@@ -110,16 +110,24 @@ class XpathParseData(Enum):
     LONGITUDE = {
         "selector": "//div[contains(@class, 'localAreaMap__half localAreaMap__map mapboxgl-map')]//@data-lat"
     }
+    TOUR_URL = {
+        "selector": "//iframe[contains(@src, 'matterport')]/@src",
+        "clean": True,
+    }
 
 
 def remove_duplicate_urls(url_list: list) -> list:
     cleaned_urls = []
-
+    seen = set()
+    
     for url in url_list:
         clean_url = re.sub(r"-\d+x\d+\.jpg", ".jpg", url.split()[0])
-        cleaned_urls.append(clean_url)
+        
+        if clean_url not in seen:  # If the item has not been seen
+            seen.add(clean_url)    # Add it to the set
+            cleaned_urls.append(clean_url)  # Add it to the result list
 
-    return list(set(cleaned_urls))
+    return cleaned_urls
 
 
 def get_month_dates(text: str) -> tuple:
@@ -276,10 +284,26 @@ def refine_extractor_data(
     # TODO: Placeholder for additional data
     data["take_a_tour"] = ""
 
+    data["space_images"] = get_all_imagenes(data["space_images"])
+
     data["Descriptions"] = get_all_descriptions(items_description_with_language_code)
+
+    data["tour_url"] = str(data["tour_url"]) if data["tour_url"] else None
 
     return data
 
+def get_all_imagenes(space_images: list) -> list[dict]:
+    all_imagenes = []
+
+    if not space_images: 
+        return []
+    for index, value in enumerate(space_images):
+        cover = True if index == 0 else False
+        all_imagenes.append({
+            "image": value,
+            "isCover": cover,
+        })
+    return all_imagenes
 
 def get_all_descriptions(items_description_with_language_code: dict):
     all_descriptions = []
@@ -352,7 +376,7 @@ def save_data(data: dict, id_coliving: str) -> Property:
         isPublished=defaults["isPublished"],
         Features=data["features"],
         videoUrl=defaults["videoUrl"],
-        tourUrl=defaults["tourUrl"],
+        tourUrl=data["tour_url"],
         PropertyTypeId=defaults["PropertyTypeId"],
         Descriptions=[
             Description(
@@ -362,7 +386,7 @@ def save_data(data: dict, id_coliving: str) -> Property:
             ).dict()
             for data_description in data["Descriptions"]
         ],
-        Images=defaults["Images"],
+        Images=data["space_images"],
         Location=LocationAddress(
             lat=data["latitude"],
             lon=data["longitude"],
@@ -523,6 +547,7 @@ def parse_coliving(
                 "available": XpathParseData.AVAILABLE.value,
                 "latitude": XpathParseData.LATITUDE.value,
                 "longitude": XpathParseData.LONGITUDE.value,
+                "tour_url": XpathParseData.TOUR_URL.value
             },
         )
 
