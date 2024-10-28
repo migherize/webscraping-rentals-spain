@@ -1,5 +1,5 @@
-from pydantic import BaseModel, HttpUrl, Field
-from typing import List, Optional, Union
+from pydantic import BaseModel, Field
+from typing import Optional, List
 
 
 class Description(BaseModel):
@@ -70,15 +70,15 @@ class Property(BaseModel):
     )
     tenantGender: Optional[str] = Field(
         None,
-        description="Género de los arrendatarios permitidos en la propiedad. Valores: indifferent = Indiferente, male = Hombres, female = Mujeres, other = Otros.",
+        description="Género de los arrendatarios permitidos en la propiedad.",
     )
     cancellationPolicy: Optional[str] = Field(
         None,
-        description="Política de cancelación para los arrendatarios en la propiedad. Valores: flexible = Flexible, standard = Estándar, strict = Estricto.",
+        description="Política de cancelación para los arrendatarios en la propiedad.",
     )
     rentalType: Optional[str] = Field(
         None,
-        description="Tipo de alquiler de la propiedad. Valores: complete = Alquiler completo de la propiedad, individual = Alquiler por habitaciones.",
+        description="Tipo de alquiler de la propiedad.",
     )
     isActive: Optional[bool] = Field(
         None, description="Indica si la propiedad se encuentra activa para su gestión."
@@ -134,24 +134,23 @@ class ContractModel(BaseModel):
     minPeriod: int = Field(..., description="Mínimo de periodo de reservación.")
     paymentCycle: str = Field(
         ...,
-        description="Ciclo de pago modalidades. Valores: unknown = Diario, daily = Diario, fortnightly = Quincenal, monthly = Mensual.",
+        description="Ciclo de pago modalidades.",
     )
-    extras: Optional[List[Extra]] = Field([], description="Listado de precios extras.")
+    extras: List[Extra] = Field([], description="Listado de precios extras.")
 
 
 class RentalUnits(BaseModel):
-    id: Optional[str] = Field(None, description="ID de la rental unit. Null si es una nueva unidad.")
-    PropertyId: str = Field(..., description="ID de la propiedad a la que pertenece la rental unit.")
-    description: Optional[str] = Field(None, description="Descripción de la rental unit.")
+    id: Optional[str] = Field(None, description="ID de la rental unit.")
+    PropertyId: str = Field(..., description="ID de la propiedad a la que pertenece la rental unit")
     referenceCode: str = Field(
-        ..., min_length=3, description="Código de referencia de la rental unit (mínimo 3 caracteres)."
+        ..., min_length=3, description="Código de referencia de la rental unit"
     )
-    areaM2: Optional[float] = Field(None, description="Área total de la rental unit en metros cuadrados.")
-    areaM2Available: Optional[float] = Field(None, description="Área disponible de la rental unit en metros cuadrados.")
-    maxCapacity: Optional[int] = Field(None, description="Capacidad máxima (número de personas) en la rental unit.")
-    urlICalSync: str = Field(..., description="URL de sincronización iCal de la rental unit.")
-    bedType: str = Field(
-        ..., description="Tipo de cama. Valores posibles: 'individual', 'double', 'queen', 'king'."
+    areaM2: Optional[str] = Field(None, description="Área total de la rental unit en metros cuadrados.")
+    areaM2Available: Optional[str] = Field(None, description="Área disponible de la rental unit en metros cuadrados.")
+    maxCapacity: Optional[str] = Field(None, description="Capacidad máxima (número de personas) en la rental unit.")
+    urlICalSync: Optional[str] = Field(None, description="URL de sincronización iCal de la rental unit.")
+    bedType: Optional[str] = Field(
+        None, description="Tipo de cama. Valores posibles: 'individual', 'double', 'queen', 'king'."
     )
     Features: Optional[List[int]] = Field(
         default_factory=list, description="Lista de IDs de características asociadas a la rental unit."
@@ -159,8 +158,14 @@ class RentalUnits(BaseModel):
     Furnitures: Optional[List[int]] = Field(
         default_factory=list, description="Lista de IDs de mobiliario asociados a la rental unit."
     )
-    isActive: Optional[bool] = Field(..., description="Indica si la rental unit está activa o archivada.")
-    isPublished: Optional[bool] = Field(..., description="Indica si la rental unit está publicada y visible para los usuarios.")
+    isActive: Optional[bool] = Field(None, description="Indica si la rental unit está activa o archivada.")
+    isPublished: Optional[bool] = Field(None, description="Indica si la rental unit está publicada y visible para los usuarios.")
     ContractsModels: List[ContractModel] = Field(
         default_factory=list, description="Lista de modelos de contratación asociados a la rental unit."
+    )
+    Descriptions: Optional[List[Description]] = Field(
+        [], description="Listado de títulos y descripciones."
+    )
+    Images: Optional[List[Image]] = Field(
+        [], description="Listado de imágenes de la propiedad."
     )
