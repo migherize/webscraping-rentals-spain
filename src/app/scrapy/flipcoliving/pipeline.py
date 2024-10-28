@@ -41,7 +41,7 @@ class RoomData(BaseModel):
     amount: str
     calendario: str
     titulo: str
-    images: str
+    images: List[str]
 
 
 def remove_duplicate_urls(url_list: list) -> list:
@@ -50,6 +50,7 @@ def remove_duplicate_urls(url_list: list) -> list:
 
     for url in url_list:
         clean_url = re.sub(r"-\d+x\d+\.jpg", ".jpg", url.split()[0])
+        clean_url = re.sub(r"-\d+x\d+\.pgn", ".pgn", url.split()[0])
 
         if clean_url not in seen:  # If the item has not been seen
             seen.add(clean_url)  # Add it to the set
@@ -131,7 +132,7 @@ def extract_features(all_data: list):
     for data in all_data:
         if re.findall(RegexPatterns.RATE.value, data):
             rates = re.findall(RegexPatterns.RATE.value, data)
-            print("rates:", rates)
+            # print("rates:", rates)
             rate_min, rate_max = rates
 
         if re.search(RegexPatterns.BEDROOMS.value, data):
@@ -139,6 +140,9 @@ def extract_features(all_data: list):
 
         if re.search(RegexPatterns.AREA_SQM.value, data):
             area_sqm = re.sub(RegexPatterns.AREA_SQM.value, "", data).strip()
+
+    rate_max = re.sub(r'[^\d,.]', '', rate_max)
+    rate_min = re.sub(r'[^\d,.]', '', rate_min)
 
     return neighborhood, rate_min, rate_max, area_sqm, bedrooms
 
@@ -151,6 +155,8 @@ def refine_extractor_data(
     data["the_floor_plan"] = remove_duplicate_urls(data["the_floor_plan"])
     data["features"] = find_feature_keys(data["features"], feature_map)
 
+    data["space_images"].extend(data["the_floor_plan"])
+
     neighborhood, min_price, max_price, area_sqm, bedrooms = extract_features(
         data["Banner__features"]
     )
@@ -160,14 +166,12 @@ def refine_extractor_data(
     data["max_price"] = max_price
     data["area_sqm"] = area_sqm
     data["bedrooms"] = bedrooms
-    data["bathroom_square_meters"] = (
-        data["bathroom_square_meters"][1]
-        if len(data["bathroom_square_meters"]) > 1
-        else None
-    )
 
-    # TODO: Placeholder for additional data
-    data["take_a_tour"] = ""
+    data['data_rental_unit'] = get_data_rental_unit(
+        data["available"], 
+        data["bathroom_square_meters"], 
+        data["titles_rental_units"], 
+    )
 
     data["space_images"] = get_all_imagenes(data["space_images"])
 
@@ -176,6 +180,31 @@ def refine_extractor_data(
     data["tour_url"] = str(data["tour_url"]) if data["tour_url"] else None
 
     return data
+
+def get_data_rental_unit(
+    availability_list: list, amount_sqft_list: list, titles_rental_units: list
+    ) -> list[dict]:
+    result = []
+
+    if not availability_list:
+        return result.append({
+                'calendario': '',
+                'amount': '',
+                'areaM2': '',
+                'titulo': '',
+                'images': '',})
+
+    for index, available in enumerate(availability_list):
+        entry = {
+            'calendario': available,
+            'amount': amount_sqft_list[index * 2],
+            'areaM2': amount_sqft_list[index * 2 + 1],
+            'titulo': titles_rental_units[index],
+            'images': ['prueba_1.jpg', 'prueba_2.jpg', 'prueba_3.jpg'],
+        }
+        result.append(entry)
+
+    return result
 
 
 def get_all_imagenes(space_images: list) -> list[dict]:
@@ -230,14 +259,14 @@ def create_rental_units(property_data: Property, bedroom_count: int, rooms_data:
 
     if not rooms_data:
         #TODO: Ajustar valores
-        rooms_data = [RoomData(areaM2=property_data.areaM2, amount=0, calendario="Default", titulo="Default", images="")]  # Ajusta según los atributos de RoomData
+        rooms_data = [RoomData(areaM2=property_data.areaM2, amount=0, calendario="Default", titulo="Default", images=[''])]  # Ajusta según los atributos de RoomData
 
     rooms_per_type = bedroom_count // len(rooms_data)
 
     for _, room_data in enumerate(rooms_data):
         for unit_index in range(rooms_per_type):
             reference_code = f"{property_data.referenceCode}-{room_data.titulo}-{unit_index + 1:03}"
-            
+            reference_code = re.sub(r'\s', '-', reference_code)
             rental_unit = RentalUnits(
                 PropertyId=property_data.id,
                 referenceCode=reference_code,
@@ -257,9 +286,7 @@ def create_rental_units(property_data: Property, bedroom_count: int, rooms_data:
                     )
                 ],
                 Descriptions=property_data.Descriptions,
-                Images=[
-                    Image(image=room_data.images, isCover=True)
-                ]
+                Images=get_all_imagenes(room_data.images)
             )
             
             rental_units.append(rental_unit)
@@ -333,15 +360,23 @@ def save_data(data: dict) -> Property:
     )
     
     #TODO: create_property(property_item)
-    
-    # rooms_data = []
+
     rooms_data = [
-        RoomData(areaM2="11", amount="800", calendario="Available from August 2025", titulo="Carrascosa_1", images="https://example.com/image1.jpg"),
-        RoomData(areaM2="10", amount="800", calendario="Available from September 2025", titulo="Carrascosa_2", images="https://example.com/image2.jpg"),
-        RoomData(areaM2="11", amount="800", calendario="Available from December 2025", titulo="Carrascosa_3", images="https://example.com/image2.jpg"),
-        RoomData(areaM2="16", amount="800", calendario="Available from March 2025", titulo="Carrascosa_4", images="https://example.com/image2.jpg"),
+        RoomData(
+            areaM2=rental_unit['areaM2'],
+            amount=data["max_price"],
+            calendario=rental_unit['calendario'],
+            titulo=rental_unit['titulo'],
+            images=rental_unit['images'],
+        )
+        for rental_unit in data['data_rental_unit']
     ]
-    rental_units_items = create_rental_units(property_item, int(data["bedrooms"]), rooms_data)
+
+    rental_units_items = create_rental_units(
+        property_item, 
+        int(data["bedrooms"]), 
+        rooms_data
+    )
     create_json(property_item)
     for unit in rental_units_items:
         create_json(unit)

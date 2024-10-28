@@ -87,12 +87,18 @@ class XpathParseData(Enum):
         "selector": "//div[contains(@class, 'localAreaMap__imageText')]//p",
     }
     BATHROOM_SQUARE_METERS = {
-        "selector": "//div[contains(@class, 'card__features')]/span",
+        "selector": "//div[contains(@class, 'card includeDots')]//div[contains(@class, 'card__features')]/span",
+        "type": "list",
+        "clean": True,
+    }
+    TITLES_RENTAL_UNITS = {
+        "selector": "//div[contains(@class, 'card__textBottom JS--cardTextWrap')]//h3",
         "type": "list",
         "clean": True,
     }
     AVAILABLE = {
-        "selector": "//span[contains(@class, 'card__label')]//text()",
+        "selector": "//div[contains(@class, 'card includeDots')]//span[contains(@class, 'card__label')]/text()",
+        "type": "list",
         "clean": True,
     }
     LATITUDE = {
@@ -103,6 +109,7 @@ class XpathParseData(Enum):
     }
     TOUR_URL = {
         "selector": "//iframe[contains(@src, 'matterport')]/@src",
+        "type": "list",
         "clean": True,
     }
 
@@ -273,8 +280,8 @@ def parse_coliving(
                 "Banner__features": XpathParseData.BANNER_FEATURES.value,
                 "about_the_home": XpathParseData.ABOUT_THE_HOME.value,
                 "features": XpathParseData.FEATURE.value,
-                "neighborhood_description": XpathParseData.BATHROOM_SQUARE_METERS.value,
                 "bathroom_square_meters": XpathParseData.BATHROOM_SQUARE_METERS.value,
+                "titles_rental_units": XpathParseData.TITLES_RENTAL_UNITS.value,
                 "the_unit": XpathParseData.THE_UNIT.value,
                 "the_floor_plan": XpathParseData.THE_FLOOR_PLAN.value,
                 "available": XpathParseData.AVAILABLE.value,
