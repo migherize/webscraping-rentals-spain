@@ -4,6 +4,9 @@ from app.models.enums import Month
 
 
 def get_month_dates(text):
+    """
+    get_month_dates
+    """
     regex = (
         r"(january|february|march|april|may|june|july|august|september|october|november|december|"
         r"enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)"
@@ -39,7 +42,7 @@ def get_month_dates(text):
 
 
 def find_feature_keys(features_list: str, feature_map: dict):
-    features_text = ', '.join(features_list)
+    features_text = ", ".join(features_list)
     text = features_text.lower()
     matched_features = []
     # TODO:bug pets allowed
