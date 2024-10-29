@@ -3,11 +3,10 @@ import re
 import json
 import ast
 import logging
-import calendar
-from datetime import datetime
 from typing import Union, List
 from enum import Enum
 from pydantic import BaseModel
+import app.utils.constants as constants
 from app.models.enums import feature_map
 from app.models.schemas import (
     Property,
@@ -17,7 +16,7 @@ from app.models.schemas import (
     Image,
     LocationAddress,
 )
-from app.utils.funcs import find_feature_keys
+from app.utils.funcs import find_feature_keys, get_elements_types
 
 
 logging.basicConfig(
@@ -41,7 +40,7 @@ class RoomData(BaseModel):
     amount: str
     calendario: str
     titulo: str
-    images: str
+    images: List[str]
 
 
 def remove_duplicate_urls(url_list: list) -> list:
@@ -50,48 +49,13 @@ def remove_duplicate_urls(url_list: list) -> list:
 
     for url in url_list:
         clean_url = re.sub(r"-\d+x\d+\.jpg", ".jpg", url.split()[0])
+        clean_url = re.sub(r"-\d+x\d+\.png", ".png", url.split()[0])
 
         if clean_url not in seen:  # If the item has not been seen
             seen.add(clean_url)  # Add it to the set
             cleaned_urls.append(clean_url)  # Add it to the result list
 
     return cleaned_urls
-
-
-def get_month_dates(text: str) -> tuple:
-    """
-    Extracts the month and year from a string and returns the start and end
-    dates of the corresponding month in the "%Y-%m-%d" format.
-
-    If the month is misspelled or the format is incorrect,
-    it issues a warning and returns (None, None).
-
-    Parameters:
-    text (str): String in the format "Available from <Month> <Year>".
-
-    Returns:
-    tuple: Start and end dates of the month as strings in "%Y-%m-%d" format,
-           or (None, None) if there is an error in the input.
-    """
-
-    try:
-        # Extract month and year from the text
-        date_str = text.replace("Available from ", "")
-        date_obj = datetime.strptime(date_str, "%B %Y")
-
-        # Get the last day of the month
-        _, last_day = calendar.monthrange(date_obj.year, date_obj.month)
-
-        # Create the start and end dates
-        start_date = date_obj.replace(day=1).strftime("%Y-%m-%d")
-        end_date = date_obj.replace(day=last_day).strftime("%Y-%m-%d")
-
-        return start_date, end_date
-
-    except ValueError:
-        # Handle the case where the month or format is incorrect
-        logger.error("Warning: The month or input format '%s' is incorrect.", text)
-        return None, None
 
 
 def byte_string_to_dict(byte_string: bytes) -> dict:
@@ -131,7 +95,6 @@ def extract_features(all_data: list):
     for data in all_data:
         if re.findall(RegexPatterns.RATE.value, data):
             rates = re.findall(RegexPatterns.RATE.value, data)
-            print("rates:", rates)
             rate_min, rate_max = rates
 
         if re.search(RegexPatterns.BEDROOMS.value, data):
@@ -139,6 +102,9 @@ def extract_features(all_data: list):
 
         if re.search(RegexPatterns.AREA_SQM.value, data):
             area_sqm = re.sub(RegexPatterns.AREA_SQM.value, "", data).strip()
+
+    rate_max = re.sub(r'[^\d,.]', '', rate_max)
+    rate_min = re.sub(r'[^\d,.]', '', rate_min)
 
     return neighborhood, rate_min, rate_max, area_sqm, bedrooms
 
@@ -160,16 +126,14 @@ def refine_extractor_data(
     data["max_price"] = max_price
     data["area_sqm"] = area_sqm
     data["bedrooms"] = bedrooms
-    data["bathroom_square_meters"] = (
-        data["bathroom_square_meters"][1]
-        if len(data["bathroom_square_meters"]) > 1
-        else None
+
+    data['data_rental_unit'] = get_data_rental_unit(
+        data["available"], 
+        data["bathroom_square_meters"], 
+        data["titles_rental_units"], 
     )
-
-    # TODO: Placeholder for additional data
-    data["take_a_tour"] = ""
-
     data["space_images"] = get_all_imagenes(data["space_images"])
+    # data["space_images"].extend(data["the_floor_plan"])
 
     data["Descriptions"] = get_all_descriptions(items_description_with_language_code)
 
@@ -218,10 +182,34 @@ def get_all_descriptions(items_description_with_language_code: dict):
 
     return all_descriptions
 
+def get_data_rental_unit(
+    availability_list: list, amount_sqft_list: list, titles_rental_units: list
+    ) -> list[dict]:
+    result = []
+    if not availability_list:
+        return result.append({
+                'calendario': '',
+                'amount': '',
+                'areaM2': '',
+                'titulo': '',
+                'images': '',})
+    for index, available in enumerate(availability_list):
+        entry = {
+            'calendario': available,
+            'amount': amount_sqft_list[index * 2],
+            'areaM2': amount_sqft_list[index * 2 + 1],
+            'titulo': titles_rental_units[index],
+            'images': ['prueba_1.jpg', 'prueba_2.jpg', 'prueba_3.jpg'],
+        }
+        result.append(entry)
+    return result
 
-def create_rental_units(property_data: Property, bedroom_count: int, rooms_data: List[RoomData]) -> List[RentalUnits]:
+
+def create_rental_units(
+    property_data: Property, bedroom_count: int, rooms_data: List[RoomData]
+) -> List[RentalUnits]:
     rental_units = []
-    
+
     if bedroom_count < 1:
         bedroom_count = 1
 
@@ -229,25 +217,29 @@ def create_rental_units(property_data: Property, bedroom_count: int, rooms_data:
         rooms_data = []
 
     if not rooms_data:
-        #TODO: Ajustar valores
-        rooms_data = [RoomData(areaM2=property_data.areaM2, amount=0, calendario="Default", titulo="Default", images="")]  # Ajusta según los atributos de RoomData
+        rooms_data = [RoomData(areaM2=property_data.areaM2, amount=0, calendario="Default", titulo="Default", images=[''])]  # Ajusta según los atributos de RoomData
 
     rooms_per_type = bedroom_count // len(rooms_data)
 
     for _, room_data in enumerate(rooms_data):
         for unit_index in range(rooms_per_type):
-            reference_code = f"{property_data.referenceCode}-{room_data.titulo}-{unit_index + 1:03}"
-            
+            reference_code = (
+                f"{property_data.referenceCode}-{room_data.titulo}-{unit_index + 1:03}"
+            )
+            reference_code = re.sub(r'\s', '-', reference_code)
             rental_unit = RentalUnits(
-                PropertyId=property_data.id,
+                # PropertyId=property_data.id,
+                PropertyId=property_data.referenceCode,
                 referenceCode=reference_code,
                 areaM2=room_data.areaM2,
                 isActive=True,
                 isPublished=True,
                 ContractsModels=[
                     ContractModel(
-                        PropertyBusinessModelId=1,
-                        currency='USD',
+                        PropertyBusinessModelId=get_elements_types(
+                            constants.MODELS_CONTRACT
+                        ),
+                        currency="USD",
                         amount=int(room_data.amount),
                         depositAmount=int(room_data.amount) * 2,
                         reservationAmount=0,
@@ -257,13 +249,11 @@ def create_rental_units(property_data: Property, bedroom_count: int, rooms_data:
                     )
                 ],
                 Descriptions=property_data.Descriptions,
-                Images=[
-                    Image(image=room_data.images, isCover=True)
-                ]
+                Images=get_all_imagenes(room_data.images),
             )
-            
+
             rental_units.append(rental_unit)
-    
+
     return rental_units
 
 
@@ -272,31 +262,16 @@ def get_default_values() -> dict:
     Retorna un diccionario con los valores por defecto (hardcoded).
     """
     return {
-        "cancellationPolicy": "standard",
-        "rentalType": "individual",
-        "isActive": True,
-        "isPublished": True,
-        "Languages": [1, 2],
-        "videoUrl": "",
-        "tourUrl": "",
-        "PropertyTypeId": 4,  # Coliving
-        "Images": [
-            {
-                "image": "https://lodgerin-archives-production.s3.amazonaws.com/uploads/archive/name/34564/10.jpg",
-                "isCover": True,
-            },
-            {
-                "image": "https://lodgerin-archives-production.s3.amazonaws.com/uploads/archive/name/34564/10.jpg",
-                "isCover": False,
-            },
-            {
-                "image": "https://lodgerin-archives-production.s3.amazonaws.com/uploads/archive/name/34564/10.jpg",
-                "isCover": False,
-            },
-        ],
-        "country": "Spain",
-        "countryCode": "ES",
+        "cancellationPolicy": constants.CANCELLATION_POLICY,
+        "rentalType": constants.RENTAL_TYPE,
+        "isActive": constants.BOOL_TRUE,
+        "isPublished": constants.BOOL_TRUE,
+        "Languages": constants.LANGUAGES,
+        "PropertyTypeId": get_elements_types(constants.PROPERTY_TYPE_ID), # 4
+        "country": constants.COUNTRY,
+        "countryCode": constants.COUNTRY_CODE,
     }
+
 
 def save_data(data: dict) -> Property:
 
@@ -311,7 +286,6 @@ def save_data(data: dict) -> Property:
         isActive=defaults["isActive"],
         isPublished=defaults["isPublished"],
         Features=data["features"],
-        videoUrl=defaults["videoUrl"],
         tourUrl=data["tour_url"],
         PropertyTypeId=defaults["PropertyTypeId"],
         Descriptions=[
@@ -331,17 +305,25 @@ def save_data(data: dict) -> Property:
             city=data["city_name"],
         ),
     )
-    
-    #TODO: create_property(property_item)
-    
+
+    # TODO: create_property(property_item)
+
     # rooms_data = []
     rooms_data = [
-        RoomData(areaM2="11", amount="800", calendario="Available from August 2025", titulo="Carrascosa_1", images="https://example.com/image1.jpg"),
-        RoomData(areaM2="10", amount="800", calendario="Available from September 2025", titulo="Carrascosa_2", images="https://example.com/image2.jpg"),
-        RoomData(areaM2="11", amount="800", calendario="Available from December 2025", titulo="Carrascosa_3", images="https://example.com/image2.jpg"),
-        RoomData(areaM2="16", amount="800", calendario="Available from March 2025", titulo="Carrascosa_4", images="https://example.com/image2.jpg"),
+        RoomData(
+            areaM2=rental_unit['areaM2'],
+            amount=data["max_price"],
+            calendario=rental_unit['calendario'],
+            titulo=rental_unit['titulo'],
+            images=rental_unit['images'],
+        )
+        for rental_unit in data['data_rental_unit']
     ]
-    rental_units_items = create_rental_units(property_item, int(data["bedrooms"]), rooms_data)
+    rental_units_items = create_rental_units(
+        property_item, 
+        int(data["bedrooms"]), 
+        rooms_data
+    )
     create_json(property_item)
     for unit in rental_units_items:
         create_json(unit)
