@@ -47,6 +47,17 @@ class LanguagesEnum(Enum):
     SPANISH = 1
     ENGLISH = 2
 
+class PropertyType(Enum):
+    STUDIO_ENTIRE_FLAT = "Studio/Entire flat"
+    STUDENT_RESIDENCE = "Student residence"
+    SHARED_FLAT = "Shared flat"
+    COLIVING = "Coliving"
+    HOST_FAMILY = "Host family"
+
+class ContractModels(Enum):
+    SHORT_TERM = "Short - term"
+    MEDIUM_TERM = "Medium-term"
+    LONG_TERM = "Long-term"
 
 class Month(Enum):
     JANUARY = 1

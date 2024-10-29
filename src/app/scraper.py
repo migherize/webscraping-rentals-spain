@@ -1,5 +1,5 @@
 import json
-from app.scrapy import flipcoliving, somosalthena, nodis
+from app.scrapy.flipcoliving.spider import scrape_flipcoliving
 from app.models.enums import URLs
 import app.utils.constants as constants
 
@@ -14,7 +14,7 @@ def run_webscraping(url: URLs) -> None:
         scraped_data = None
 
         if url == URLs.flipcoliving:
-            scraped_data = flipcoliving.scrape_flipcoliving(url.value)
+            scraped_data = scrape_flipcoliving(url.value)
         elif url == URLs.somosalthena:
             # scraped_data = somosalthena.scrape_somosalthena(url.value)
             pass
