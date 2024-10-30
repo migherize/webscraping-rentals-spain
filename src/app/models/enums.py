@@ -1,6 +1,7 @@
 from __future__ import annotations
 from enum import Enum
 
+
 class URLs(str, Enum):
     flipcoliving = "https://flipcoliving.com/"
     somosalthena = "https://somosalthena.com/"
@@ -43,9 +44,17 @@ class PaymentCycleEnum(Enum):
     MONTHLY = "monthly"
 
 
+class CurrencyCode(Enum):
+    USD = "USD"
+    CAD = "CAD"
+    EUR = "EUR"
+    ZWL = "ZWL"
+
+
 class LanguagesEnum(Enum):
     SPANISH = 1
     ENGLISH = 2
+
 
 class PropertyType(Enum):
     STUDIO_ENTIRE_FLAT = "Studio/Entire flat"
@@ -54,10 +63,12 @@ class PropertyType(Enum):
     COLIVING = "Coliving"
     HOST_FAMILY = "Host family"
 
+
 class ContractModels(Enum):
     SHORT_TERM = "Short - term"
     MEDIUM_TERM = "Medium-term"
     LONG_TERM = "Long-term"
+
 
 class Month(Enum):
     JANUARY = 1
@@ -84,10 +95,8 @@ class Month(Enum):
     OCTUBRE = 10
     NOVIEMBRE = 11
     DICIEMBRE = 12
-
-
 feature_map = {
-    "1": ["air conditioning", "air", "conditioning"],
+    "1": ["air conditioning", "aire acondicionado"],
     "2": ["bed linen", "ropa de cama", "sábanas"],
     "3": ["census", "registro en el censo", "inscripción censal"],
     "4": ["cleaning common areas", "limpieza de áreas comunes"],
@@ -98,7 +107,7 @@ feature_map = {
     "9": ["guests night allowed", "se permiten noches de invitados"],
     "10": ["heating system", "sistema de calefacción"],
     "11": ["instant booking", "reserva instantánea"],
-    "12": ["internet", "internet", "wi-fi"],
+    "12": ["internet"],
     "13": ["lift", "ascensor", "elevador"],
     "14": ["lockable door", "puerta con cerradura"],
     "15": ["mailbox access", "acceso a buzón"],
@@ -129,7 +138,7 @@ feature_map = {
     "40": ["video surveillance", "videovigilancia"],
     "41": ["visually impaired access", "acceso para personas con discapacidad visual"],
     "42": ["wheelchair access", "acceso para sillas de ruedas"],
-    "43": ["wi-fi", "wi-fi", "internet inalámbrico"],
+    "43": ["wi-fi"],
     "44": ["playing music", "reproducción de música"],
     "45": ["couples", "parejas"],
 }

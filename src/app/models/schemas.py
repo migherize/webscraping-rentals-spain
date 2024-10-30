@@ -145,7 +145,7 @@ class RentalUnits(BaseModel):
     referenceCode: str = Field(
         ..., min_length=3, description="Código de referencia de la rental unit"
     )
-    areaM2: Optional[str] = Field(None, description="Área total de la rental unit en metros cuadrados.")
+    areaM2: Optional[int] = Field(None, description="Área total de la rental unit en metros cuadrados.")
     areaM2Available: Optional[str] = Field(None, description="Área disponible de la rental unit en metros cuadrados.")
     maxCapacity: Optional[str] = Field(None, description="Capacidad máxima (número de personas) en la rental unit.")
     urlICalSync: Optional[str] = Field(None, description="URL de sincronización iCal de la rental unit.")
@@ -169,3 +169,12 @@ class RentalUnits(BaseModel):
     Images: Optional[List[Image]] = Field(
         [], description="Listado de imágenes de la propiedad."
     )
+
+class DatePayloadItem(BaseModel):
+    summary: str = Field(..., description="Short summary for the date range, e.g., 'Blocked until August 2025'")
+    description: str = Field(..., description="Detailed description of availability, e.g., 'Available from August 2025'")
+    startDate: str = Field(..., description="Start date of the blocked range")
+    endDate: str = Field(..., description="End date of the blocked range")
+
+class DatePayload(BaseModel):
+    dates: List[DatePayloadItem]

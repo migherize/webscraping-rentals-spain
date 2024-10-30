@@ -69,10 +69,7 @@ class LodgerinAPI:
         return None
 
     def get_rental_unit_calendar(
-        self, 
-        rental_unit_id: str, 
-        start_date: Optional[str] = None, 
-        end_date: Optional[str] = None
+        self, rental_unit_id: str, end_date: Optional[str] = None
     ):
         """
         Obtiene el calendario de una unidad de renta específica.
@@ -86,23 +83,26 @@ class LodgerinAPI:
         Returns:
             dict: Respuesta JSON con la información del calendario o None en caso de error.
         """
-        url = f"{self.base_url}/api/v1/rental-units/{rental_unit_id}/calendar"
-        
-        params = {}
-        if start_date:
-            params["startDate"] = start_date
-        if end_date:
-            params["endDate"] = end_date
+        url = f"{self.base_url}/rental-units/{rental_unit_id}/calendar"
 
         try:
-            response = requests.get(url, headers=self.headers, params=params)
+            response = requests.get(url, headers=self.headers, params=end_date)
             response.raise_for_status()
             return response.json()
-        except requests.exceptions.HTTPError as err:
-            print(f"HTTP error occurred: {err}")
+        except requests.exceptions.HTTPError as http_err:
+            error_message = (
+                response.json()
+                if response.content
+                else "No additional error details provided"
+            )
+            print(
+                f"HTTP error occurred: {http_err} - Response content: {error_message}"
+            )
+        except requests.exceptions.RequestException as req_err:
+            print(f"Request error occurred: {req_err}")
         except Exception as err:
-            print(f"An error occurred: {err}")
-        return None
+            print(f"An unexpected error occurred: {err}")
+
 
     def create_or_update_property(self, property_data):
         url = f"{self.base_url}/properties"
@@ -110,28 +110,32 @@ class LodgerinAPI:
             response = requests.post(url, json=property_data, headers=self.headers)
             response.raise_for_status()
             return response.json()
-        except requests.exceptions.HTTPError as err:
-            print(f"HTTP error occurred: {err}")
+        except requests.exceptions.HTTPError as http_err:
+            error_message = response.json() if response.content else "No additional error details provided"
+            print(f"HTTP error occurred: {http_err} - Response content: {error_message}")
+        except requests.exceptions.RequestException as req_err:
+            print(f"Request error occurred: {req_err}")
         except Exception as err:
-            print(f"An error occurred: {err}")
-        return None
-
+            print(f"An unexpected error occurred: {err}")
+        return None    
+    
     def create_or_update_rental_unit(self, rental_unit_data):
         url = f"{self.base_url}/rental-units"
         try:
             response = requests.post(url, json=rental_unit_data, headers=self.headers)
             response.raise_for_status()
             return response.json()
-        except requests.exceptions.HTTPError as err:
-            print(f"HTTP error occurred: {err}")
+        except requests.exceptions.HTTPError as http_err:
+            error_message = response.json() if response.content else "No additional error details provided"
+            print(f"HTTP error occurred: {http_err} - Response content: {error_message}")
+        except requests.exceptions.RequestException as req_err:
+            print(f"Request error occurred: {req_err}")
         except Exception as err:
-            print(f"An error occurred: {err}")
+            print(f"An unexpected error occurred: {err}")
         return None
 
-    def add_rental_unit_calendar(
-        self,
-        rental_unit_id: str,
-        dates: List[Dict[str, Optional[str]]]
+    def create_rental_unit_calendar(
+        self, rental_unit_id: str, dates: List[Dict[str, Optional[str]]]
     ):
         """
         Agrega fechas de no disponibilidad a una unidad de renta específica.
@@ -144,15 +148,24 @@ class LodgerinAPI:
         Returns:
             dict: Respuesta JSON con el resultado de la solicitud o None en caso de error.
         """
-        url = f"{self.base_url}/api/v1/rental-units/{rental_unit_id}/calendar"
+        url = f"{self.base_url}/rental-units/{rental_unit_id}/calendar"
         payload = {"dates": dates}
 
         try:
             response = requests.post(url, headers=self.headers, json=payload)
             response.raise_for_status()
             return response.json()
-        except requests.exceptions.HTTPError as err:
-            print(f"HTTP error occurred: {err}")
+        except requests.exceptions.HTTPError as http_err:
+            error_message = (
+                response.json()
+                if response.content
+                else "No additional error details provided"
+            )
+            print(
+                f"HTTP error occurred: {http_err} - Response content: {error_message}"
+            )
+        except requests.exceptions.RequestException as req_err:
+            print(f"Request error occurred: {req_err}")
         except Exception as err:
-            print(f"An error occurred: {err}")
-        return None
+            print(f"An unexpected error occurred: {err}")
+

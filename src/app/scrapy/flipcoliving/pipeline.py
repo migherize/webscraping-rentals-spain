@@ -7,7 +7,7 @@ from typing import Union, List
 from enum import Enum
 from pydantic import BaseModel
 import app.utils.constants as constants
-from app.models.enums import feature_map
+from app.models.enums import feature_map, CurrencyCode, PaymentCycleEnum
 from app.models.schemas import (
     Property,
     RentalUnits,
@@ -15,15 +15,20 @@ from app.models.schemas import (
     Description,
     Image,
     LocationAddress,
+    DatePayload,
+    DatePayloadItem
 )
-from app.utils.funcs import find_feature_keys, get_elements_types
+from app.utils.funcs import find_feature_keys, get_elements_types, save_property, save_rental_unit,get_month_dates,check_and_insert_rental_unit_calendar
 
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
-    handlers=[logging.StreamHandler()],
+        handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler("app.log", mode="a", encoding="utf-8")
+    ],
 )
 logger = logging.getLogger(__name__)
 
@@ -36,10 +41,10 @@ class RegexPatterns(str, Enum):
 
 
 class RoomData(BaseModel):
-    areaM2: str
+    areaM2: int
     amount: str
-    calendario: str
-    titulo: str
+    schedule: str
+    title: str
     images: List[str]
 
 
@@ -113,6 +118,7 @@ def refine_extractor_data(
     data: dict, items_description_with_language_code: dict
 ) -> dict:
     data["space_images"] = remove_duplicate_urls(data["space_images"])
+    data['imagenes_rental_units'] = remove_duplicate_urls(data['imagenes_rental_units'])
     data["the_unit"] = remove_duplicate_urls(data["the_unit"])
     data["the_floor_plan"] = remove_duplicate_urls(data["the_floor_plan"])
     data["features"] = find_feature_keys(data["features"], feature_map)
@@ -131,13 +137,14 @@ def refine_extractor_data(
         data["available"], 
         data["bathroom_square_meters"], 
         data["titles_rental_units"], 
+        data['imagenes_rental_units']
     )
     data["space_images"] = get_all_imagenes(data["space_images"])
-    # data["space_images"].extend(data["the_floor_plan"])
 
     data["Descriptions"] = get_all_descriptions(items_description_with_language_code)
-
-    data["tour_url"] = str(data["tour_url"]) if data["tour_url"] else None
+    
+    if data["tour_url"]:
+        data["tour_url"] = data["tour_url"][0]
 
     return data
 
@@ -160,46 +167,49 @@ def get_all_imagenes(space_images: list) -> list[dict]:
 
 def get_all_descriptions(items_description_with_language_code: dict):
     all_descriptions = []
-    for id_language, info_description in items_description_with_language_code.items():
+    dict_language = {
+        1: "Propiedades",
+        2: "Property",
+    }
+    for id_language, info_description in reversed(items_description_with_language_code.items()):
         info_description: list
-        # url_language = info_description[0]
         descriptions = {
-            "LanguagesId": "",
+            "LanguagesId": int(id_language) + 1 ,
             "title": "",
             "description": "",
         }
-        descriptions["LanguagesId"] = id_language
-
         try:
+            descriptions["title"] = dict_language.get(descriptions["LanguagesId"])
             descriptions["description"] = info_description[1]["about_the_home"]
-        except:
-            pass
-
-        if descriptions["description"] == "":
-            continue
-
-        all_descriptions.append(descriptions)
+        except (IndexError, KeyError) as e:
+            continue 
+        
+        if descriptions["description"]:
+            all_descriptions.append(descriptions)
 
     return all_descriptions
 
 def get_data_rental_unit(
-    availability_list: list, amount_sqft_list: list, titles_rental_units: list
+    availability_list: list, 
+    amount_sqft_list: list, 
+    titles_rental_units: list, 
+    imagenes_rental_units: list
     ) -> list[dict]:
     result = []
     if not availability_list:
         return result.append({
-                'calendario': '',
+                'schedule': '',
                 'amount': '',
                 'areaM2': '',
-                'titulo': '',
+                'title': '',
                 'images': '',})
     for index, available in enumerate(availability_list):
         entry = {
-            'calendario': available,
+            'schedule': available,
             'amount': amount_sqft_list[index * 2],
             'areaM2': amount_sqft_list[index * 2 + 1],
-            'titulo': titles_rental_units[index],
-            'images': ['prueba_1.jpg', 'prueba_2.jpg', 'prueba_3.jpg'],
+            'title': titles_rental_units[index],
+            'images': imagenes_rental_units
         }
         result.append(entry)
     return result
@@ -209,6 +219,7 @@ def create_rental_units(
     property_data: Property, bedroom_count: int, rooms_data: List[RoomData]
 ) -> List[RentalUnits]:
     rental_units = []
+    calendar_unit_list = []
 
     if bedroom_count < 1:
         bedroom_count = 1
@@ -217,21 +228,21 @@ def create_rental_units(
         rooms_data = []
 
     if not rooms_data:
-        rooms_data = [RoomData(areaM2=property_data.areaM2, amount=0, calendario="Default", titulo="Default", images=[''])]  # Ajusta según los atributos de RoomData
+        rooms_data = [RoomData(areaM2=int(property_data.areaM2), amount=0, schedule="Default", title="Default", images=[''])]  # Ajusta según los atributos de RoomData
 
     rooms_per_type = bedroom_count // len(rooms_data)
 
     for _, room_data in enumerate(rooms_data):
         for unit_index in range(rooms_per_type):
             reference_code = (
-                f"{property_data.referenceCode}-{room_data.titulo}-{unit_index + 1:03}"
+                f"{property_data.referenceCode}-{room_data.title}-{unit_index + 1:03}"
             )
             reference_code = re.sub(r'\s', '-', reference_code)
             rental_unit = RentalUnits(
-                # PropertyId=property_data.id,
-                PropertyId=property_data.referenceCode,
+                PropertyId=property_data.id,
                 referenceCode=reference_code,
-                areaM2=room_data.areaM2,
+                areaM2=int(room_data.areaM2),
+                Features=property_data.Features,
                 isActive=True,
                 isPublished=True,
                 ContractsModels=[
@@ -239,12 +250,12 @@ def create_rental_units(
                         PropertyBusinessModelId=get_elements_types(
                             constants.MODELS_CONTRACT
                         ),
-                        currency="USD",
+                        currency=CurrencyCode.EUR.value,
                         amount=int(room_data.amount),
-                        depositAmount=int(room_data.amount) * 2,
-                        reservationAmount=0,
-                        minPeriod=1,
-                        paymentCycle="monthly",
+                        depositAmount=constants.INT_ZERO,
+                        reservationAmount=constants.INT_ZERO,
+                        minPeriod=constants.INT_ONE,
+                        paymentCycle=PaymentCycleEnum.MONTHLY.value,
                         extras=[],
                     )
                 ],
@@ -253,9 +264,29 @@ def create_rental_units(
             )
 
             rental_units.append(rental_unit)
+            # Calendar
+            month_year = room_data.schedule.split("from")[-1].strip()
+            start_date, end_date = get_month_dates(room_data.schedule)
+            date_items=DatePayloadItem(
+                summary= f"Blocked until {month_year}",
+                description= room_data.schedule,
+                startDate= start_date,
+                endDate= end_date,
+            )
+            calendar_unit_list.append(date_items)
 
-    return rental_units
+    return rental_units, calendar_unit_list
 
+def get_imagenes_rental_units(imagenes_rental_units: list):
+    
+    aux_imagenes_rental_units, imagenes_rental_units = imagenes_rental_units, []
+    for value in aux_imagenes_rental_units:
+        value: str
+        if not value.endswith('.jpg'):
+            continue
+        imagenes_rental_units.append(value)
+    
+    return imagenes_rental_units
 
 def get_default_values() -> dict:
     """
@@ -291,7 +322,7 @@ def save_data(data: dict) -> Property:
         Descriptions=[
             Description(
                 LanguagesId=data_description["LanguagesId"],
-                title=data_description["title"],
+                title=f'{data_description["title"]} {data["coliving_name"]}',
                 description=data_description["description"],
             ).dict()
             for data_description in data["Descriptions"]
@@ -305,34 +336,48 @@ def save_data(data: dict) -> Property:
             city=data["city_name"],
         ),
     )
+    #Property
+    property_id = save_property(property_item)
+    property_item.id = property_id
+    create_json(property_item)
 
-    # TODO: create_property(property_item)
-
-    # rooms_data = []
+    #RentalUnits
     rooms_data = [
         RoomData(
-            areaM2=rental_unit['areaM2'],
+            areaM2 = int(rental_unit['areaM2'].replace(" sqm", "")),
             amount=data["max_price"],
-            calendario=rental_unit['calendario'],
-            titulo=rental_unit['titulo'],
+            schedule=rental_unit['schedule'],
+            title=rental_unit['title'],
             images=rental_unit['images'],
         )
         for rental_unit in data['data_rental_unit']
     ]
-    rental_units_items = create_rental_units(
+    rental_units_items, calendar_unit_list = create_rental_units(
         property_item, 
         int(data["bedrooms"]), 
         rooms_data
     )
-    create_json(property_item)
+    list_rental_unit_id = []
+    for unit in rental_units_items:
+        rental_unit = save_rental_unit(unit)
+        unit.id = rental_unit
+        list_rental_unit_id.append(rental_unit)
+
     for unit in rental_units_items:
         create_json(unit)
 
+    #schedule
+    for rental_id, calendar_unit in zip(list_rental_unit_id, calendar_unit_list):
+        check_and_insert_rental_unit_calendar(rental_id, calendar_unit)
 
-def create_json(item: Union[RentalUnits, Property]) -> None:
+    for calendar_unit in calendar_unit_list:
+        create_json(calendar_unit)
+
+def create_json(item: Union[RentalUnits, Property, DatePayloadItem]) -> None:
     class PathDocument(Enum):
+        PROPERTY = "data/property.json"
         RENTAL_UNITS = "data/rental_units.json"
-        PROPERTY = "data/output_document.json"
+        CALENDAR = "data/calendar.json"
 
     current_dir = os.getcwd()
 
@@ -340,12 +385,14 @@ def create_json(item: Union[RentalUnits, Property]) -> None:
         json_file_path = os.path.join(current_dir, PathDocument.RENTAL_UNITS.value)
     elif isinstance(item, Property):
         json_file_path = os.path.join(current_dir, PathDocument.PROPERTY.value)
+    elif isinstance(item, DatePayloadItem):
+        json_file_path = os.path.join(current_dir, PathDocument.CALENDAR.value)
     else:
-        raise ValueError("item must be an instance of RentalUnits or Property.")
+        raise ValueError("item must be an instance of RentalUnits or Property or Calendar.")
 
     os.makedirs(os.path.dirname(json_file_path), exist_ok=True)
 
     with open(json_file_path, "a", encoding="utf-8-sig") as json_file:
         json.dump(item.dict(), json_file, indent=4)
 
-    print(f"Datos guardados en: {json_file_path}")
+    logging.info(f"Datos guardados en: {json_file_path}")
