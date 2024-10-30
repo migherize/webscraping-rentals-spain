@@ -8,6 +8,7 @@ from app.scrapy.flipcoliving.pipeline import (
     byte_string_to_dict,
     refine_extractor_data,
     save_data,
+    get_imagenes_rental_units
 )
 
 logging.basicConfig(
@@ -94,7 +95,8 @@ class XpathParseData(Enum):
     }
     
     TITLES_RENTAL_UNITS = {
-        "selector": "//div[contains(@class, 'card__textBottom JS--cardTextWrap')]//h3",
+        # "selector": "//div[contains(@class, 'card__textBottom JS--cardTextWrap')]//h3",
+        "selector": "//div[contains(@class, 'JS--cardTextWrap')]//h3",
         "type": "list",
         "clean": True,
     }
@@ -109,11 +111,21 @@ class XpathParseData(Enum):
     LONGITUDE = {
         "selector": "//div[contains(@class, 'localAreaMap__half localAreaMap__map mapboxgl-map')]//@data-lat"
     }
+    IMAGENES_RENTAL_UNITS = {
+        "selector": "//div[contains(@class, 'theRooms__innerWrap')]//img/@src",
+        "type": "list",
+        "clean": True,
+    }
     TOUR_URL = {
         "selector": "//iframe[contains(@src, 'matterport')]/@src",
         "type": "list",
         "clean": True,
     }
+class XpathParseScrapy(Enum):
+    TYPE_ROOM = "//div[contains(@class, 'theRooms__innerWrap')]//h2/text()"
+    THE_UNIT = "//div[contains(@class, 'theRooms__innerWrap')]//img/@src"
+    ALL_THE_ROOMS = "//div[contains(@class, 'theRooms__innerWrap')]/div//div/div//div[contains(@class, 'flickity-slider')]"
+    IMAGENS_RENTAL_UNITS = "//@src"
 
 
 
@@ -195,6 +207,8 @@ def scrape_flipcoliving(url: str) -> dict:
         data["cities_url"] = [url + new_url for new_url in data["cities_url"]]
 
         meta = {"base_url": url}
+        
+        print("cities_url",data["cities_url"])
 
         for _, city_url in enumerate(data["cities_url"]):
             city_name = re.sub(r"[^A-Za-z]", " ", city_url.split("-")[-1]).strip()
@@ -242,10 +256,10 @@ def parse_all_coliving(
             logger.error("Failed to extract data: %s", data)
             return
 
+        print("coliving_url all: ",data)
         for coliving_url in data.get("coliving_url", []):
             meta["coliving_url"] = coliving_url
             parse_coliving(client=client, coliving_url=coliving_url, meta=meta)
-            break
 
     except Exception as e:
         logger.error(
@@ -269,6 +283,7 @@ def parse_coliving(
     Returns:
         None: This function does not return a value but processes coliving information and appends it to a CSV file.
     """
+    print("coliving_url",coliving_url)
     try:
         response = client.get(url=coliving_url)
 
@@ -290,8 +305,10 @@ def parse_coliving(
                 "latitude": XpathParseData.LATITUDE.value,
                 "longitude": XpathParseData.LONGITUDE.value,
                 "tour_url": XpathParseData.TOUR_URL.value,
+                "imagenes_rental_units": XpathParseData.IMAGENES_RENTAL_UNITS.value
             },
         )
+        data['imagenes_rental_units'] = get_imagenes_rental_units(data['imagenes_rental_units'])
 
         if isinstance(data, str):
             logger.error("Failed to extract data: %s", data)
@@ -330,7 +347,7 @@ def parse_coliving(
 
     except Exception as e:
         logger.error(
-            "Error while parsing coliving data from URL %s: %s", coliving_url, e
+            "Error while parsing coliving data from URL %s: %s, data: %s", coliving_url, e, data
         )
 
 
