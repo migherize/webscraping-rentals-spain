@@ -21,6 +21,7 @@ from app.models.schemas import (
 from app.utils.funcs import find_feature_keys, get_elements_types, save_property, save_rental_unit,get_month_dates,check_and_insert_rental_unit_calendar
 
 
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -147,6 +148,34 @@ def refine_extractor_data(
         data["tour_url"] = data["tour_url"][0]
 
     return data
+
+def get_data_rental_unit(
+    availability_list: list, 
+    amount_sqft_list: list, 
+    titles_rental_units: list, 
+    imagenes_rental_units: list
+    ) -> list[dict]:
+    result = []
+
+    if not availability_list:
+        return result.append({
+                'calendario': '',
+                'amount': '',
+                'areaM2': '',
+                'titulo': '',
+                'images': '',})
+
+    for index, available in enumerate(availability_list):
+        entry = {
+            'calendario': available,
+            'amount': amount_sqft_list[index * 2],
+            'areaM2': amount_sqft_list[index * 2 + 1],
+            'titulo': titles_rental_units[index],
+            'images': imagenes_rental_units,
+        }
+        result.append(entry)
+
+    return result
 
 
 def get_all_imagenes(space_images: list) -> list[dict]:
@@ -276,6 +305,17 @@ def create_rental_units(
             calendar_unit_list.append(date_items)
 
     return rental_units, calendar_unit_list
+
+def get_imagenes_rental_units(imagenes_rental_units: list):
+    
+    aux_imagenes_rental_units, imagenes_rental_units = imagenes_rental_units, []
+    for value in aux_imagenes_rental_units:
+        value: str
+        if not value.endswith('.jpg'):
+            continue
+        imagenes_rental_units.append(value)
+    
+    return imagenes_rental_units
 
 def get_imagenes_rental_units(imagenes_rental_units: list):
     

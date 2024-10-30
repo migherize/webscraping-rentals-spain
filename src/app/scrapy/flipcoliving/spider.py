@@ -127,6 +127,17 @@ class XpathParseScrapy(Enum):
     ALL_THE_ROOMS = "//div[contains(@class, 'theRooms__innerWrap')]/div//div/div//div[contains(@class, 'flickity-slider')]"
     IMAGENS_RENTAL_UNITS = "//@src"
 
+    TOUR_URL = {
+        "selector": "//iframe[contains(@src, 'matterport')]/@src",
+        "type": "list",
+        "clean": True,
+    }
+
+class XpathParseScrapy(Enum):
+    TYPE_ROOM = "//div[contains(@class, 'theRooms__innerWrap')]//h2/text()"
+    THE_UNIT = "//div[contains(@class, 'theRooms__innerWrap')]//img/@src"
+    ALL_THE_ROOMS = "//div[contains(@class, 'theRooms__innerWrap')]/div//div/div//div[contains(@class, 'flickity-slider')]"
+    IMAGENS_RENTAL_UNITS = "//@src"
 
 
 def get_information_response(
@@ -310,6 +321,8 @@ def parse_coliving(
         )
         data['imagenes_rental_units'] = get_imagenes_rental_units(data['imagenes_rental_units'])
 
+        data['imagenes_rental_units'] = get_imagenes_rental_units(data['imagenes_rental_units'])
+        
         if isinstance(data, str):
             logger.error("Failed to extract data: %s", data)
             return
@@ -362,7 +375,6 @@ if __name__ == "__main__":
     url_test = os.getenv("URL_TEST")
 
     client = ScrapingBeeClient(api_key=api_key)
-
     parse_coliving(
         client=client,
         coliving_url=url_test,
