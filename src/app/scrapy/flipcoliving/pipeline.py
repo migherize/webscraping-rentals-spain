@@ -20,6 +20,7 @@ from app.models.schemas import (
 from app.utils.funcs import find_feature_keys
 
 
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -151,11 +152,10 @@ def refine_extractor_data(
     data: dict, items_description_with_language_code: dict
 ) -> dict:
     data["space_images"] = remove_duplicate_urls(data["space_images"])
+    data['imagenes_rental_units'] = remove_duplicate_urls(data['imagenes_rental_units'])
     data["the_unit"] = remove_duplicate_urls(data["the_unit"])
     data["the_floor_plan"] = remove_duplicate_urls(data["the_floor_plan"])
     data["features"] = find_feature_keys(data["features"], feature_map)
-
-    data["space_images"].extend(data["the_floor_plan"])
 
     neighborhood, min_price, max_price, area_sqm, bedrooms = extract_features(
         data["Banner__features"]
@@ -171,6 +171,7 @@ def refine_extractor_data(
         data["available"], 
         data["bathroom_square_meters"], 
         data["titles_rental_units"], 
+        data['imagenes_rental_units']
     )
 
     data["space_images"] = get_all_imagenes(data["space_images"])
@@ -182,7 +183,10 @@ def refine_extractor_data(
     return data
 
 def get_data_rental_unit(
-    availability_list: list, amount_sqft_list: list, titles_rental_units: list
+    availability_list: list, 
+    amount_sqft_list: list, 
+    titles_rental_units: list, 
+    imagenes_rental_units: list
     ) -> list[dict]:
     result = []
 
@@ -200,7 +204,7 @@ def get_data_rental_unit(
             'amount': amount_sqft_list[index * 2],
             'areaM2': amount_sqft_list[index * 2 + 1],
             'titulo': titles_rental_units[index],
-            'images': ['prueba_1.jpg', 'prueba_2.jpg', 'prueba_3.jpg'],
+            'images': imagenes_rental_units,
         }
         result.append(entry)
 
@@ -293,6 +297,17 @@ def create_rental_units(property_data: Property, bedroom_count: int, rooms_data:
     
     return rental_units
 
+
+def get_imagenes_rental_units(imagenes_rental_units: list):
+    
+    aux_imagenes_rental_units, imagenes_rental_units = imagenes_rental_units, []
+    for value in aux_imagenes_rental_units:
+        value: str
+        if not value.endswith('.jpg'):
+            continue
+        imagenes_rental_units.append(value)
+    
+    return imagenes_rental_units
 
 def get_default_values() -> dict:
     """
