@@ -127,12 +127,6 @@ class XpathParseScrapy(Enum):
     ALL_THE_ROOMS = "//div[contains(@class, 'theRooms__innerWrap')]/div//div/div//div[contains(@class, 'flickity-slider')]"
     IMAGENS_RENTAL_UNITS = "//@src"
 
-    TOUR_URL = {
-        "selector": "//iframe[contains(@src, 'matterport')]/@src",
-        "type": "list",
-        "clean": True,
-    }
-
 class XpathParseScrapy(Enum):
     TYPE_ROOM = "//div[contains(@class, 'theRooms__innerWrap')]//h2/text()"
     THE_UNIT = "//div[contains(@class, 'theRooms__innerWrap')]//img/@src"

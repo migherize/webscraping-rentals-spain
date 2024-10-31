@@ -18,8 +18,7 @@ from app.models.schemas import (
     DatePayload,
     DatePayloadItem
 )
-from app.utils.funcs import find_feature_keys, get_elements_types, save_property, save_rental_unit,get_month_dates,check_and_insert_rental_unit_calendar
-
+from app.utils.funcs import find_feature_keys, get_elements_types
 
 
 logging.basicConfig(
@@ -293,40 +292,9 @@ def create_rental_units(
             )
 
             rental_units.append(rental_unit)
-            # Calendar
-            month_year = room_data.schedule.split("from")[-1].strip()
-            start_date, end_date = get_month_dates(room_data.schedule)
-            date_items=DatePayloadItem(
-                summary= f"Blocked until {month_year}",
-                description= room_data.schedule,
-                startDate= start_date,
-                endDate= end_date,
-            )
-            calendar_unit_list.append(date_items)
 
-    return rental_units, calendar_unit_list
+    return rental_units
 
-def get_imagenes_rental_units(imagenes_rental_units: list):
-    
-    aux_imagenes_rental_units, imagenes_rental_units = imagenes_rental_units, []
-    for value in aux_imagenes_rental_units:
-        value: str
-        if not value.endswith('.jpg'):
-            continue
-        imagenes_rental_units.append(value)
-    
-    return imagenes_rental_units
-
-def get_imagenes_rental_units(imagenes_rental_units: list):
-    
-    aux_imagenes_rental_units, imagenes_rental_units = imagenes_rental_units, []
-    for value in aux_imagenes_rental_units:
-        value: str
-        if not value.endswith('.jpg'):
-            continue
-        imagenes_rental_units.append(value)
-    
-    return imagenes_rental_units
 
 def get_default_values() -> dict:
     """
