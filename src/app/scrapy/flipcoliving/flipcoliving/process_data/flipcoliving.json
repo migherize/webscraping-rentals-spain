@@ -1,0 +1,112 @@
+[
+    {
+        "items_output": {
+            "all_firts_imagenes": [
+                "https://flipcoliving.com/wp-content/uploads/2023/10/Flipco-Cantueso-001.jpg",
+                "https://flipcoliving.com/wp-content/uploads/2023/10/Flipco-Cantueso-003.jpg",
+                "https://flipcoliving.com/wp-content/uploads/2023/10/Flipco-Cantueso-002.jpg",
+                "https://flipcoliving.com/wp-content/uploads/2023/10/Flipco-Cantueso-W004.jpg",
+                "https://flipcoliving.com/wp-content/uploads/2023/10/Flipco-Cantueso-W010.jpg",
+                "https://flipcoliving.com/wp-content/uploads/2023/10/Flipco-Cantueso-W009.jpg",
+                "https://flipcoliving.com/wp-content/uploads/2023/10/Flipco-Cantueso-W011.jpg",
+                "https://flipcoliving.com/wp-content/uploads/2023/10/Flipco-Cantueso-W012.jpg",
+                "https://flipcoliving.com/wp-content/uploads/2023/07/CNT-PLANTA-SOTANO.jpg",
+                "https://flipcoliving.com/wp-content/uploads/2023/07/CNT-PLANTA-BAJA-scaled.jpg",
+                "https://flipcoliving.com/wp-content/uploads/2023/07/CNT-PLANTA-PRIMERA-scaled.jpg",
+                "https://flipcoliving.com/wp-content/uploads/2023/07/CNT-PLANTA-TIPO-scaled.jpg",
+                "https://flipcoliving.com/wp-content/uploads/2023/07/CNT-PLANTA-ATICO-scaled.jpg"
+            ],
+            "parse_coliving_name": [
+                "Cantueso"
+            ],
+            "banner_features": [
+                "Valdeacederas",
+                "From 795€ to 1100€ /month",
+                "500 sqm",
+                "20 bedrooms"
+            ],
+            "parse_description": [
+                "Cantueso is an exceptional twenty-bedroom guesthouse with an extraordinary curation of decoration and art. Live the Madrid dream in this stunning guesthouse that oozes elegance and peace. The rich décor and high ceilings are particularly spectacular, and the huge kitchen on the upper floor provides a contrast to the more formal ambience of the living and dining areas. The guesthouse has a terrace for unwinding after a day in the city.",
+                "Cantueso es una excepcional casa de huéspedes de veinte dormitorios con una extraordinaria decoración y arte. Vive el sueño de Madrid en esta impresionante establecimiento que rezuma elegancia y paz. La rica decoración y los altos techos son particularmente espectaculares, y la enorme cocina en el piso superior ofrece un contraste con el ambiente más formal de las áreas de estar y comedor. La casa de huéspedes tiene una terraza para desconectar después del día en la ciudad."
+            ],
+            "all_features": [
+                "Blazing fast Wi-Fi",
+                "On-Site laundry",
+                "Fully equipped kitchen",
+                "Linens",
+                "Coffee machine",
+                "Dishwasher",
+                "Washer",
+                "Dryer",
+                "Hot and cold A/C",
+                "Amazing shared spaces",
+                "Smart TV",
+                "Iron",
+                "Bathroom",
+                "Hangers",
+                "Keyless access",
+                "Non smoking",
+                "Access exclusive events",
+                "Close to metro station",
+                "Close to bus station",
+                "Bicycle parking",
+                "Oven",
+                "Fridge",
+                "BBQ / Grill",
+                "Towels",
+                "Private bedroom",
+                "Fitness center",
+                "Guesthouse",
+                "Coworking",
+                "Private desk",
+                "Shared areas daily cleaning",
+                "Quick repairs service",
+                "Fully furnished",
+                "No pets allowed",
+                "Couples are allowed"
+            ],
+            "all_url_tour": [
+                "https://my.matterport.com/show/?m=i65DfCK4ymG",
+                "https://my.matterport.com/show/?m=zyGpVU6U4f6",
+                "https://my.matterport.com/show/?m=HG95saF1HYb"
+            ],
+            "latitude": [
+                "-3.7056482"
+            ],
+            "longitude": [
+                "40.4670626"
+            ],
+            "city_name": "madrid",
+            "aux_city_url": "https://flipcoliving.com//city/coliving-in-madrid/",
+            "coliving_url": "https://flipcoliving.com/coliving/cantueso/",
+            "coliving_name": "cantueso",
+            "rental_units": [
+                {
+                    "type_name_rental_unit": [
+                        "The Unit"
+                    ],
+                    "name_rental_unit": [
+                        "Cantueso Room"
+                    ],
+                    "available_rental_unit": [
+                        "Available from December",
+                        "Available from December",
+                        "Available from December",
+                        "Available from December",
+                        "Available from Jaunary 2025"
+                    ],
+                    "data_rental_unit": [
+                        "From 795€ to 1100€ /month",
+                        "12 sqm"
+                    ],
+                    "imagenes_rental_unit": [
+                        "https://flipcoliving.com/wp-content/uploads/2023/10/Flipco-Cantueso-W006.jpg",
+                        "https://flipcoliving.com/wp-content/uploads/2023/10/Flipco-Cantueso-W005.jpg",
+                        "https://flipcoliving.com/wp-content/uploads/2023/10/Flipco-Cantueso-W007.jpg",
+                        "https://flipcoliving.com/wp-content/uploads/2023/10/Flipco-Cantueso-W008.jpg"
+                    ]
+                }
+            ]
+        }
+    }
+]
