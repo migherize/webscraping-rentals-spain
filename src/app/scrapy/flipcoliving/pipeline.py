@@ -7,7 +7,7 @@ from typing import Union, List
 from enum import Enum
 from pydantic import BaseModel
 import app.utils.constants as constants
-from app.models.enums import feature_map, CurrencyCode, PaymentCycleEnum
+from app.models.enums import feature_map, CurrencyCode, PaymentCycleEnum, Languages
 from app.models.schemas import (
     Property,
     RentalUnits,
@@ -184,8 +184,8 @@ def get_all_imagenes(space_images: list) -> list[dict]:
 def get_all_descriptions(items_description_with_language_code: dict):
     all_descriptions = []
     dict_language = {
-        1: "Propiedades",
-        2: "Property",
+        Languages.SPANISH.value: "Propiedades",
+        Languages.ENGLISH.value: "Property",
     }
     for id_language, info_description in reversed(items_description_with_language_code.items()):
         info_description: list

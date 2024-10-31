@@ -2,7 +2,7 @@ import re
 import os
 import logging
 from datetime import datetime, timedelta
-from app.models.enums import Month, PropertyType, ContractModels
+from app.models.enums import Month, PropertyType, ContractModels, CurrencyCode, Languages
 from app.utils.lodgerinService import LodgerinAPI
 import app.utils.constants as constants
 from app.models.schemas import DatePayloadItem
@@ -19,6 +19,34 @@ logging.basicConfig(
     ],
 )
 logger = logging.getLogger(__name__)
+
+def detect_language(description: str) -> int:
+    if any(word in description for word in ["es", "de", "la", "el", "y"]):  # Palabras clave en español
+        return Languages.SPANISH.value
+    elif any(word in description for word in ["is", "the", "a", "an", "and"]):  # Palabras clave en inglés
+        return Languages.ENGLISH.value
+    return None
+
+
+def get_currency_code(symbol: str) -> str:
+    """
+    Función para obtener el acrónimo de la moneda dado un símbolo.
+
+    Args:
+        symbol (str): Símbolo de la moneda (ejemplo: $, €, etc.).
+
+    Returns:
+        str: Acrónimo de la moneda correspondiente, o None si no se encuentra.
+    """
+    symbol_to_code = {
+        "$": CurrencyCode.USD.value,
+        "CAD": CurrencyCode.CAD.value,
+        "€": CurrencyCode.EUR.value,
+        "ZWL": CurrencyCode.ZWL.value,
+    }
+    
+    return symbol_to_code.get(symbol, None)
+
 
 def get_month_dates(text):
     regex = (
