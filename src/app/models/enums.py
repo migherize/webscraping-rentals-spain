@@ -55,7 +55,7 @@ class CurrencyCode(Enum):
     ZWL = "ZWL"
 
 
-class LanguagesEnum(Enum):
+class Languages(Enum):
     SPANISH = 1
     ENGLISH = 2
 
