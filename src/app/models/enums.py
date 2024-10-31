@@ -7,6 +7,10 @@ class URLs(str, Enum):
     somosalthena = "https://somosalthena.com/"
     nodis = "https://nodis.es/"
 
+class Pages(str, Enum):
+    flipcoliving = "flipcoliving"
+    somosalthena = "somosalthena"
+    nodis = "nodis"
 
 class ScrapingBeeParams(str, Enum):
     RENDER_JS = "render_js"
