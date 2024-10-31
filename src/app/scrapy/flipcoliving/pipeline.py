@@ -21,18 +21,6 @@ from app.models.schemas import (
 from app.utils.funcs import find_feature_keys, get_elements_types
 
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-        handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler("app.log", mode="a", encoding="utf-8")
-    ],
-)
-logger = logging.getLogger(__name__)
-
-
 class RegexPatterns(str, Enum):
     RATE = r"[\d,.]+€"
     BEDROOMS = r"habitaciones|bedrooms"
@@ -86,7 +74,7 @@ def byte_string_to_dict(byte_string: bytes) -> dict:
         return python_dict
 
     except (UnicodeDecodeError, ValueError, SyntaxError) as e:
-        logger.error("Failed to convert byte string to dictionary: %s", e)
+        print("Failed to convert byte string to dictionary: %s", e)
         raise ValueError(f"Invalid byte string provided: {str(e)}")
 
 

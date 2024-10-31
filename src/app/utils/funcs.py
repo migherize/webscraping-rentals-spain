@@ -1,4 +1,5 @@
 import re
+import os
 import logging
 from datetime import datetime, timedelta
 from app.models.enums import Month, PropertyType, ContractModels
@@ -6,17 +7,18 @@ from app.utils.lodgerinService import LodgerinAPI
 import app.utils.constants as constants
 from app.models.schemas import DatePayloadItem
 
+os.makedirs(constants.LOG_DIR, exist_ok=True)
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler("app.log", mode="a", encoding="utf-8"),
+        logging.FileHandler(os.path.join(constants.LOG_DIR, "app.log"), mode="a", encoding="utf-8"),
     ],
 )
 logger = logging.getLogger(__name__)
-
 
 def get_month_dates(text):
     regex = (

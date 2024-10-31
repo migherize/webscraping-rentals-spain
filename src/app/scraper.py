@@ -5,7 +5,7 @@ import app.utils.constants as constants
 from scrapy.crawler import CrawlerRunner
 from crochet import setup
 
-from app.scrapy.flipcoliving.flipcoliving.flipcoliving_spider import FlipcolivingSpiderSpider
+# from app.scrapy.flipcoliving.flipcoliving.flipcoliving_spider import FlipcolivingSpiderSpider
 # from app.scrapy.somosalthena... import SomosalthenaSpider
 # from app.scrapy.nodis... import NodisSpider
 
@@ -20,7 +20,6 @@ def run_webscraping(url: URLs) -> None:
         url (str): URL de la página que será scrapeada.
     """
     try:
-        print("url.value: ",url.value)
         if url == URLs.flipcoliving:
             # runner.crawl(FlipcolivingSpider, start_urls=[url.value])
             pass

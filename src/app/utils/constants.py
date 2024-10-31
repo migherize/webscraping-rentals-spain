@@ -16,6 +16,6 @@ LANGUAGES = [1, 2]
 CANCELLATION_POLICY = "standard"
 RENTAL_TYPE = "individual"
 PROPERTY_TYPE_ID = "Coliving"
-RESULTS_PATH = "scraping_results.json"
+LOG_DIR = "logs/fastapi"
 INT_ZERO = 0
 INT_ONE = 1
