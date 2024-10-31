@@ -2,6 +2,15 @@ import json
 from app.scrapy.flipcoliving.spider import scrape_flipcoliving
 from app.models.enums import URLs
 import app.utils.constants as constants
+from scrapy.crawler import CrawlerRunner
+from crochet import setup
+
+from app.scrapy.flipcoliving.flipcoliving.flipcoliving_spider import FlipcolivingSpiderSpider
+# from app.scrapy.somosalthena... import SomosalthenaSpider
+# from app.scrapy.nodis... import NodisSpider
+
+setup() 
+runner = CrawlerRunner()
 
 def run_webscraping(url: URLs) -> None:
     """
@@ -11,24 +20,18 @@ def run_webscraping(url: URLs) -> None:
         url (str): URL de la página que será scrapeada.
     """
     try:
-        # scraped_data = None
-
         print("url.value: ",url.value)
-        
         if url == URLs.flipcoliving:
-            scrape_flipcoliving(url.value)
+            # runner.crawl(FlipcolivingSpider, start_urls=[url.value])
+            pass
         elif url == URLs.somosalthena:
-            # somosalthena.scrape_somosalthena(url.value)
+            # runner.crawl(SomosAlthenaSpider, start_urls=[url.value])
             pass
         elif url == URLs.nodis:
-            # scraped_data = nodis.scrape_nodis(url.value)
+            # runner.crawl(NodisSpider, start_urls=[url.value])
             pass
-
-        # if scraped_data is not None:
-        #     with open(constants.RESULTS_PATH, "w") as f:
-        #         json.dump(scraped_data, f)
-        # else:
-        #     raise ValueError("No se pudo obtener datos scrapeados.")
+    except Exception as e:
+        print(f"Error al hacer scraping: {str(e)}")
 
     except Exception as e:
         print(f"Error al hacer scraping: {str(e)}")

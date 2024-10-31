@@ -176,4 +176,3 @@ def check_and_insert_rental_unit_calendar(
 
     except Exception as e:
         logger.info(f"An error occurred for rental unit ID {rental_unit_id}: {e}")
-
