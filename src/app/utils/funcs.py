@@ -21,11 +21,18 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 def detect_language(description: str) -> int:
-    if any(word in description for word in ["es", "de", "la", "el", "y"]):  # Palabras clave en español
+    spanish_keywords = [" es ", " de ", " la ", " el ", " y ", " en ", "un ", "una ", "los ", "las "]
+    english_keywords = [" is ", " the ", " a ", " an ", " and ", " in ", "to ", "of "]
+
+    spanish_count = sum(description.lower().count(word) for word in spanish_keywords)
+    english_count = sum(description.lower().count(word) for word in english_keywords)
+
+    if spanish_count > english_count:
         return Languages.SPANISH.value
-    elif any(word in description for word in ["is", "the", "a", "an", "and"]):  # Palabras clave en inglés
+    elif english_count > spanish_count:
         return Languages.ENGLISH.value
-    return None
+    else:
+        return None
 
 
 def get_currency_code(symbol: str) -> str:
@@ -48,9 +55,9 @@ def get_currency_code(symbol: str) -> str:
     return symbol_to_code.get(symbol, None)
 
 
-def get_month_dates(text):
+def get_month_dates(text: str):
     regex = (
-        r"(january|february|march|april|may|june|july|august|september|october|november|december|"
+        r"(now|january|february|march|april|may|june|july|august|september|october|november|december|"
         r"enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)"
     )
 
@@ -61,21 +68,24 @@ def get_month_dates(text):
         current_date = datetime.now()
         start_date = current_date.strftime("%Y-%m-%d")
 
-        try:
-            month_enum = Month[month_name.upper()]
-        except KeyError:
-            return None, None
-
-        month = month_enum.value
-
-        current_year = current_date.year
-        current_month = current_date.month
-        year = current_year if month >= current_month else current_year + 1
-
-        if month == 1:
-            end_date = datetime(year - 1, 12, 31)
+        if month_name == "now":
+            # "Now" case - return the current month's start and end dates
+            month = current_date.month
+            year = current_date.year
         else:
-            end_date = datetime(year, month - 1, 1) + timedelta(days=-1)
+            try:
+                month_enum = Month[month_name.upper()]
+                month = month_enum.value
+            except KeyError:
+                return None, None
+
+            year = current_date.year if month >= current_date.month else current_date.year + 1
+
+        # Calculate end date for the selected month and year
+        if month == 12:
+            end_date = datetime(year + 1, 1, 1) - timedelta(days=1)
+        else:
+            end_date = datetime(year, month + 1, 1) - timedelta(days=1)
 
         return start_date, end_date.strftime("%Y-%m-%d")
     else:

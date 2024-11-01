@@ -198,7 +198,7 @@ class FlipcolivingSpiderSpider(scrapy.Spider):
             if items_output[key]:
                 items_output[key] = self.check_data_object(items_output[key])
         items_output['all_firts_imagenes'] = self.remove_duplicate_urls(items_output['all_firts_imagenes'])
-
+        items_output['all_firts_imagenes'] = self.get_all_imagenes(items_output['all_firts_imagenes'])
         items_output["city_name"] = items_meta["city_name"]
         items_output["aux_city_url"] = items_meta["aux_city_url"]
         items_output["coliving_url"] = items_meta["coliving_url"]
@@ -329,3 +329,18 @@ class FlipcolivingSpiderSpider(scrapy.Spider):
                 cleaned_urls.append(clean_url)  # Add it to the result list
 
         return cleaned_urls
+
+    def get_all_imagenes(self,space_images: list) -> list[dict]:
+        all_imagenes = []
+
+        if not space_images:
+            return []
+        for index, value in enumerate(space_images):
+            cover = True if index == 0 else False
+            all_imagenes.append(
+                {
+                    "image": value,
+                    "isCover": cover,
+                }
+            )
+        return all_imagenes

@@ -5,7 +5,7 @@ import app.utils.constants as constants
 from scrapy.crawler import CrawlerRunner
 from crochet import setup
 
-# from app.scrapy.flipcoliving.flipcoliving.flipcoliving_spider import FlipcolivingSpiderSpider
+from app.scrapy.flipcoliving.flipcoliving.flipcoliving.spiders.flipcoliving_spider import FlipcolivingSpiderSpider
 # from app.scrapy.somosalthena... import SomosalthenaSpider
 # from app.scrapy.nodis... import NodisSpider
 
@@ -21,8 +21,9 @@ def run_webscraping(url: URLs) -> None:
     """
     try:
         if url == URLs.flipcoliving:
-            # runner.crawl(FlipcolivingSpider, start_urls=[url.value])
-            pass
+            print("entre")
+            runner.crawl(FlipcolivingSpiderSpider, start_urls=[url.value])
+
         elif url == URLs.somosalthena:
             # runner.crawl(SomosAlthenaSpider, start_urls=[url.value])
             pass
