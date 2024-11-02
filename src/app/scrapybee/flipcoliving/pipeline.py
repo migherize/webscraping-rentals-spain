@@ -371,9 +371,9 @@ def save_data(data: dict) -> Property:
 
 def create_json(item: Union[RentalUnits, Property, DatePayloadItem]) -> None:
     class PathDocument(Enum):
-        PROPERTY = "data/property.json"
-        RENTAL_UNITS = "data/rental_units.json"
-        CALENDAR = "data/calendar.json"
+        PROPERTY = "/data/property.json"
+        RENTAL_UNITS = "/data/rental_units.json"
+        CALENDAR = "/data/calendar.json"
 
     current_dir = os.getcwd()
 

@@ -5,6 +5,7 @@ import os
 import re
 from os import path
 import logging
+from collections import defaultdict
 from .constants import spider_names
 from pydantic import BaseModel
 import unicodedata
@@ -46,6 +47,11 @@ class RoomData(BaseModel):
     title: str
     images: List[str]
 
+def clean_string(text):
+    cleaned_text = re.sub(r'\bBullones\b', '', text)
+    cleaned_text = cleaned_text.replace("/", "")
+    return cleaned_text.strip()
+
 def remove_accents(text: str) -> str:
     normalized_text = unicodedata.normalize('NFD', text)
     return ''.join(char for char in normalized_text if unicodedata.category(char) != 'Mn')
@@ -65,9 +71,7 @@ def get_all_imagenes(space_images: list) -> list[dict]:
         )
     return all_imagenes
 
-
-
-def get_all_descriptions(parse_description: list):
+def get_all_descriptions(parse_description: list, parse_coliving_name:str):
     all_descriptions = []
     dict_language = {
         Languages.SPANISH.value: "Propiedades",
@@ -75,17 +79,17 @@ def get_all_descriptions(parse_description: list):
     }
     
     for description in parse_description:
-        lang_id = detect_language(description)  # Detecta el idioma de la descripción
+        lang_id = detect_language(description)
         if not lang_id:
-            continue  # Salta en caso de que no se detecte el idioma
+            continue
         
         descriptions = {
             "LanguagesId": lang_id,
-            "title": dict_language.get(lang_id, ""),
+            "title": f'{dict_language.get(lang_id, "")} {parse_coliving_name}',
             "description": remove_accents(description),
         }
         
-        if descriptions["description"]:  # Verifica que la descripción no esté vacía
+        if descriptions["description"]:
             all_descriptions.append(descriptions)
 
     return all_descriptions
@@ -99,11 +103,11 @@ def create_json(item: Union[RentalUnits, Property, DatePayloadItem]) -> None:
     current_dir = os.getcwd()
 
     if isinstance(item, RentalUnits):
-        json_file_path = os.path.join(current_dir, PathDocument.RENTAL_UNITS)
+        json_file_path = os.path.join(current_dir, PathDocument.RENTAL_UNITS.value)
     elif isinstance(item, Property):
-        json_file_path = os.path.join(current_dir, PathDocument.PROPERTY)
+        json_file_path = os.path.join(current_dir, PathDocument.PROPERTY.value)
     elif isinstance(item, DatePayloadItem):
-        json_file_path = os.path.join(current_dir, PathDocument.CALENDAR)
+        json_file_path = os.path.join(current_dir, PathDocument.CALENDAR.value)
     else:
         raise ValueError("item must be an instance of RentalUnits or Property or Calendar.")
 
@@ -206,16 +210,27 @@ def parse_banner_features(banner_features):
 
     return location, int(max_price), currency, int(sqm), int(bedrooms)
 
+def merge_by_language(descriptions):
+    merged = defaultdict(lambda: {"LanguagesId": None, "title": "", "description": ""})
+
+    for item in descriptions:
+        lang_id = item["LanguagesId"]
+
+        if merged[lang_id]["LanguagesId"] is None:
+            merged[lang_id]["LanguagesId"] = lang_id
+            merged[lang_id]["title"] = item["title"]
+
+        merged[lang_id]["description"] += (item["description"] + ". ")
+
+    return [dict(value) for value in merged.values()]
+
 class FlipcolivingPipeline:
     def open_spider(self, spider):
-        # Create file path for JSON output
         self.json_path = path.join(spider.output_folder, spider.output_filename)
-        # Initialize a list to hold items
         self.items = []
 
     def process_item(self, item, spider):
-        # Add item to the list
-        self.items.append(dict(item))  # Convert item to dict if it's not already
+        self.items.append(dict(item))
 
         # save lodgerin
         defaults = get_default_values()
@@ -224,8 +239,9 @@ class FlipcolivingPipeline:
             item["banner_features"]
         )
 
-        result_description = get_all_descriptions(item["parse_description"])
         parse_coliving_name = remove_accents(item["parse_coliving_name"][0]).replace(" ", "-")
+        result_description = get_all_descriptions(item["parse_description"],parse_coliving_name)
+        result_description = merge_by_language(result_description)
         logger.info(f"result_description {result_description}")
 
         try:
@@ -265,12 +281,13 @@ class FlipcolivingPipeline:
             logger.info(f"property_item creado con éxito: {property_item}")
             property_id = save_property(property_item)
             property_item.id = property_id
+            create_json(property_item)
             rooms_data = [
                 RoomData(
                     areaM2=int(rental_unit['data_rental_unit'][1].replace(" sqm", "")),
                     amount=int(rental_unit['data_rental_unit'][0].split(" to ")[-1].replace("€ /month", "").strip()),
                     schedule=rental_unit['available_rental_unit'][0],
-                    title=remove_accents(rental_unit['name_rental_unit'][0].replace(" ", "_")), 
+                    title=clean_string(remove_accents(rental_unit['name_rental_unit'][0].replace(" ", "_"))), 
                     images=rental_unit['imagenes_rental_unit'], 
                 )
                 for rental_unit in item['rental_units']
@@ -286,15 +303,16 @@ class FlipcolivingPipeline:
                 unit.id = rental_unit
                 list_rental_unit_id.append(rental_unit)
 
-            # for unit in rental_units_items:
-                # create_json(unit)
+            for unit in rental_units_items:
+                create_json(unit)
             logger.info(f'list_rental_unit_id {list_rental_unit_id}')
+
             #schedule
             for rental_id, calendar_unit in zip(list_rental_unit_id, calendar_unit_list):
                 check_and_insert_rental_unit_calendar(rental_id, calendar_unit)
 
-            # for calendar_unit in calendar_unit_list:
-                # create_json(calendar_unit)
+            for calendar_unit in calendar_unit_list:
+                create_json(calendar_unit)
 
             return property_item
 
@@ -302,6 +320,5 @@ class FlipcolivingPipeline:
             logger.info(f"Error al iniciar el scraping para {str(e)}")
 
     def close_spider(self, spider):
-        # Write the collected items to a JSON file
-        with open(self.json_path, "a", encoding="utf-8") as json_file:
+        with open(self.json_path, "w", encoding="utf-8") as json_file:
             json.dump(self.items, json_file, ensure_ascii=False, indent=4)

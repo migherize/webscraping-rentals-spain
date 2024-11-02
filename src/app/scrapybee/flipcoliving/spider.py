@@ -4,7 +4,7 @@ from enum import Enum
 from scrapingbee import ScrapingBeeClient
 from app.models.enums import ScrapingBeeParams
 import app.utils.constants as constants
-from app.scrapy.flipcoliving.pipeline import (
+from app.scrapybee.flipcoliving.pipeline import (
     byte_string_to_dict,
     refine_extractor_data,
     save_data,
