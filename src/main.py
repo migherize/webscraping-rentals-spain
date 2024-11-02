@@ -1,8 +1,6 @@
 import os
-import json
 import logging
-from enum import Enum
-from typing import Dict, Any
+from typing import Dict
 from fastapi import FastAPI, HTTPException, Query, BackgroundTasks
 import app.utils.constants as constants
 import app.models.enums as models
@@ -33,7 +31,7 @@ app = FastAPI(
 @app.get("/scrape")
 async def scrape_page(
     background_tasks: BackgroundTasks,
-    url: models.URLs = Query(..., description="URL to be scraped"),
+    page: models.Pages = Query(..., description="URL to be scraped"),
 ) -> Dict[str, str]:
     """
     Endpoint para iniciar el proceso de scraping en segundo plano.
@@ -45,14 +43,16 @@ async def scrape_page(
     Returns:
         dict: Mensaje confirmando que el scraping ha comenzado.
     """
-    logger.info(f"Solicitud de scraping recibida para la URL: {url.name}")
+ 
+    url = getattr(models.URLs, page.value).value
+    logger.info(f"Solicitud de scraping recibida para la URL: {url}")
 
     try:
         background_tasks.add_task(scraper.run_webscraping, url)
-        logger.info(f"Tarea de scraping iniciada en segundo plano para {url.name}")
+        logger.info(f"Tarea de scraping iniciada en segundo plano para {url}")
         return {"message": "Scraping iniciado, consulta el estado más tarde."}
     except Exception as e:
-        logger.error(f"Error al iniciar el scraping para {url.name}: {str(e)}")
+        logger.error(f"Error al iniciar el scraping para {url}: {str(e)}")
         raise HTTPException(
             status_code=500, detail="Error al iniciar el proceso de scraping."
         )
@@ -61,29 +61,41 @@ async def scrape_page(
 @app.get("/log_status/{spider_name}")
 def check_log_status(spider_name: models.Pages) -> Dict[str, str]:
     """
-    Endpoint para verificar el estado del log de un spider basado en su nombre en el Enum URLs.
+    Endpoint para verificar el estado del log de un spider basado en su nombre en el Enum Pages.
 
     Args:
-        spider_name (URLs): Nombre del spider basado en el Enum URLs.
+        spider_name (models.Pages): Nombre del spider basado en el Enum Pages.
 
     Returns:
-        dict: Estado de los logs del spider.
+        dict: Estado de los logs del spider, incluyendo si hay errores.
     """
-    log_path = f"logs/{spider_name.name}/{spider_name.name}_spider.log"
-    logger.info(f"Verificando el estado del log para el spider: {spider_name.name}")
+    log_path = f"logs/{spider_name.value}/{spider_name.value}_spider.log"
+    logger.info(f"Verificando el estado del log para el spider: {spider_name.value}")
 
-    if not os.path.exists(log_path):
-        logger.warning(f"Log no encontrado para el spider: {spider_name.name}")
+    if not os.path.isfile(log_path):
+        logger.warning(f"Log no encontrado para el spider: {spider_name.value}")
         raise HTTPException(status_code=404, detail="Log no encontrado")
 
-    with open(log_path, "r", encoding="utf-8") as log_file:
-        errors = [line for line in log_file if "ERROR" in line]
+    try:
+        with open(log_path, "r", encoding="utf-8") as log_file:
+            errors = [line for line in log_file if "ERROR" in line]
+            log_file.seek(0)
+            recent_lines = log_file.readlines()[-10:]
 
-    if errors:
+        status = "error" if errors else "ok"
+        details = {
+            "error_count": len(errors),
+            "recent_errors": errors[:5],
+            "recent_log_lines": recent_lines
+        }
+
         logger.info(
-            f"Se encontraron {len(errors)} errores en el log de {spider_name.name}"
+            f"{len(errors)} errores encontrados en el log de {spider_name.value}" if errors else f"No se encontraron errores en el log de {spider_name.value}"
         )
-        return {"status": "error", "details": f"{len(errors)} errores encontrados"}
-    else:
-        logger.info(f"No se encontraron errores en el log de {spider_name.name}")
-        return {"status": "ok", "details": "No se encontraron errores"}
+        return {"status": status, "details": details}
+
+    except Exception as e:
+        logger.error(f"Error al leer el archivo de log para {spider_name.value}: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail="Error al procesar el archivo de log."
+        )

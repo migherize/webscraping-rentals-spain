@@ -99,6 +99,7 @@ class Month(Enum):
     OCTUBRE = 10
     NOVIEMBRE = 11
     DICIEMBRE = 12
+
 feature_map = {
     "1": ["air conditioning", "aire acondicionado"],
     "2": ["bed linen", "ropa de cama", "sábanas"],

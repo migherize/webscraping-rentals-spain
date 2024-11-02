@@ -324,6 +324,5 @@ class FlipcolivingPipeline:
             logger.info(f"Error al iniciar el scraping para {str(e)}")
 
     def close_spider(self, spider):
-        # Write the collected items to a JSON file
-        with open(self.json_path, "a", encoding="utf-8") as json_file:
+        with open(self.json_path, "w", encoding="utf-8") as json_file:
             json.dump(self.items, json_file, ensure_ascii=False, indent=4)

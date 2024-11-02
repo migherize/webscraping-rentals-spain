@@ -11,7 +11,7 @@ main_spider = f"{BASE_NAME_MODEL}_spider"
 # Datos directos si no se coloca informacion por consola
 item_input_output_archive: dict[str, str] = {
     "output_folder_path": "./",
-    "output_folder_name": "process_data",
+    "output_folder_name": "data",
     "file_name": f"{BASE_NAME_MODEL}.json",
     "processed_name": f"{BASE_NAME_MODEL}" + "_refined.csv",
 }
