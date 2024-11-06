@@ -25,6 +25,7 @@ from app.models.schemas import (
 )
 import app.models.enums as models
 from app.utils.funcs import find_feature_keys, get_elements_types, save_property, save_rental_unit,get_month_dates,check_and_insert_rental_unit_calendar,detect_language
+from scrapy import Spider
 
 
 os.makedirs(constants.LOG_DIR, exist_ok=True)
@@ -234,13 +235,13 @@ def merge_by_language(descriptions):
     return [dict(value) for value in merged.values()]
 
 class FlipcolivingPipeline:
-    def open_spider(self, spider):
+    def open_spider(self, spider: Spider):
         self.json_path = path.join(spider.output_folder, spider.output_filename)
         self.items = []
 
-    def process_item(self, item, spider):
+    def process_item(self, item, spider: Spider):
         self.items.append(dict(item))
-        print("entre a guardar")
+        spider.logger.info("entre a guardar")
         # save lodgerin
         defaults = get_default_values()
         item = item["items_output"]
@@ -251,7 +252,7 @@ class FlipcolivingPipeline:
         parse_coliving_name = remove_accents(item["parse_coliving_name"][0]).replace(" ", "-")
         result_description = get_all_descriptions(item["parse_description"],parse_coliving_name)
         result_description = merge_by_language(result_description)
-        print(f"result_description {result_description}")
+        spider.logger.info(f"result_description {result_description}")
 
         try:
             property_item = Property(
@@ -287,7 +288,7 @@ class FlipcolivingPipeline:
                 ),
             )
 
-            print(f"property_item creado con éxito: {property_item}")
+            spider.logger.info(f"property_item creado con éxito: {property_item}")
             property_id = save_property(property_item)
             property_item.id = property_id
             create_json(property_item)
@@ -314,7 +315,7 @@ class FlipcolivingPipeline:
 
             for unit in rental_units_items:
                 create_json(unit)
-            print(f'list_rental_unit_id {list_rental_unit_id}')
+            spider.logger.info(f'list_rental_unit_id {list_rental_unit_id}')
             
             #schedule
             for rental_id, calendar_unit in zip(list_rental_unit_id, calendar_unit_list):
@@ -326,10 +327,10 @@ class FlipcolivingPipeline:
             return property_item
 
         except Exception as e:
-            print(f"Error al iniciar el scraping para {str(e)}")
+            spider.logger.error(f"Error al iniciar el scraping para {str(e)}")
 
-    def close_spider(self, spider):
-        print(f"close_spider {models.Pages.flipcoliving.value}")
+    def close_spider(self, spider: Spider):
+        spider.logger.info(f"close_spider {models.Pages.flipcoliving.value}")
         with open(self.json_path, "w", encoding="utf-8") as json_file:
             json.dump(self.items, json_file, ensure_ascii=False, indent=4)
-        print("Spider finished successfully")
+        spider.logger.info("Spider finished successfully")
