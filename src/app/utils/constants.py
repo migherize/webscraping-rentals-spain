@@ -16,6 +16,6 @@ LANGUAGES = [1, 2]
 CANCELLATION_POLICY = "standard"
 RENTAL_TYPE = "individual"
 PROPERTY_TYPE_ID = "Coliving"
-LOG_DIR = os.getcwd() + '/logs/fastapi'
+LOG_DIR = os.getcwd() + '/logs/'
 INT_ZERO = 0
 INT_ONE = 1

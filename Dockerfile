@@ -9,9 +9,12 @@ RUN pip3 install --no-cache-dir --upgrade -r requirements.txt
 FROM python:3.10-slim-buster AS IMAGE
 COPY --from=BUILDER /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
-WORKDIR /app
-COPY ./src /app
-COPY ./data /app/data
+ENV PYTHONPATH=/app:$PYTHONPATH
 
-CMD /opt/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8080
+WORKDIR /app
+COPY ./src/app /app
+COPY ./data /data
+
+# CMD /opt/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8080
+ENTRYPOINT ["tail", "-f", "/dev/null"]
 # CMD fastapi dev main.py --host 0.0.0.0 --port 8080
