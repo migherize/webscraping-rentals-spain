@@ -130,7 +130,7 @@ dmypy.json
 
 # General
 local
-data
+data/
 .vscode
 .env
 .pylintrc
