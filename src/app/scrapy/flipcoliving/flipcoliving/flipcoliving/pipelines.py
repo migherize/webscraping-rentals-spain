@@ -6,7 +6,7 @@ import re
 from os import path
 import logging
 from collections import defaultdict
-from .constants import spider_names
+from .constants_spider import spider_names
 from pydantic import BaseModel
 import unicodedata
 from enum import Enum
@@ -23,23 +23,32 @@ from app.models.schemas import (
     DatePayload,
     DatePayloadItem
 )
+import app.models.enums as models
 from app.utils.funcs import find_feature_keys, get_elements_types, save_property, save_rental_unit,get_month_dates,check_and_insert_rental_unit_calendar,detect_language
 
 
-os.makedirs("logs/flipcoliving", exist_ok=True)
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler(
-            os.path.join("logs/flipcoliving", "spider.log"), mode="a", encoding="utf-8"
-        ),
-    ],
-)
-logger = logging.getLogger(__name__)
+os.makedirs(constants.LOG_DIR, exist_ok=True)
+print(f"Log directory: {constants.LOG_DIR}") 
 
+spider_logger = logging.getLogger("scrapy_spider")
+spider_logger.setLevel(logging.DEBUG)
+
+if not spider_logger.handlers:
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S"
+    )
+
+    file_handler = logging.FileHandler(
+        os.path.join(constants.LOG_DIR, f"{models.Pages.flipcoliving.value}.log"),
+        mode="a",
+        encoding="utf-8"
+    )
+    file_handler.setFormatter(formatter)
+
+    spider_logger.addHandler(file_handler)
+
+print(f"Iniciando la pipeline '{models.Pages.flipcoliving.value}'.log")
 class RoomData(BaseModel):
     areaM2: int
     amount: int
@@ -234,7 +243,7 @@ class FlipcolivingPipeline:
 
     def process_item(self, item, spider):
         self.items.append(dict(item))
-
+        print("entre a guardar")
         # save lodgerin
         defaults = get_default_values()
         item = item["items_output"]
@@ -245,7 +254,7 @@ class FlipcolivingPipeline:
         parse_coliving_name = remove_accents(item["parse_coliving_name"][0]).replace(" ", "-")
         result_description = get_all_descriptions(item["parse_description"],parse_coliving_name)
         result_description = merge_by_language(result_description)
-        logger.info(f"result_description {result_description}")
+        print(f"result_description {result_description}")
 
         try:
             property_item = Property(
@@ -281,7 +290,7 @@ class FlipcolivingPipeline:
                 ),
             )
 
-            logger.info(f"property_item creado con éxito: {property_item}")
+            print(f"property_item creado con éxito: {property_item}")
             property_id = save_property(property_item)
             property_item.id = property_id
             create_json(property_item)
@@ -309,7 +318,7 @@ class FlipcolivingPipeline:
 
             for unit in rental_units_items:
                 create_json(unit)
-            logger.info(f'list_rental_unit_id {list_rental_unit_id}')
+            print(f'list_rental_unit_id {list_rental_unit_id}')
             
             #schedule
             for rental_id, calendar_unit in zip(list_rental_unit_id, calendar_unit_list):
@@ -321,8 +330,10 @@ class FlipcolivingPipeline:
             return property_item
 
         except Exception as e:
-            logger.info(f"Error al iniciar el scraping para {str(e)}")
+            print(f"Error al iniciar el scraping para {str(e)}")
 
     def close_spider(self, spider):
+        print(f"close_spider {models.Pages.flipcoliving.value}")
         with open(self.json_path, "w", encoding="utf-8") as json_file:
             json.dump(self.items, json_file, ensure_ascii=False, indent=4)
+        print("Spider finished successfully")

@@ -13,6 +13,12 @@ services:
     volumes:
       - "./src/:/app"
       - "./data/:/app/data"
+      - "./logs/:/app/logs"
 
     ports:
       - "8080:8080"
+
+    environment:
+      - PYTHONPATH=/app:$PYTHONPATH 
+      - LODGERIN_API=/app:$LODGERIN_API 
+      - LODGERIN_API_KEY=/app:$LODGERIN_API_KEY 

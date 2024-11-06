@@ -1,5 +1,7 @@
 import os
 import logging
+from socket import timeout
+import time
 from crochet import setup, wait_for
 from twisted.internet.defer import inlineCallbacks
 from scrapy.crawler import CrawlerRunner
@@ -9,6 +11,8 @@ import app.utils.constants as constants
 from app.scrapy.flipcoliving.flipcoliving.flipcoliving.spiders.flipcoliving_spider import FlipcolivingSpiderSpider
 # from app.scrapy.somosalthena.somosalthena.somosalthena.spiders.somosalthena_spider import SomosAlthenaSpider
 # from app.scrapy.nodis.nodis.nodis.spiders.nodis_spider import NodisSpider
+
+os.makedirs(constants.LOG_DIR, exist_ok=True)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -22,12 +26,12 @@ logging.basicConfig(
     ],
 )
 logger = logging.getLogger(__name__)
-
+logger.setLevel(logging.DEBUG)
 
 setup()
 runner = CrawlerRunner()
 
-@wait_for(timeout=60)
+@wait_for(timeout=600)
 @inlineCallbacks
 def run_webscraping(url: URLs) -> None:
     """
@@ -38,7 +42,7 @@ def run_webscraping(url: URLs) -> None:
     """
     try:
         if url == URLs.flipcoliving:
-            yield runner.crawl(FlipcolivingSpiderSpider, start_urls=[url.value])
+            yield runner.crawl(FlipcolivingSpiderSpider, start_urls=[url])
 
         elif url == URLs.somosalthena:
             # yield runner.crawl(SomosAlthenaSpider, start_urls=[url.value])
@@ -49,4 +53,4 @@ def run_webscraping(url: URLs) -> None:
             pass
 
     except Exception as e:
-        logger.info(f"Error al hacer scraping para {url.name}: {str(e)}")
+        logger.info(f"Error al hacer scraping para {url}: {str(e)}")
