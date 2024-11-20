@@ -217,3 +217,65 @@ def check_and_insert_rental_unit_calendar(
 
     except Exception as e:
         logger.info(f"An error occurred for rental unit ID {rental_unit_id}: {e}")
+
+def remove_html(text):
+    """
+    Removes all HTML tags and characters from a string.
+
+    Args:
+        text (str): The string containing HTML tags.
+
+    Returns:
+        str: The cleaned string, without HTML tags.
+    """
+    cleaned_text = re.sub(r'<.*?>', '', text)
+    return cleaned_text
+
+def clean_image_urls(image_string):
+    """
+    Cleans a string containing image URLs and returns a list of cleaned URLs.
+
+    Args:
+        image_string (str): The string containing image URLs, separated by commas.
+
+    Returns:
+        list: A list of cleaned image URLs.
+    """
+    cleaned_string = image_string.replace("\\/", "/")
+    url_list = cleaned_string.split(",")
+    return url_list
+
+
+def initialize_scraping_context():
+    """
+    Realiza la inicialización previa al scraping, como obtener API keys, tokens y configuraciones.
+    
+    Returns:
+        dict: Diccionario con datos inicializados como API key, tokens y otros valores.
+    """
+    LodgerinAPI.get_features()
+    try:
+        apikey = "obtained_api_key"
+        token_actualizado = "updated_token"
+        servicios = ["servicio1", "servicio2"]
+
+        return {
+            "apikey": apikey,
+            "token": token_actualizado,
+            "servicios": servicios
+        }
+    except Exception as e:
+        logger.error(f"Error durante la inicialización del contexto de scraping: {str(e)}")
+        raise
+
+
+if __name__=="__main__":
+    
+    html_text = "<p>This is an <strong>example</strong> of text with <a href='#'>HTML</a>.</p>"
+    cleaned_text = remove_html(html_text)
+    print(cleaned_text)
+    
+    image_string = ("https:\\/\\/media.mobiliagestion.es\\/Portals\\/inmoguinotprunera\\/Images\\/13707\\/17669168.jpg,"
+                    "https:\\/\\/media.mobiliagestion.es\\/Portals\\/inmoguinotprunera\\/Images\\/13707\\/17669170.jpg")
+    cleaned_urls = clean_image_urls(image_string)
+    print(cleaned_urls)
