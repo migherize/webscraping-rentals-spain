@@ -13,7 +13,8 @@ item_input_output_archive: dict[str, str] = {
     "output_folder_path": "./",
     "output_folder_name": "data",
     "file_name": f"{BASE_NAME_MODEL}.json",
-    "processed_name": f"{BASE_NAME_MODEL}" + "_refined.csv",
+    "processed_name": f"{BASE_NAME_MODEL}" + "_refined.json",
+    "refine": '0',
 }
 
 # ------------------------------------------------------------------------
@@ -36,5 +37,5 @@ spider_names: dict = {main_spider: item_main_spider}
 item_custom_settings: dict[str, bool or str] = {
     "ROBOTSTXT_OBEY": False,
     "AUTOTHROTTLE_ENABLED": True,
-    # "LOG_LEVEL": "INFO",
+    "LOG_LEVEL": "INFO",
 }

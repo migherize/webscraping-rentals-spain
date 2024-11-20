@@ -1,10 +1,6 @@
 # coding=utf-8
-import os
 import re
 import scrapy
-import logging
-import requests
-import json
 
 from os import path
 from pathlib import Path
@@ -18,6 +14,8 @@ from ..enum_path import RegexProperty
 # import app.models.enums as models
 
 
+# scrapy crawl somosalthena_spider -a refine=0
+# scrapy crawl somosalthena_spider -a refine=1
 
 class SomosalthenaSpiderSpider(scrapy.Spider):
     name = "somosalthena_spider"
@@ -26,33 +24,19 @@ class SomosalthenaSpiderSpider(scrapy.Spider):
 
         super(SomosalthenaSpiderSpider, self).__init__(*args, **kwargs)
 
-        # -----------------------------------------------------------------
-        # Ruta de la carpeta donde se almancera la data extraida
-        self.output_folder_path = kwargs.pop(
-            'output_folder_path', item_input_output_archive['output_folder_path']
-        )
-        # Nombre de la carpeta donde se almacenara la data extraida
-        self.output_folder_name = kwargs.pop(
-            'output_folder_name', item_input_output_archive['output_folder_name']
-        )
-        # Path de la carpeta salida
-        self.output_folder = path.join(
-            self.output_folder_path, self.output_folder_name
-        )
-
-        # -----------------------------------------------------------------
-        # Nombre del documento con la data extraida sin refinar
-        self.output_filename = kwargs.pop(
-            'file_name', item_input_output_archive['file_name']
-        )
-        # Nombre del documento con la data extraida refinada
-        self.output_filename_processed = kwargs.pop(
-            'processed_name', item_input_output_archive['processed_name']
+        self.items_spider_output_document = {
+            key_data: kwargs.pop(key_data, item_input_output_archive[key_data])
+            for key_data in item_input_output_archive.keys()
+        }
+        self.items_spider_output_document['output_folder'] = path.join(
+            self.items_spider_output_document['output_folder_path'],
+            self.items_spider_output_document['output_folder_name']
         )
         
+        print('items_spider_output_document:', self.items_spider_output_document)
         # -----------------------------------------------------------------
         # if folder not exists create one
-        Path(self.output_folder).mkdir(
+        Path(self.items_spider_output_document['output_folder']).mkdir(
             parents=True, exist_ok=True
         )
 
@@ -62,26 +46,14 @@ class SomosalthenaSpiderSpider(scrapy.Spider):
         Inicio de la pagina principal
         """
 
+        if self.items_spider_output_document['refine'] == '1':
+            self.logger.info('Proceso de Refinado')
+            return None
+
         url = 'https://somosalthena.com/inmuebles/'
 
-        headers = {
-            "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-            "accept-language": "es-419,es;q=0.9,en-US;q=0.8,en;q=0.7",
-            "cache-control": "max-age=0",
-            "priority": "u=0, i",
-            "sec-ch-ua": "\"Chromium\";v=\"130\", \"Google Chrome\";v=\"130\", \"Not?A_Brand\";v=\"99\"",
-            "sec-ch-ua-mobile": "?0",
-            "sec-ch-ua-platform": "\"Windows\"",
-            "sec-fetch-dest": "document",
-            "sec-fetch-mode": "navigate",
-            "sec-fetch-site": "same-origin",
-            "sec-fetch-user": "?1",
-            "upgrade-insecure-requests": "1"
-        }
-        
         yield scrapy.Request(
             url=url,
-            headers=headers,
         )
 
     def parse(self, response):
@@ -97,11 +69,8 @@ class SomosalthenaSpiderSpider(scrapy.Spider):
         if not all_data:
             self.logger.warning('No se logro la obtencion del JSON')
             return None
+        
+        item = items.SomosalthenaItem()
 
-        try:
-            path_document_API = os.path.join(self.output_folder, self.output_filename)
-            with open(path_document_API,'w') as json_file:
-                json.dump(all_data, json_file, indent=4)
-        except Exception as error:
-            self.logger.error('No se logro guardar la data en un archivo .json')
-            self.logger.error('Error: "%s"', str(error))
+        item['items_output'] = all_data
+        yield item

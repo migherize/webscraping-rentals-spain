@@ -27,6 +27,8 @@ import app.models.enums as models
 from app.utils.funcs import find_feature_keys, get_elements_types, save_property, save_rental_unit,get_month_dates,check_and_insert_rental_unit_calendar,detect_language
 from scrapy import Spider
 
+from app.scrapy.common import get_all_imagenes
+
 
 os.makedirs(constants.LOG_DIR, exist_ok=True)
 print(f"Log directory: {constants.LOG_DIR}") 
@@ -66,20 +68,6 @@ def remove_accents(text: str) -> str:
     normalized_text = unicodedata.normalize('NFD', text)
     return ''.join(char for char in normalized_text if unicodedata.category(char) != 'Mn')
 
-def get_all_imagenes(space_images: list) -> list[dict]:
-    all_imagenes = []
-
-    if not space_images:
-        return []
-    for index, value in enumerate(space_images):
-        cover = True if index == 0 else False
-        all_imagenes.append(
-            {
-                "image": value,
-                "isCover": cover,
-            }
-        )
-    return all_imagenes
 
 def get_all_descriptions(parse_description: list, parse_coliving_name:str):
     all_descriptions = []
