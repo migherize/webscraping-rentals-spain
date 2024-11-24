@@ -21,4 +21,3 @@ services:
     environment:
       - PYTHONPATH=/app:$PYTHONPATH 
       - LODGERIN_API=/app:$LODGERIN_API 
-      - LODGERIN_API_KEY=/app:$LODGERIN_API_KEY 

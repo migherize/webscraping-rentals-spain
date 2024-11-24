@@ -2,7 +2,13 @@ import re
 import os
 import logging
 from datetime import datetime, timedelta
-from app.models.enums import Month, PropertyType, ContractModels, CurrencyCode, Languages
+from app.models.enums import (
+    Month,
+    PropertyType,
+    ContractModels,
+    CurrencyCode,
+    Languages,
+)
 from app.utils.lodgerinService import LodgerinAPI
 import app.utils.constants as constants
 from app.models.schemas import DatePayloadItem
@@ -15,14 +21,28 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler(os.path.join(constants.LOG_DIR, "app.log"), mode="a", encoding="utf-8"),
+        logging.FileHandler(
+            os.path.join(constants.LOG_DIR, "app.log"), mode="a", encoding="utf-8"
+        ),
     ],
 )
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
+
 def detect_language(description: str) -> int:
-    spanish_keywords = [" es ", " de ", " la ", " el ", " y ", " en ", "un ", "una ", "los ", "las "]
+    spanish_keywords = [
+        " es ",
+        " de ",
+        " la ",
+        " el ",
+        " y ",
+        " en ",
+        "un ",
+        "una ",
+        "los ",
+        "las ",
+    ]
     english_keywords = [" is ", " the ", " a ", " an ", " and ", " in ", "to ", "of "]
 
     spanish_count = sum(description.lower().count(word) for word in spanish_keywords)
@@ -52,7 +72,7 @@ def get_currency_code(symbol: str) -> str:
         "€": CurrencyCode.EUR.value,
         "ZWL": CurrencyCode.ZWL.value,
     }
-    
+
     return symbol_to_code.get(symbol, None)
 
 
@@ -80,7 +100,11 @@ def get_month_dates(text: str):
             except KeyError:
                 return None, None
 
-            year = current_date.year if month >= current_date.month else current_date.year + 1
+            year = (
+                current_date.year
+                if month >= current_date.month
+                else current_date.year + 1
+            )
 
         # Calculate end date for the selected month and year
         if month == 12:
@@ -109,13 +133,13 @@ def find_feature_keys(features_list: str, feature_map: dict):
 
 
 def get_elements_types(term):
-    lodgerin_api = LodgerinAPI(constants.LODGERIN_API_KEY)
+    lodgerin_api = LodgerinAPI(constants.LODGERIN_API_KEY)  # TODO: get spider.context
 
     if term in {ptype.value for ptype in PropertyType}:
         elements = lodgerin_api.get_property_types()
 
     elif term in {ptype.value for ptype in ContractModels}:
-        elements = lodgerin_api.get_elements()
+        elements = lodgerin_api.get_contract_types()
 
     else:
         return None
@@ -139,7 +163,9 @@ def save_property(property_item):
     if response is not None and "msg" in response and "data" in response:
         if response["msg"] == "The property has been saved successfully!":
             data = response["data"]
-            logger.info(f"Property saved successfully! Property Code: {data.get('code')}, Property ID: {data.get('id')}, Property Name: {data.get('name')}")
+            logger.info(
+                f"Property saved successfully! Property Code: {data.get('code')}, Property ID: {data.get('id')}, Property Name: {data.get('name')}"
+            )
             return data.get("id")
         else:
             logger.info(f"Unexpected message: {response['msg']}")
@@ -156,7 +182,9 @@ def save_rental_unit(rental_unit_item):
     if response is not None and "msg" in response and "data" in response:
         if response["msg"] == "The rental unit has been saved successfully!":
             data = response["data"]
-            logger.info(f"rental_unit saved successfully! rental_unit ID: {data.get('id')}")
+            logger.info(
+                f"rental_unit saved successfully! rental_unit ID: {data.get('id')}"
+            )
             return data.get("id")
         else:
             logger.info(f"Unexpected message: {response['msg']}")
@@ -218,6 +246,7 @@ def check_and_insert_rental_unit_calendar(
     except Exception as e:
         logger.info(f"An error occurred for rental unit ID {rental_unit_id}: {e}")
 
+
 def remove_html(text):
     """
     Removes all HTML tags and characters from a string.
@@ -228,8 +257,9 @@ def remove_html(text):
     Returns:
         str: The cleaned string, without HTML tags.
     """
-    cleaned_text = re.sub(r'<.*?>', '', text)
+    cleaned_text = re.sub(r"<.*?>", "", text)
     return cleaned_text
+
 
 def clean_image_urls(image_string):
     """
@@ -244,38 +274,3 @@ def clean_image_urls(image_string):
     cleaned_string = image_string.replace("\\/", "/")
     url_list = cleaned_string.split(",")
     return url_list
-
-
-def initialize_scraping_context():
-    """
-    Realiza la inicialización previa al scraping, como obtener API keys, tokens y configuraciones.
-    
-    Returns:
-        dict: Diccionario con datos inicializados como API key, tokens y otros valores.
-    """
-    LodgerinAPI.get_features()
-    try:
-        apikey = "obtained_api_key"
-        token_actualizado = "updated_token"
-        servicios = ["servicio1", "servicio2"]
-
-        return {
-            "apikey": apikey,
-            "token": token_actualizado,
-            "servicios": servicios
-        }
-    except Exception as e:
-        logger.error(f"Error durante la inicialización del contexto de scraping: {str(e)}")
-        raise
-
-
-if __name__=="__main__":
-    
-    html_text = "<p>This is an <strong>example</strong> of text with <a href='#'>HTML</a>.</p>"
-    cleaned_text = remove_html(html_text)
-    print(cleaned_text)
-    
-    image_string = ("https:\\/\\/media.mobiliagestion.es\\/Portals\\/inmoguinotprunera\\/Images\\/13707\\/17669168.jpg,"
-                    "https:\\/\\/media.mobiliagestion.es\\/Portals\\/inmoguinotprunera\\/Images\\/13707\\/17669170.jpg")
-    cleaned_urls = clean_image_urls(image_string)
-    print(cleaned_urls)

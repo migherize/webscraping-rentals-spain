@@ -41,7 +41,7 @@ class FlipcolivingSpiderSpider(scrapy.Spider):
     name = "flipcoliving_spider"
     custom_settings = item_custom_settings
     
-    def __init__(self, *args, **kwargs):
+    def __init__(self, context=None, *args, **kwargs):
 
         super(FlipcolivingSpiderSpider, self).__init__(*args, **kwargs)
 
@@ -74,6 +74,7 @@ class FlipcolivingSpiderSpider(scrapy.Spider):
         Path(self.output_folder).mkdir(
             parents=True, exist_ok=True
         )
+        self.context = context
 
 
     def start_requests(self):
@@ -206,7 +207,6 @@ class FlipcolivingSpiderSpider(scrapy.Spider):
                 items_output[key] = self.check_data_object(items_output[key])
         items_output['all_firts_imagenes'] = self.remove_duplicate_urls(items_output['all_firts_imagenes'])
         items_output['all_firts_imagenes'] = self.get_all_imagenes(items_output['all_firts_imagenes'])
-
         items_output["city_name"] = items_meta["city_name"]
         items_output["aux_city_url"] = items_meta["aux_city_url"]
         items_output["coliving_url"] = items_meta["coliving_url"]
@@ -238,7 +238,6 @@ class FlipcolivingSpiderSpider(scrapy.Spider):
                 "imagenes_rental_unit": response.xpath(XpathGeneralColiving.IMAGENES_RENTAL_UNIT.value).getall(),
             }
             data_rental_unit['imagenes_rental_unit'] = self.remove_duplicate_urls(data_rental_unit['imagenes_rental_unit'])
-
             items_rental_units.append(data_rental_unit)
 
         elif type_name_rental_unit == 'The Rooms':
@@ -338,7 +337,6 @@ class FlipcolivingSpiderSpider(scrapy.Spider):
                 cleaned_urls.append(clean_url)  # Add it to the result list
 
         return cleaned_urls
-    
 
     def get_all_imagenes(self,space_images: list) -> list[dict]:
         all_imagenes = []
@@ -354,4 +352,3 @@ class FlipcolivingSpiderSpider(scrapy.Spider):
                 }
             )
         return all_imagenes
-

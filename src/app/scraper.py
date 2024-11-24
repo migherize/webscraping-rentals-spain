@@ -8,6 +8,7 @@ from scrapy.crawler import CrawlerRunner
 from app.models.enums import URLs
 import app.utils.constants as constants
 
+from app.scrapy.common import initialize_scraping_context
 from app.scrapy.flipcoliving.flipcoliving.flipcoliving.spiders.flipcoliving_spider import FlipcolivingSpiderSpider
 from app.scrapy.somosalthena.somosalthena.somosalthena.spiders.somosalthena_spider import SomosalthenaSpiderSpider
 # from app.scrapy.nodis.nodis.nodis.spiders.nodis_spider import NodisSpider
@@ -28,28 +29,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-def initialize_scraping_context():
-    """
-    Realiza la inicialización previa al scraping, como obtener API keys, tokens y configuraciones.
-    
-    Returns:
-        dict: Diccionario con datos inicializados como API key, tokens y otros valores.
-    """
-    try:
-        apikey = "obtained_api_key"
-        token_actualizado = "updated_token"
-        servicios = ["servicio1", "servicio2"]
-
-        return {
-            "apikey": apikey,
-            "token": token_actualizado,
-            "servicios": servicios
-        }
-    except Exception as e:
-        logger.error(f"Error durante la inicialización del contexto de scraping: {str(e)}")
-        raise
-
-
 setup()
 runner = CrawlerRunner()
 
@@ -63,16 +42,17 @@ def run_webscraping(url: URLs) -> None:
         url (URLs): URL de la página que será scrapeada.
     """
     try:
-        context = initialize_scraping_context()
-        logger.info(f"Contexto inicializado: {context}")
-        
+        context = ""
         if url == URLs.flipcoliving:
+            context = initialize_scraping_context(constants.EMAIL_FLIPCOLIVING)
             yield runner.crawl(FlipcolivingSpiderSpider, start_urls=[url], context=context)
 
         elif url == URLs.somosalthena:
+            context = initialize_scraping_context(constants.EMAIL_SOMOSATHENEA)
             yield runner.crawl(SomosalthenaSpiderSpider, start_urls=[url], context=context)
 
         elif url == URLs.nodis:
+            # context = initialize_scraping_context(constants.EMAIL_NODIS)
             # yield runner.crawl(NodisSpider, start_urls=[url.value])
             pass
 
