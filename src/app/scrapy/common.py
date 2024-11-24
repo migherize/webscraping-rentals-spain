@@ -1,5 +1,8 @@
 import re
-
+import json
+import requests
+from app.utils.lodgerinService import LodgerinAPI, LodgerinInternal
+import app.utils.constants as constants
 
 def get_all_imagenes(space_images: list) -> list[dict]:
     all_imagenes = []
@@ -38,3 +41,42 @@ def clean_information_html(text):
     cleaned = re.sub(r'<.*?>', '', text)  # Remove any HTML tags
     cleaned = re.sub(r'\s+', ' ', cleaned)  # Replace multiple spaces with a single space
     return cleaned.strip()  # Remove leading and trailing whitespace
+
+def initialize_scraping_context(email: str):
+    try:
+        lodgerin_api = LodgerinInternal(email)
+        api_key = lodgerin_api.get_api_key(email)
+        api_client = LodgerinAPI(api_key)
+        api_client.load_all_data()
+        mapped_data = api_client.get_mapped_data()
+        mapped_data['api_key'] = {
+            "data": [
+                {
+                    "id": email,
+                    "name": api_key
+                }
+            ]
+        }
+        return mapped_data
+    except Exception as e:
+        print(f"Error durante la inicialización del contexto de scraping: {str(e)}")
+        raise
+
+
+def read_json() -> dict:
+    """
+    Lee un archivo JSON y lo convierte en un diccionario de Python.
+    """
+    try:
+        with open(constants.ELEMENTS_JSON, "r", encoding="utf-8") as file:
+            data = json.load(file)
+        return data
+    except FileNotFoundError:
+        print(f"Error: El archivo {constants.ELEMENTS_JSON} no se encontró.")
+        return {}
+    except json.JSONDecodeError:
+        print(f"Error: El archivo {constants.ELEMENTS_JSON} no es un JSON válido.")
+        return {}
+    except Exception as e:
+        print(f"Error inesperado: {e}")
+        return {}

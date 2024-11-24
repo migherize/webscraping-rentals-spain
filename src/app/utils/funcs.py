@@ -29,6 +29,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
+
 def detect_language(description: str) -> int:
     spanish_keywords = [
         " es ",
