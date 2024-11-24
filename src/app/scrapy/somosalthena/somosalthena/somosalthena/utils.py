@@ -3,9 +3,76 @@ import re
 import json
 from scrapy import Spider
 from pprint import pprint
+from enum import Enum
 from app.scrapy.common import clean_information_html, get_all_images
 from app.models.schemas import Property, RentalUnits
 import app.utils.constants as constants
+from app.models.schemas import (
+    Property,
+    RentalUnits,
+    ContractModel,
+    Description,
+    Image,
+    LocationAddress,
+    DatePayload,
+    DatePayloadItem,
+    ContractTypes,
+    SpacesTypes,
+    PropertyTypes,
+    RentalUnitsTypes,
+    Features,
+    Furnitures,
+    Languages,
+    PensionTypes,
+    ApiKey
+)
+
+
+class FeaturesSomosAlthena(Enum):
+    
+    FEATURES = {'Habitaciones', 'Cocina', 'Trasteros', 'Altillo', 'ZonasComunes', 'Terrazas', 'Gas', 'AccesoDiscapacitados', 'Agua', 'AdmiteMascotas', 'Microondas', 'Vigilancia24h', 'PiscinaPrivada', 'SofaCama', 'Sillas', 'AireAcondicionado', 'Despachos', 'CocinaAmueblada', 'Chimeneas', 'Amueblado', 'Exterior', 'Televisor', 'CajaFuerte', 'Conserje', 'Luz', 'Ascensor', 'Alarma', 'Cama', 'Calefaccion', 'Internet', 'Banos', 'ZonaInfantil', 'Armarios', 'Mesa', 'Lavadero', 'Horno'}
+    EQUIVALENCES_FEATURES = {
+        "Habitaciones": "Bedroom lock",
+        "Banos": "Private bath",
+        "AireAcondicionado": "Air conditioning",
+        "Exterior": "Exterior",
+        "Internet": "Wi-fi",
+        "Cocina": "Kitchen",
+        "PiscinaPrivada": "Swimming pool",
+        "AdmiteMascotas": "Pets allowed",
+        "Calefaccion": "Heating system",
+        "Ascensor": "Lift",
+        "ZonaInfantil": "Common areas",
+        "Conserje": "24hr Concierge Reception",
+        "Alarma": "Smoke alarm",
+        "Vigilancia24h": "Video surveillance",
+        "AccesoDiscapacitados": "Wheelchair access",
+        "ZonaInfantil": "Playground",
+        "Terrazas": "Terrace / balcony",
+        "Gas": "Gas",
+        "Agua": "Water",
+        "Luz": "Electricity",
+        "Amueblado": "Furnished",
+        "ZonasComunes": "Common areas"
+    }
+    EQUIVALENCES_FURNITURES = {
+        "Armarios": "Wardrobe",
+        "CocinaAmueblada": "Fitted wardrobes",
+        "Lavadero": "Washer",
+        "CajaFuerte": "Closet",
+        "Mesa": "Desk",
+        "Sillas": "Chair",
+        "Televisor": "Television",
+        "Cama": "Double bed",
+        "SofaCama": "Futon",
+        "Horno": "Oven",
+        "Microondas": "Microwave",
+        "Trasteros": "Extra storage",
+        "Despachos": "Filing Cabinet",
+        "Altillo": "Bookshelf/Bookcase",
+        "Chimeneas": "Iron"
+    }
+
 
 
 def get_data_json(object_spider: Spider, json_path_no_refined: str) -> list[dict]:
@@ -42,10 +109,17 @@ def refine_data_json(data_json: dict) -> dict:
         "title": "",
         "referend_code": "",
         "cost": "",
-        "area": "",
+        "area_building": "",
+        "area_utils": "",
         "bedrooms": "",
         "bathrooms": "",
         "all_titles": {
+            "spanish": "",
+            "catalan": "",
+            "english": "",
+            "french": "",
+        },
+        "all_descriptions_short": {
             "spanish": "",
             "catalan": "",
             "english": "",
@@ -57,12 +131,6 @@ def refine_data_json(data_json: dict) -> dict:
             "english": "",
             "french": "",
         },
-        # "all_status": {
-        #     'spanish': '',
-        #     'catalan': '',
-        #     'english': '',
-        #     'french': '',
-        # },
         "address": {
             "Numero": "",
             "Direccion": "",
@@ -74,12 +142,15 @@ def refine_data_json(data_json: dict) -> dict:
             "longitude": "",
         },
         "images": [],
+        "features": []
     }
 
     output_json_data["title"] = data_json["Titulo"]
     output_json_data["referend_code"] = data_json["Referencia"]
     output_json_data["cost"] = data_json["Precio"]
-    output_json_data["area"] = data_json["MetrosConstruidos"]
+    output_json_data["area_building"] = data_json["MetrosConstruidos"]
+    output_json_data["area_utils"] = data_json["MetrosUtiles"]
+    
     output_json_data["bedrooms"] = data_json["Habitaciones"]
     output_json_data["bathrooms"] = data_json["Banos"]
 
@@ -105,12 +176,21 @@ def refine_data_json(data_json: dict) -> dict:
         "DescripcionAmpliadaEn",
         "DescripcionAmpliadaFr",
     )
-
     output_json_data = get_all_multidata(
         all_description, data_json, output_json_data, "all_descriptions"
     )
-    output_json_data["images"] = get_all_images(data_json["Fotos"])
 
+    all_description_short = (
+        "Descripcion",
+        "DescripcionCa",
+        "DescripcionEn",
+        "DescripcionFr",
+    )
+    output_json_data = get_all_multidata(
+        all_description_short, data_json, output_json_data, "all_descriptions_short"
+    )
+    output_json_data["images"] = get_all_images(data_json["Fotos"])
+    output_json_data["features"] = get_all_features(data_json)
     return output_json_data
 
 
@@ -153,6 +233,24 @@ def get_all_multidata(
         )
 
     return output_json_data
+
+
+def get_all_features(data_json: dict):
+
+    all_feature_somosalthena = FeaturesSomosAlthena.FEATURES.value
+
+    output_info_feature = {}
+    for feature_somosalthena in all_feature_somosalthena:
+        try:
+            if data_json[feature_somosalthena] in (0, "0", '', None, "None"):
+                output_info_feature[feature_somosalthena] = False
+            else:
+                output_info_feature[feature_somosalthena] = True
+        except:
+            output_info_feature[feature_somosalthena] = False
+
+    return output_info_feature
+
 
 
 def get_id_from_name(data_dict: dict, name: str, key_name: str) -> int:
@@ -205,21 +303,30 @@ def process_descriptions(
     return result
 
 
+def search_feature_with_map(items_features: dict, elements_features: list[dict]):
+
+    for data_feature in elements_features:
+        id_feature = data_feature["id"]
+        name_feature = data_feature["name"]
+
+        # TODO: Pendiente con el match
+
 def retrive_lodgerin(items, elements):
     PropertyTypeId = get_id_from_name(elements["property_types"], "Host family", "name")
     PensionTypeId = get_id_from_name(elements["pension_types"], "Full board", "name")
     descriptions = process_descriptions(
         items["all_descriptions"], items["all_titles"], elements["languages"]
     )
+    features = search_feature_with_map(items['features'], elements['features']['data'])
 
     data_property = Property(
         name=items["title"],
-        description=items["Descripcion"],  # TODO: add description short ES
+        description=items["all_descriptions_short"]["spanish"],
         referenceCode=items["referend_code"],
         # minAge=items[''],
         # maxAge=items[''],
-        areaM2=items["MetrosConstruidos"],
-        areaM2Available=items["MetrosUtiles"],
+        areaM2=items["area_building"],
+        areaM2Available=items["area_utils"],
         # maxOccupancy=items[''],
         # dateLastReform=items[''],
         # tenantGender=items[''],
@@ -234,8 +341,8 @@ def retrive_lodgerin(items, elements):
         PropertyTypeId=PropertyTypeId,
         PensionTypeId=PensionTypeId,
         Descriptions=descriptions,
-        Images=items[""],  # TODO: add Images
-        Location=items[""],  # TODO: add Location
+        Images=items["images"],
+        Location=items["output_address"],
     )
 
     data_rental_units = RentalUnits(

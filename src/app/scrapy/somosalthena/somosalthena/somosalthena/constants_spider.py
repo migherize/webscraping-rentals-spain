@@ -10,8 +10,8 @@ main_spider = f"{BASE_NAME_MODEL}_spider"
 # ------------------------------------------------------------------------
 # Datos directos si no se coloca informacion por consola
 item_input_output_archive: dict[str, str] = {
-    "output_folder_path": "./",
-    "output_folder_name": "data",
+    "output_folder_path": r"somosalthena",
+    "output_folder_name": r"data",
     "file_name": f"{BASE_NAME_MODEL}.json",
     "processed_name": f"{BASE_NAME_MODEL}" + "_refined.json",
     "refine": '0',
