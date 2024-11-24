@@ -41,7 +41,7 @@ class FlipcolivingSpiderSpider(scrapy.Spider):
     name = "flipcoliving_spider"
     custom_settings = item_custom_settings
     
-    def __init__(self, *args, **kwargs):
+    def __init__(self, context=None, *args, **kwargs):
 
         super(FlipcolivingSpiderSpider, self).__init__(*args, **kwargs)
 
@@ -74,6 +74,7 @@ class FlipcolivingSpiderSpider(scrapy.Spider):
         Path(self.output_folder).mkdir(
             parents=True, exist_ok=True
         )
+        self.context = context
 
 
     def start_requests(self):

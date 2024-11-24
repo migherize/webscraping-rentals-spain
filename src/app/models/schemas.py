@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Optional, List, Dict
 
 
 class Description(BaseModel):
@@ -176,5 +176,110 @@ class DatePayloadItem(BaseModel):
     startDate: str = Field(..., description="Start date of the blocked range")
     endDate: str = Field(..., description="End date of the blocked range")
 
+
+# Elements
 class DatePayload(BaseModel):
     dates: List[DatePayloadItem]
+
+class ContractTypeItem(BaseModel):
+    id: int
+    name: str
+    description: Optional[str]
+
+class ContractTypes(BaseModel):
+    data: List[ContractTypeItem]
+
+class SpaceTypeItem(BaseModel):
+    id: int
+    name: str
+    description: str
+    type: str
+    icon: Optional[str]
+    canBeRentalUnit: bool
+
+class SpacesTypes(BaseModel):
+    data: List[SpaceTypeItem]
+
+class PropertyTypeItem(BaseModel):
+    id: int
+    name: str
+    description: str
+
+class PropertyTypes(BaseModel):
+    data: List[PropertyTypeItem]
+
+class RentalUnitTypeItem(BaseModel):
+    id: int
+    name: str
+    description: str
+
+class RentalUnitsTypes(BaseModel):
+    data: List[RentalUnitTypeItem]
+
+class FeatureItem(BaseModel):
+    id: int
+    name: str
+    description: str
+    icon: Optional[str]
+
+class Features(BaseModel):
+    data: List[FeatureItem]
+
+class FurnitureItem(BaseModel):
+    id: int
+    name: str
+    description: str
+    icon: Optional[str]
+
+class Furnitures(BaseModel):
+    data: List[FurnitureItem]
+
+class LanguageItem(BaseModel):
+    id: int
+    name_es: str
+    name_en: str
+    code: str
+
+class Languages(BaseModel):
+    data: List[LanguageItem]
+
+class PensionTypeItem(BaseModel):
+    id: int
+    name: Optional[str]
+
+class PensionTypes(BaseModel):
+    data: List[PensionTypeItem]
+
+class ApiKeyItem(BaseModel):
+    id: str
+    name: str
+
+class ApiKey(BaseModel):
+    data: List[ApiKeyItem]
+
+
+
+#extras
+
+class AllTitles(BaseModel):
+    spanish: str
+    catalan: str
+    english: str
+    french: str
+    
+    def to_descriptions(self, languages: List[Dict]) -> List[Description]:
+        # Crear un mapa de códigos de idioma a IDs
+        language_map = {lang["name_en"].lower(): lang["id"] for lang in languages}
+
+        # Mapear los títulos a su estructura de "Description"
+        descriptions = []
+        for lang, title in self.dict().items():
+            if title:  # Solo incluir títulos que no estén vacíos
+                lang_id = language_map.get(lang, None)
+                if lang_id:
+                    descriptions.append(Description(
+                        LanguagesId=lang_id,
+                        title=title,
+                        description=""  # Aquí puedes añadir una descripción si es necesario
+                    ))
+        return descriptions

@@ -11,7 +11,11 @@ COPY --from=BUILDER /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 ENV PYTHONPATH=/app:$PYTHONPATH
 
+ENV PYTHONPATH=/app:$PYTHONPATH
+
 WORKDIR /app
+COPY ./src/app /app
+COPY ./data /data
 COPY ./src/app /app
 COPY ./data /data
 

@@ -4,9 +4,7 @@ from dotenv import load_dotenv
 # Cargar .env
 load_dotenv()
 PATH_HOME = os.getcwd()
-SCRAPINGBEE_API_KEY = os.getenv("SCRAPINGBEE_API_KEY")
-LODGERIN_API_KEY = os.getenv("LODGERIN_API_KEY")
-LODGERIN_API = os.getenv("LODGERIN_API")
+
 MODELS_CONTRACT = "Medium-term"
 BOOL_TRUE = True
 BOOL_FALSE = False
@@ -19,3 +17,13 @@ PROPERTY_TYPE_ID = "Coliving"
 LOG_DIR = os.getcwd() + '/logs/'
 INT_ZERO = 0
 INT_ONE = 1
+
+SCRAPINGBEE_API_KEY = os.getenv("SCRAPINGBEE_API_KEY")
+ELEMENTS_JSON = os.getenv("ELEMENTS_JSON")
+
+LODGERIN_API_KEY = os.getenv("LODGERIN_API_KEY")
+LODGERIN_API = os.getenv("LODGERIN_API")
+LODGERIN_INTERNAL = os.getenv("LODGERIN_INTERNAL")
+TOKEN_API_INTERNAL = os.getenv("TOKEN_API_INTERNAL")
+EMAIL_FLIPCOLIVING = os.getenv("EMAIL_FLIPCOLIVING")
+EMAIL_SOMOSATHENEA = os.getenv("EMAIL_SOMOSATHENEA")
