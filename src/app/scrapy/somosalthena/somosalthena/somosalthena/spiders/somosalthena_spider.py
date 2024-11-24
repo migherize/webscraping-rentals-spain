@@ -10,6 +10,7 @@ from .. import items
 from ..constants_spider import item_custom_settings, item_input_output_archive
 from ..enum_path import RegexProperty
 
+from app.scrapy.common import read_json
 # import app.utils.constants as constants
 # import app.models.enums as models
 
@@ -20,7 +21,7 @@ from ..enum_path import RegexProperty
 class SomosalthenaSpiderSpider(scrapy.Spider):
     name = "somosalthena_spider"
     custom_settings = item_custom_settings
-    def __init__(self, *args, **kwargs):
+    def __init__(self, context=None, *args, **kwargs):
 
         super(SomosalthenaSpiderSpider, self).__init__(*args, **kwargs)
 
@@ -39,6 +40,7 @@ class SomosalthenaSpiderSpider(scrapy.Spider):
         Path(self.items_spider_output_document['output_folder']).mkdir(
             parents=True, exist_ok=True
         )
+        self.context = context
 
     def start_requests(self):
 
