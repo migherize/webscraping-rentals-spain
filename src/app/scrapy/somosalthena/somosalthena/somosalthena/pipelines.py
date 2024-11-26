@@ -3,7 +3,6 @@ from os import path
 from scrapy import Spider
 from .utils import (
     get_data_json,
-    parse_elements,
     retrive_lodgerin_property,
     retrive_lodgerin_rental_units,
     get_month
@@ -14,6 +13,7 @@ from app.models.schemas import (
     DatePayloadItem,
     mapping
 )
+from app.scrapy.common import parse_elements
 
 
 class SomosalthenaPipeline:

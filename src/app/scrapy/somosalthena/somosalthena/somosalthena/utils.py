@@ -2,9 +2,8 @@ from asyncio import constants
 import re
 import json
 from scrapy import Spider
-from pprint import pprint
 from enum import Enum
-from app.scrapy.common import clean_information_html, get_all_images
+from app.scrapy.common import clean_information_html, get_all_images, parse_elements
 from app.models.schemas import Property, RentalUnits
 import app.utils.constants as constants
 import app.utils.funcs as funcs
@@ -12,10 +11,6 @@ from app.models.schemas import (
     Property,
     RentalUnits,
     ContractModel,
-    Description,
-    Image,
-    LocationAddress,
-    DatePayload,
     DatePayloadItem,
     ContractTypes,
     SpacesTypes,
@@ -25,23 +20,53 @@ from app.models.schemas import (
     Furnitures,
     Languages,
     PensionTypes,
-    ApiKey
+    ApiKey,
 )
-from app.models.enums import (
-    Month,
-    PropertyType,
-    ContractModels,
-    CurrencyCode,
-    PaymentCycleEnum
-)
+from app.models.enums import CurrencyCode, PaymentCycleEnum
 from datetime import datetime, timedelta
 import calendar
-from typing import Dict, Type
-from pydantic import BaseModel
+
 
 class FeaturesSomosAlthena(Enum):
-    
-    FEATURES = {'Habitaciones', 'Cocina', 'Trasteros', 'Altillo', 'ZonasComunes', 'Terrazas', 'Gas', 'AccesoDiscapacitados', 'Agua', 'AdmiteMascotas', 'Microondas', 'Vigilancia24h', 'PiscinaPrivada', 'SofaCama', 'Sillas', 'AireAcondicionado', 'Despachos', 'CocinaAmueblada', 'Chimeneas', 'Amueblado', 'Exterior', 'Televisor', 'CajaFuerte', 'Conserje', 'Luz', 'Ascensor', 'Alarma', 'Cama', 'Calefaccion', 'Internet', 'Banos', 'ZonaInfantil', 'Armarios', 'Mesa', 'Lavadero', 'Horno'}
+
+    FEATURES = {
+        "Habitaciones",
+        "Cocina",
+        "Trasteros",
+        "Altillo",
+        "ZonasComunes",
+        "Terrazas",
+        "Gas",
+        "AccesoDiscapacitados",
+        "Agua",
+        "AdmiteMascotas",
+        "Microondas",
+        "Vigilancia24h",
+        "PiscinaPrivada",
+        "SofaCama",
+        "Sillas",
+        "AireAcondicionado",
+        "Despachos",
+        "CocinaAmueblada",
+        "Chimeneas",
+        "Amueblado",
+        "Exterior",
+        "Televisor",
+        "CajaFuerte",
+        "Conserje",
+        "Luz",
+        "Ascensor",
+        "Alarma",
+        "Cama",
+        "Calefaccion",
+        "Internet",
+        "Banos",
+        "ZonaInfantil",
+        "Armarios",
+        "Mesa",
+        "Lavadero",
+        "Horno",
+    }
     EQUIVALENCES_FEATURES = {
         "Habitaciones": "Bedroom lock",
         "Banos": "Private bath",
@@ -63,7 +88,7 @@ class FeaturesSomosAlthena(Enum):
         "Agua": "Water",
         "Luz": "Electricity",
         "Amueblado": "Furnished",
-        "ZonasComunes": "Common areas"
+        "ZonasComunes": "Common areas",
     }
     EQUIVALENCES_FURNITURES = {
         "Armarios": "Wardrobe",
@@ -80,9 +105,8 @@ class FeaturesSomosAlthena(Enum):
         "Trasteros": "Extra storage",
         "Despachos": "Filing Cabinet",
         "Altillo": "Bookshelf/Bookcase",
-        "Chimeneas": "Iron"
+        "Chimeneas": "Iron",
     }
-
 
 
 def get_data_json(object_spider: Spider, json_path_no_refined: str) -> list[dict]:
@@ -152,7 +176,7 @@ def refine_data_json(data_json: dict) -> dict:
             "longitude": "",
         },
         "images": [],
-        "features": []
+        "features": [],
     }
 
     output_json_data["title"] = data_json["Titulo"]
@@ -160,7 +184,7 @@ def refine_data_json(data_json: dict) -> dict:
     output_json_data["cost"] = data_json["Precio"]
     output_json_data["area_building"] = data_json["MetrosConstruidos"]
     output_json_data["area_utils"] = data_json["MetrosUtiles"]
-    
+
     output_json_data["bedrooms"] = data_json["Habitaciones"]
     output_json_data["bathrooms"] = data_json["Banos"]
 
@@ -252,7 +276,7 @@ def get_all_features(data_json: dict):
     output_info_feature = {}
     for feature_somosalthena in all_feature_somosalthena:
         try:
-            if data_json[feature_somosalthena] in (0, "0", '', None, "None"):
+            if data_json[feature_somosalthena] in (0, "0", "", None, "None"):
                 output_info_feature[feature_somosalthena] = False
             else:
                 output_info_feature[feature_somosalthena] = True
@@ -282,6 +306,7 @@ def get_id_from_name(data_dict: dict, name: str, key_name: str) -> int:
         if item.get(key_name) == name:
             return item.get("id")
     return None
+
 
 def process_descriptions(
     all_descriptions: dict, all_titles: dict, languages_dict: dict
@@ -316,7 +341,9 @@ def process_descriptions(
     return result
 
 
-def search_feature_with_map(items_features: dict, elements_features: dict, equivalences: dict):
+def search_feature_with_map(
+    items_features: dict, elements_features: dict, equivalences: dict
+):
 
     true_ids = []
 
@@ -325,13 +352,18 @@ def search_feature_with_map(items_features: dict, elements_features: dict, equiv
             if item_feature in equivalences:
                 mapped_feature = equivalences[item_feature]
                 element_id = next(
-                    (id_ for id_, name in elements_features.items() if name == mapped_feature),
-                    None
+                    (
+                        id_
+                        for id_, name in elements_features.items()
+                        if name == mapped_feature
+                    ),
+                    None,
                 )
                 if element_id is not None:
                     true_ids.append(element_id)
 
     return true_ids
+
 
 def retrive_lodgerin_property(items, elements):
     PropertyTypeId = get_id_from_name(elements["property_types"], "Host family", "name")
@@ -339,11 +371,19 @@ def retrive_lodgerin_property(items, elements):
     descriptions = process_descriptions(
         items["all_descriptions"], items["all_titles"], elements["languages"]
     )
-    element_feature = extract_id_name(elements['features']['data'])
-    features_id = search_feature_with_map(items['features'], element_feature, FeaturesSomosAlthena.EQUIVALENCES_FEATURES.value)
-    
-    element_furnitures = extract_id_name(elements_dict['furnitures']['data'])
-    furnitures_id = search_feature_with_map(items['features'], element_furnitures, FeaturesSomosAlthena.EQUIVALENCES_FURNITURES.value)
+    element_feature = extract_id_name(elements["features"]["data"])
+    features_id = search_feature_with_map(
+        items["features"],
+        element_feature,
+        FeaturesSomosAlthena.EQUIVALENCES_FEATURES.value,
+    )
+
+    element_furnitures = extract_id_name(elements_dict["furnitures"]["data"])
+    furnitures_id = search_feature_with_map(
+        items["features"],
+        element_furnitures,
+        FeaturesSomosAlthena.EQUIVALENCES_FURNITURES.value,
+    )
 
     property_items = Property(
         name=items["title"],
@@ -373,35 +413,41 @@ def retrive_lodgerin_property(items, elements):
 
     return property_items, items["cost"], furnitures_id
 
-def retrive_lodgerin_rental_units(items_property: Property,elements_dict: dict, cost: str, furnitures_id: str):
+
+def retrive_lodgerin_rental_units(
+    items_property: Property, elements_dict: dict, cost: str, furnitures_id: str
+):
     data_rental_units = RentalUnits(
-    PropertyId=items_property.id,
-    referenceCode=items_property.referenceCode,
-    areaM2=items_property.areaM2,
-    areaM2Available=int(items_property.areaM2Available),
-    # maxCapacity=items_property[""],
-    # urlICalSync=items_property[""],
-    # bedType=items_property[""],
-    Features=items_property.Features,
-    Furnitures=furnitures_id,
-    isActive=True,
-    isPublished=True,
-    ContractsModels=[ContractModel(
-        PropertyBusinessModelId=funcs.get_elements_types(
-            constants.MODELS_CONTRACT,elements_dict['contract_types']
-        ),
-        currency=CurrencyCode.EUR.value,
-        amount=int(cost),
-        depositAmount=constants.INT_ZERO,
-        reservationAmount=constants.INT_ZERO,
-        minPeriod=constants.INT_ONE,
-        paymentCycle=PaymentCycleEnum.MONTHLY.value,
-        extras=[],
-    )],
-    Descriptions=items_property.Descriptions,
-    Images=items_property.Images,
+        PropertyId=items_property.id,
+        referenceCode=items_property.referenceCode,
+        areaM2=items_property.areaM2,
+        areaM2Available=int(items_property.areaM2Available),
+        # maxCapacity=items_property[""],
+        # urlICalSync=items_property[""],
+        # bedType=items_property[""],
+        Features=items_property.Features,
+        Furnitures=furnitures_id,
+        isActive=True,
+        isPublished=True,
+        ContractsModels=[
+            ContractModel(
+                PropertyBusinessModelId=funcs.get_elements_types(
+                    constants.MODELS_CONTRACT, elements_dict["contract_types"]
+                ),
+                currency=CurrencyCode.EUR.value,
+                amount=int(cost),
+                depositAmount=constants.INT_ZERO,
+                reservationAmount=constants.INT_ZERO,
+                minPeriod=constants.INT_ONE,
+                paymentCycle=PaymentCycleEnum.MONTHLY.value,
+                extras=[],
+            )
+        ],
+        Descriptions=items_property.Descriptions,
+        Images=items_property.Images,
     )
     return data_rental_units
+
 
 def get_month() -> tuple:
     now = datetime.now()
@@ -409,73 +455,8 @@ def get_month() -> tuple:
     next_month = now.replace(day=28) + timedelta(days=4)
     end_date = next_month.replace(day=1) - timedelta(days=1)
     month_name = calendar.month_name[now.month]
-    
+
     start_date_str = start_date.strftime("%Y-%m-%d")
     end_date_str = end_date.strftime("%Y-%m-%d")
-    
+
     return start_date_str, end_date_str, month_name
-
-def parse_elements(full_json: Dict, mapping: Dict[str, Type[BaseModel]]) -> Dict[str, dict]:
-    """
-    Procesa un JSON completo y lo convierte en un diccionario con clases Pydantic.
-
-    Args:
-        full_json (dict): El JSON que contiene los datos para procesar.
-        mapping (dict): Un mapeo de nombres de claves a clases Pydantic.
-
-    Returns:
-        dict: Un diccionario con los datos parseados.
-    """
-    elements_dict = {}
-    for key, model_class in mapping.items():
-        if key in full_json:
-            elements_dict[key] = model_class(**full_json[key]).dict()
-        else:
-            raise KeyError(f"Key '{key}' not found in the provided JSON")
-    return elements_dict
-
-
-
-if __name__ == "__main__":
-    ruta_json1 = '/Users/mherize/squadmakers/logderin/WebScrapingforRentalPlatforms/src/app/scrapy/somosalthena/somosalthena/data/somosalthena_refined.json'
-    ruta_json2 = '/Users/mherize/squadmakers/logderin/WebScrapingforRentalPlatforms/local/elements.json'
-    with open(ruta_json1, 'r', encoding='utf-8') as archivo1:
-            datos_json1 = json.load(archivo1)
-    with open(ruta_json2, 'r', encoding='utf-8') as archivo2:
-        datos_json2 = json.load(archivo2)
-
-    full_json = datos_json2[0]
-    mapping = {
-        "contract_types": ContractTypes,
-        "spaces_types": SpacesTypes,
-        "property_types": PropertyTypes,
-        "rental_units_types": RentalUnitsTypes,
-        "features": Features,
-        "furnitures": Furnitures,
-        "languages": Languages,
-        "pension_types": PensionTypes,
-        "api_key": ApiKey,
-    }
-    
-    elements_dict = parse_elements(full_json, mapping)
-    api_key = elements_dict['api_key']['data'][0]['name']
-
-    for data in datos_json1:
-        # Property
-        data_property, cost, furnitures = retrive_lodgerin_property(data,elements_dict)
-        property_id = funcs.save_property(data_property,api_key)
-        data_property.id = property_id
-        # RentalUnit
-        data_rental_units = retrive_lodgerin_rental_units(data_property,elements_dict,cost,furnitures)
-        rental_unit_id = funcs.save_rental_unit(data_rental_units,api_key)
-        data_rental_units.id = rental_unit_id
-        # Schedule
-        start_date, end_date, month = get_month()
-        calendar_unit=DatePayloadItem(
-            summary= f"Blocked until {start_date}",
-            description= f"Available from {month}",
-            startDate= start_date,
-            endDate= end_date,
-        )
-        funcs.check_and_insert_rental_unit_calendar(rental_unit_id, calendar_unit,api_key)
-        break
