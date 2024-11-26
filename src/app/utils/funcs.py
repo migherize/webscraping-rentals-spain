@@ -132,18 +132,7 @@ def find_feature_keys(features_list: str, feature_map: dict):
     return matched_features
 
 
-def get_elements_types(term):
-    lodgerin_api = LodgerinAPI(constants.LODGERIN_API_KEY)  # TODO: get spider.context
-
-    if term in {ptype.value for ptype in PropertyType}:
-        elements = lodgerin_api.get_property_types()
-
-    elif term in {ptype.value for ptype in ContractModels}:
-        elements = lodgerin_api.get_contract_types()
-
-    else:
-        return None
-
+def get_elements_types(term, elements):
     if elements:
         contract_types = elements.get("data", [])
 
@@ -155,9 +144,9 @@ def get_elements_types(term):
         return None
 
 
-def save_property(property_item):
+def save_property(property_item, api_key):
     property_dict = property_item.model_dump()
-    lodgerin_api = LodgerinAPI(constants.LODGERIN_API_KEY)
+    lodgerin_api = LodgerinAPI(api_key)
     response = lodgerin_api.create_or_update_property(property_dict)
 
     if response is not None and "msg" in response and "data" in response:
@@ -174,9 +163,9 @@ def save_property(property_item):
     return None
 
 
-def save_rental_unit(rental_unit_item):
+def save_rental_unit(rental_unit_item, api_key):
     rental_unit_dict = rental_unit_item.model_dump()
-    lodgerin_api = LodgerinAPI(constants.LODGERIN_API_KEY)
+    lodgerin_api = LodgerinAPI(api_key)
     response = lodgerin_api.create_or_update_rental_unit(rental_unit_dict)
 
     if response is not None and "msg" in response and "data" in response:
@@ -194,14 +183,14 @@ def save_rental_unit(rental_unit_item):
 
 
 def check_and_insert_rental_unit_calendar(
-    rental_unit_id: str, calendar_unit: DatePayloadItem
+    rental_unit_id: str, calendar_unit: DatePayloadItem, api_key:str
 ):
-    lodgerin_api = LodgerinAPI(constants.LODGERIN_API_KEY)
+    lodgerin_api = LodgerinAPI(api_key)
     dates_payload = [calendar_unit.model_dump()]
 
     try:
         existing_schedule = lodgerin_api.get_rental_unit_calendar(rental_unit_id)
-        logger.info(existing_schedule)
+        logger.info("existing_schedule",existing_schedule)
 
         if existing_schedule is None or not existing_schedule.get("data"):
             logger.info(f"Inserting new dates for rental unit ID {rental_unit_id}")
