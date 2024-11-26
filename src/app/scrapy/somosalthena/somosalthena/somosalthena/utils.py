@@ -3,7 +3,7 @@ import re
 import json
 from scrapy import Spider
 from enum import Enum
-from app.scrapy.common import clean_information_html, get_all_images
+from app.scrapy.common import clean_information_html, get_all_images, parse_elements
 from app.models.schemas import Property, RentalUnits
 import app.utils.constants as constants
 import app.utils.funcs as funcs
