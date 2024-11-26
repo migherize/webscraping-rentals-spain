@@ -146,7 +146,7 @@ class RentalUnits(BaseModel):
         ..., min_length=3, description="Código de referencia de la rental unit"
     )
     areaM2: Optional[int] = Field(None, description="Área total de la rental unit en metros cuadrados.")
-    areaM2Available: Optional[str] = Field(None, description="Área disponible de la rental unit en metros cuadrados.")
+    areaM2Available: Optional[int] = Field(None, description="Área disponible de la rental unit en metros cuadrados.")
     maxCapacity: Optional[str] = Field(None, description="Capacidad máxima (número de personas) en la rental unit.")
     urlICalSync: Optional[str] = Field(None, description="URL de sincronización iCal de la rental unit.")
     bedType: Optional[str] = Field(
@@ -257,29 +257,14 @@ class ApiKeyItem(BaseModel):
 class ApiKey(BaseModel):
     data: List[ApiKeyItem]
 
-
-
-#extras
-
-class AllTitles(BaseModel):
-    spanish: str
-    catalan: str
-    english: str
-    french: str
-    
-    def to_descriptions(self, languages: List[Dict]) -> List[Description]:
-        # Crear un mapa de códigos de idioma a IDs
-        language_map = {lang["name_en"].lower(): lang["id"] for lang in languages}
-
-        # Mapear los títulos a su estructura de "Description"
-        descriptions = []
-        for lang, title in self.dict().items():
-            if title:  # Solo incluir títulos que no estén vacíos
-                lang_id = language_map.get(lang, None)
-                if lang_id:
-                    descriptions.append(Description(
-                        LanguagesId=lang_id,
-                        title=title,
-                        description=""  # Aquí puedes añadir una descripción si es necesario
-                    ))
-        return descriptions
+mapping = {
+    "contract_types": ContractTypes,
+    "spaces_types": SpacesTypes,
+    "property_types": PropertyTypes,
+    "rental_units_types": RentalUnitsTypes,
+    "features": Features,
+    "furnitures": Furnitures,
+    "languages": Languages,
+    "pension_types": PensionTypes,
+    "api_key": ApiKey,
+}
