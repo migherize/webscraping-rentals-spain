@@ -3,7 +3,6 @@ from os import path
 from scrapy import Spider
 from .utils import (
     get_data_json,
-    parse_elements,
     retrive_lodgerin_property,
     retrive_lodgerin_rental_units,
     get_month
@@ -14,6 +13,7 @@ from app.models.schemas import (
     DatePayloadItem,
     mapping
 )
+from app.scrapy.common import parse_elements
 
 
 class SomosalthenaPipeline:
@@ -35,12 +35,12 @@ class SomosalthenaPipeline:
         return item
 
     def close_spider(self, spider: Spider) -> None:
-        output_data_json = get_data_json(spider, self.json_path_no_refined)
+        output_data_json = get_data_json(self.json_path_no_refined)
         write_to_json_file(self.json_path_refined, output_data_json, spider)
 
         elements_dict = parse_elements(spider.context, mapping)
         api_key = elements_dict["api_key"]["data"][0]["name"]
-        
+
         print(f"maps_elements: {spider.context}")
         print(f"elements_dict: {elements_dict}")
         print(f"api_key: {api_key}")
