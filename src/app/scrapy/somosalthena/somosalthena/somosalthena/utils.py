@@ -98,6 +98,14 @@ class FeaturesSomosAlthena(Enum):
         "Chimeneas": "Iron",
     }
 
+class PropertyTypeColiving(Enum):
+    PROPERTY_TYPE = (
+        'Pisos',
+        'Casas',
+        'Edificios',
+    )
+    OPERATION = 'alquiler'
+
 
 def get_data_json(json_path_no_refined: str) -> list[dict]:
     """
@@ -117,6 +125,12 @@ def get_data_json(json_path_no_refined: str) -> list[dict]:
     with open(json_path_no_refined, "r") as file:
         all_data = json.load(file)
         for data_json in all_data:
+            if not data_json:
+                continue
+            if not (data_json['GrupoInmueble'] in PropertyTypeColiving.PROPERTY_TYPE.value):
+                continue
+            if not (data_json['Operacion'] == PropertyTypeColiving.OPERATION.value):
+                continue
             refined_data_json = refine_data_json(data_json)
             output_data.append(refined_data_json)
 
@@ -263,11 +277,11 @@ def get_all_features(data_json: dict):
     for feature_somosalthena in all_feature_somosalthena:
         try:
             if data_json[feature_somosalthena] in (0, "0", "", None, "None"):
-                output_info_feature[feature_somosalthena] = False
+                pass
             else:
                 output_info_feature[feature_somosalthena] = True
         except:
-            output_info_feature[feature_somosalthena] = False
+            pass
 
     return output_info_feature
 
