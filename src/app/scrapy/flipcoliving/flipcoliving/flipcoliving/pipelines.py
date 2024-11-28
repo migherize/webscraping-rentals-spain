@@ -1,37 +1,39 @@
-# -*- coding: utf-8 -*-
-
-import json
 import os
+import json
 import re
-from os import path
-import logging
-from collections import defaultdict
-from .constants_spider import spider_names
-from pydantic import BaseModel
 import unicodedata
+import logging
 from enum import Enum
 from typing import Union, List
+from os import path
+from pydantic import BaseModel
+from collections import defaultdict
+from scrapy import Spider
 import app.utils.constants as constants
+import app.models.enums as models
+from app.scrapy.common import get_all_imagenes, parse_elements
 from app.models.enums import feature_map, CurrencyCode, PaymentCycleEnum, Languages
 from app.models.schemas import (
     Property,
     RentalUnits,
     ContractModel,
     Description,
-    Image,
     LocationAddress,
-    DatePayload,
-    DatePayloadItem
+    DatePayloadItem,
+    mapping,
 )
-import app.models.enums as models
-from app.utils.funcs import find_feature_keys, get_elements_types, save_property, save_rental_unit,get_month_dates,check_and_insert_rental_unit_calendar,detect_language
-from scrapy import Spider
-
-from app.scrapy.common import get_all_imagenes
-
+from app.utils.funcs import (
+    find_feature_keys,
+    get_elements_types,
+    save_property,
+    save_rental_unit,
+    get_month_dates,
+    check_and_insert_rental_unit_calendar,
+    detect_language,
+)
 
 os.makedirs(constants.LOG_DIR, exist_ok=True)
-print(f"Log directory: {constants.LOG_DIR}") 
+print(f"Log directory: {constants.LOG_DIR}")
 
 spider_logger = logging.getLogger("scrapy_spider")
 spider_logger.setLevel(logging.DEBUG)
@@ -39,19 +41,21 @@ spider_logger.setLevel(logging.DEBUG)
 if not spider_logger.handlers:
     formatter = logging.Formatter(
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S"
+        datefmt="%Y-%m-%d %H:%M:%S",
     )
 
     file_handler = logging.FileHandler(
         os.path.join(constants.LOG_DIR, f"{models.Pages.flipcoliving.value}.log"),
         mode="a",
-        encoding="utf-8"
+        encoding="utf-8",
     )
     file_handler.setFormatter(formatter)
 
     spider_logger.addHandler(file_handler)
 
 print(f"Iniciando la pipeline '{models.Pages.flipcoliving.value}'.log")
+
+
 class RoomData(BaseModel):
     areaM2: int
     amount: int
@@ -59,38 +63,43 @@ class RoomData(BaseModel):
     title: str
     images: List[str]
 
+
 def clean_string(text):
-    cleaned_text = re.sub(r'\bBullones\b', '', text)
+    cleaned_text = re.sub(r"\bBullones\b", "", text)
     cleaned_text = cleaned_text.replace("/", "")
     return cleaned_text.strip()
 
+
 def remove_accents(text: str) -> str:
-    normalized_text = unicodedata.normalize('NFD', text)
-    return ''.join(char for char in normalized_text if unicodedata.category(char) != 'Mn')
+    normalized_text = unicodedata.normalize("NFD", text)
+    return "".join(
+        char for char in normalized_text if unicodedata.category(char) != "Mn"
+    )
 
 
-def get_all_descriptions(parse_description: list, parse_coliving_name:str):
+def get_all_descriptions(parse_description: list, parse_coliving_name: str):
     all_descriptions = []
     dict_language = {
         Languages.SPANISH.value: "Propiedades",
         Languages.ENGLISH.value: "Property",
     }
-    
+
     for description in parse_description:
         lang_id = detect_language(description)
         if not lang_id:
             continue
-        
+
         descriptions = {
             "LanguagesId": lang_id,
             "title": f'{dict_language.get(lang_id, "")} {parse_coliving_name}',
             "description": remove_accents(description),
         }
-        
+
         if descriptions["description"]:
             all_descriptions.append(descriptions)
 
     return all_descriptions
+
 
 def create_json(item: Union[RentalUnits, Property, DatePayloadItem]) -> None:
     class PathDocument(Enum):
@@ -107,7 +116,9 @@ def create_json(item: Union[RentalUnits, Property, DatePayloadItem]) -> None:
     elif isinstance(item, DatePayloadItem):
         json_file_path = os.path.join(current_dir, PathDocument.CALENDAR.value)
     else:
-        raise ValueError("item must be an instance of RentalUnits or Property or Calendar.")
+        raise ValueError(
+            "item must be an instance of RentalUnits or Property or Calendar."
+        )
 
     os.makedirs(os.path.dirname(json_file_path), exist_ok=True)
 
@@ -118,7 +129,10 @@ def create_json(item: Union[RentalUnits, Property, DatePayloadItem]) -> None:
 
 
 def create_rental_units(
-    property_data: Property, bedroom_count: int, rooms_data: List[RoomData]
+    property_data: Property,
+    bedroom_count: int,
+    rooms_data: List[RoomData],
+    elements_dict: dict,
 ) -> List[RentalUnits]:
     rental_units = []
     calendar_unit_list = []
@@ -130,16 +144,22 @@ def create_rental_units(
         rooms_data = []
 
     if not rooms_data:
-        rooms_data = [RoomData(areaM2=int(property_data.areaM2), amount=0, schedule="Default", title="Default", images=[''])]  # Ajusta según los atributos de RoomData
+        rooms_data = [
+            RoomData(
+                areaM2=int(property_data.areaM2),
+                amount=0,
+                schedule="Default",
+                title="Default",
+                images=[""],
+            )
+        ]  # Ajusta según los atributos de RoomData
 
     rooms_per_type = bedroom_count // len(rooms_data)
 
     for _, room_data in enumerate(rooms_data):
         for unit_index in range(rooms_per_type):
-            reference_code = (
-                f"{room_data.title}-{unit_index + 1:03}"
-            )
-            reference_code = re.sub(r'\s', '-', reference_code)
+            reference_code = f"{room_data.title}-{unit_index + 1:03}"
+            reference_code = re.sub(r"\s", "-", reference_code)
             rental_unit = RentalUnits(
                 PropertyId=property_data.id,
                 referenceCode=reference_code,
@@ -150,7 +170,7 @@ def create_rental_units(
                 ContractsModels=[
                     ContractModel(
                         PropertyBusinessModelId=get_elements_types(
-                            constants.MODELS_CONTRACT
+                            constants.MODELS_CONTRACT, elements_dict["contract_types"]
                         ),
                         currency=CurrencyCode.EUR.value,
                         amount=int(room_data.amount),
@@ -169,18 +189,18 @@ def create_rental_units(
             # Calendar
             month_year = room_data.schedule.split("from")[-1].strip()
             start_date, end_date = get_month_dates(room_data.schedule)
-            date_items=DatePayloadItem(
-                summary= f"Blocked until {month_year}",
-                description= room_data.schedule,
-                startDate= start_date,
-                endDate= end_date,
+            date_items = DatePayloadItem(
+                summary=f"Blocked until {month_year}",
+                description=room_data.schedule,
+                startDate=start_date,
+                endDate=end_date,
             )
             calendar_unit_list.append(date_items)
 
     return rental_units, calendar_unit_list
 
 
-def get_default_values() -> dict:
+def get_default_values(elements_dict) -> dict:
     """
     Retorna un diccionario con los valores por defecto (hardcoded).
     """
@@ -190,11 +210,12 @@ def get_default_values() -> dict:
         "isActive": constants.BOOL_TRUE,
         "isPublished": constants.BOOL_TRUE,
         "Languages": constants.LANGUAGES,
-        "PropertyTypeId": get_elements_types(constants.PROPERTY_TYPE_ID),  # 4
+        "PropertyTypeId": get_elements_types(
+            constants.PROPERTY_TYPE_ID, elements_dict["property_types"]
+        ),  # 4
         "country": constants.COUNTRY,
         "countryCode": constants.COUNTRY_CODE,
     }
-
 
 
 def parse_banner_features(banner_features):
@@ -204,9 +225,14 @@ def parse_banner_features(banner_features):
     max_price = "".join(filter(str.isdigit, price_info.split("to")[-1]))
     currency = "".join(filter(str.isalpha, price_info.split()[1]))
     sqm = "".join(filter(str.isdigit, banner_features[2]))
-    bedrooms = int("".join(filter(str.isdigit, banner_features[3]))) if len(banner_features) > 3 else 1
+    bedrooms = (
+        int("".join(filter(str.isdigit, banner_features[3])))
+        if len(banner_features) > 3
+        else 1
+    )
 
     return location, int(max_price), currency, int(sqm), int(bedrooms)
+
 
 def merge_by_language(descriptions):
     merged = defaultdict(lambda: {"LanguagesId": None, "title": "", "description": ""})
@@ -218,9 +244,10 @@ def merge_by_language(descriptions):
             merged[lang_id]["LanguagesId"] = lang_id
             merged[lang_id]["title"] = item["title"]
 
-        merged[lang_id]["description"] += (item["description"] + ". ")
+        merged[lang_id]["description"] += item["description"] + ". "
 
     return [dict(value) for value in merged.values()]
+
 
 class FlipcolivingPipeline:
     def open_spider(self, spider: Spider):
@@ -230,15 +257,19 @@ class FlipcolivingPipeline:
     def process_item(self, item, spider: Spider):
         self.items.append(dict(item))
         spider.logger.info("entre a guardar")
+        elements_dict = parse_elements(spider.context, mapping)
+        api_key = elements_dict["api_key"]["data"][0]["name"]
         # save lodgerin
-        defaults = get_default_values()
+        defaults = get_default_values(elements_dict)
         item = item["items_output"]
-        neighborhood, amount, currency, areaM2, bedrooms = parse_banner_features(
-            item["banner_features"]
-        )
+        _, _, _, areaM2, bedrooms = parse_banner_features(item["banner_features"])
 
-        parse_coliving_name = remove_accents(item["parse_coliving_name"][0]).replace(" ", "-")
-        result_description = get_all_descriptions(item["parse_description"],parse_coliving_name)
+        parse_coliving_name = remove_accents(item["parse_coliving_name"][0]).replace(
+            " ", "-"
+        )
+        result_description = get_all_descriptions(
+            item["parse_description"], parse_coliving_name
+        )
         result_description = merge_by_language(result_description)
         spider.logger.info(f"result_description {result_description}")
 
@@ -277,37 +308,46 @@ class FlipcolivingPipeline:
             )
 
             spider.logger.info(f"property_item creado con éxito: {property_item}")
-            property_id = save_property(property_item)
+            property_id = save_property(property_item, api_key)
             property_item.id = property_id
             create_json(property_item)
             rooms_data = [
                 RoomData(
-                    areaM2=int(rental_unit['data_rental_unit'][1].replace(" sqm", "")),
-                    amount=int(rental_unit['data_rental_unit'][0].split(" to ")[-1].replace("€ /month", "").strip()),
-                    schedule=rental_unit['available_rental_unit'][0],
-                    title=clean_string(remove_accents(rental_unit['name_rental_unit'][0].replace(" ", "_"))), 
-                    images=rental_unit['imagenes_rental_unit'], 
+                    areaM2=int(rental_unit["data_rental_unit"][1].replace(" sqm", "")),
+                    amount=int(
+                        rental_unit["data_rental_unit"][0]
+                        .split(" to ")[-1]
+                        .replace("€ /month", "")
+                        .strip()
+                    ),
+                    schedule=rental_unit["available_rental_unit"][0],
+                    title=clean_string(
+                        remove_accents(
+                            rental_unit["name_rental_unit"][0].replace(" ", "_")
+                        )
+                    ),
+                    images=rental_unit["imagenes_rental_unit"],
                 )
-                for rental_unit in item['rental_units']
+                for rental_unit in item["rental_units"]
             ]
             rental_units_items, calendar_unit_list = create_rental_units(
-                    property_item, 
-                    int(bedrooms), 
-                    rooms_data
-                )
+                property_item, int(bedrooms), rooms_data, elements_dict
+            )
             list_rental_unit_id = []
             for unit in rental_units_items:
-                rental_unit = save_rental_unit(unit)
+                rental_unit = save_rental_unit(unit, api_key)
                 unit.id = rental_unit
                 list_rental_unit_id.append(rental_unit)
 
             for unit in rental_units_items:
                 create_json(unit)
-            spider.logger.info(f'list_rental_unit_id {list_rental_unit_id}')
-            
-            #schedule
-            for rental_id, calendar_unit in zip(list_rental_unit_id, calendar_unit_list):
-                check_and_insert_rental_unit_calendar(rental_id, calendar_unit)
+            spider.logger.info(f"list_rental_unit_id {list_rental_unit_id}")
+
+            # schedule
+            for rental_id, calendar_unit in zip(
+                list_rental_unit_id, calendar_unit_list
+            ):
+                check_and_insert_rental_unit_calendar(rental_id, calendar_unit, api_key)
 
             for calendar_unit in calendar_unit_list:
                 create_json(calendar_unit)

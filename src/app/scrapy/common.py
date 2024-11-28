@@ -1,6 +1,7 @@
 import re
 import json
-import requests
+from typing import Dict, Type
+from pydantic import BaseModel
 from app.utils.lodgerinService import LodgerinAPI, LodgerinInternal
 import app.utils.constants as constants
 
@@ -61,6 +62,25 @@ def initialize_scraping_context(email: str):
     except Exception as e:
         print(f"Error durante la inicialización del contexto de scraping: {str(e)}")
         raise
+
+def parse_elements(full_json: Dict, mapping: Dict[str, Type[BaseModel]]) -> Dict[str, dict]:
+    """
+    Procesa un JSON completo y lo convierte en un diccionario con clases Pydantic.
+
+    Args:
+        full_json (dict): El JSON que contiene los datos para procesar.
+        mapping (dict): Un mapeo de nombres de claves a clases Pydantic.
+
+    Returns:
+        dict: Un diccionario con los datos parseados.
+    """
+    elements_dict = {}
+    for key, model_class in mapping.items():
+        if key in full_json:
+            elements_dict[key] = model_class(**full_json[key]).dict()
+        else:
+            raise KeyError(f"Key '{key}' not found in the provided JSON")
+    return elements_dict
 
 
 def read_json() -> dict:

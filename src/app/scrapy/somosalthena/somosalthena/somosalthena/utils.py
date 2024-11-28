@@ -2,9 +2,8 @@ from asyncio import constants
 import re
 import json
 from scrapy import Spider
-from pprint import pprint
 from enum import Enum
-from app.scrapy.common import clean_information_html, get_all_images
+from app.scrapy.common import clean_information_html, get_all_images, parse_elements
 from app.models.schemas import Property, RentalUnits
 import app.utils.constants as constants
 import app.utils.funcs as funcs
@@ -12,32 +11,11 @@ from app.models.schemas import (
     Property,
     RentalUnits,
     ContractModel,
-    Description,
-    Image,
-    LocationAddress,
-    DatePayload,
-    DatePayloadItem,
-    ContractTypes,
-    SpacesTypes,
-    PropertyTypes,
-    RentalUnitsTypes,
-    Features,
-    Furnitures,
-    Languages,
-    PensionTypes,
-    ApiKey
 )
-from app.models.enums import (
-    Month,
-    PropertyType,
-    ContractModels,
-    CurrencyCode,
-    PaymentCycleEnum
-)
+from app.models.enums import CurrencyCode, PaymentCycleEnum
 from datetime import datetime, timedelta
 import calendar
-from typing import Dict, Type
-from pydantic import BaseModel
+
 
 class PropertyTypeColiving(Enum):
     PROPERTY_TYPE = (
@@ -48,8 +26,45 @@ class PropertyTypeColiving(Enum):
     OPERATION = 'alquiler'
 
 class FeaturesSomosAlthena(Enum):
-    
-    FEATURES = {'Habitaciones', 'Cocina', 'Trasteros', 'Altillo', 'ZonasComunes', 'Terrazas', 'Gas', 'AccesoDiscapacitados', 'Agua', 'AdmiteMascotas', 'Microondas', 'Vigilancia24h', 'PiscinaPrivada', 'SofaCama', 'Sillas', 'AireAcondicionado', 'Despachos', 'CocinaAmueblada', 'Chimeneas', 'Amueblado', 'Exterior', 'Televisor', 'CajaFuerte', 'Conserje', 'Luz', 'Ascensor', 'Alarma', 'Cama', 'Calefaccion', 'Internet', 'Banos', 'ZonaInfantil', 'Armarios', 'Mesa', 'Lavadero', 'Horno'}
+
+    FEATURES = {
+        "Habitaciones",
+        "Cocina",
+        "Trasteros",
+        "Altillo",
+        "ZonasComunes",
+        "Terrazas",
+        "Gas",
+        "AccesoDiscapacitados",
+        "Agua",
+        "AdmiteMascotas",
+        "Microondas",
+        "Vigilancia24h",
+        "PiscinaPrivada",
+        "SofaCama",
+        "Sillas",
+        "AireAcondicionado",
+        "Despachos",
+        "CocinaAmueblada",
+        "Chimeneas",
+        "Amueblado",
+        "Exterior",
+        "Televisor",
+        "CajaFuerte",
+        "Conserje",
+        "Luz",
+        "Ascensor",
+        "Alarma",
+        "Cama",
+        "Calefaccion",
+        "Internet",
+        "Banos",
+        "ZonaInfantil",
+        "Armarios",
+        "Mesa",
+        "Lavadero",
+        "Horno",
+    }
     EQUIVALENCES_FEATURES = {
         # "Habitaciones": "Bedroom lock",
         "Banos": "Private bath",
@@ -71,7 +86,7 @@ class FeaturesSomosAlthena(Enum):
         "Agua": "Water",
         "Luz": "Electricity",
         "Amueblado": "Furnished",
-        "ZonasComunes": "Common areas"
+        "ZonasComunes": "Common areas",
     }
     EQUIVALENCES_FURNITURES = {
         "Armarios": "Wardrobe",
@@ -91,9 +106,16 @@ class FeaturesSomosAlthena(Enum):
         # "Chimeneas": "Iron"
     }
 
+class PropertyTypeColiving(Enum):
+    PROPERTY_TYPE = (
+        'Pisos',
+        'Casas',
+        'Edificios',
+    )
+    OPERATION = 'alquiler'
 
 
-def get_data_json(object_spider: Spider, json_path_no_refined: str) -> list[dict]:
+def get_data_json(json_path_no_refined: str) -> list[dict]:
     """
     object_spider:
         keys:
@@ -175,7 +197,7 @@ def refine_data_json(data_json: dict) -> dict:
     output_json_data["cost"] = data_json["Precio"]
     output_json_data["area_building"] = data_json["MetrosConstruidos"]
     output_json_data["area_utils"] = data_json["MetrosUtiles"]
-    
+
     output_json_data["bedrooms"] = data_json["Habitaciones"]
     output_json_data["bathrooms"] = data_json["Banos"]
 
@@ -358,7 +380,9 @@ def process_descriptions(
     return result
 
 
-def search_feature_with_map(items_features: dict, elements_features: dict, equivalences: dict):
+def search_feature_with_map(
+    items_features: dict, elements_features: dict, equivalences: dict
+):
 
     true_ids = []
 
@@ -367,13 +391,18 @@ def search_feature_with_map(items_features: dict, elements_features: dict, equiv
             if item_feature in equivalences:
                 mapped_feature = equivalences[item_feature]
                 element_id = next(
-                    (id_ for id_, name in elements_features.items() if name == mapped_feature),
-                    None
+                    (
+                        id_
+                        for id_, name in elements_features.items()
+                        if name == mapped_feature
+                    ),
+                    None,
                 )
                 if element_id is not None:
                     true_ids.append(element_id)
 
     return true_ids
+
 
 def retrive_lodgerin_property(items, elements):
     PropertyTypeId = get_id_from_name(elements["property_types"], "Studio/Entire flat", "name")
@@ -443,16 +472,17 @@ def retrive_lodgerin_rental_units(items_property: Property,elements_dict: dict, 
     )
     return data_rental_units
 
+
 def get_month() -> tuple:
     now = datetime.now()
     start_date = now.replace(day=1)
     next_month = now.replace(day=28) + timedelta(days=4)
     end_date = next_month.replace(day=1) - timedelta(days=1)
     month_name = calendar.month_name[now.month]
-    
+
     start_date_str = start_date.strftime("%Y-%m-%d")
     end_date_str = end_date.strftime("%Y-%m-%d")
-    
+
     return start_date_str, end_date_str, month_name
 
 def parse_elements(full_json: Dict, mapping: Dict[str, Type[BaseModel]]) -> Dict[str, dict]:
@@ -473,49 +503,3 @@ def parse_elements(full_json: Dict, mapping: Dict[str, Type[BaseModel]]) -> Dict
         else:
             raise KeyError(f"Key '{key}' not found in the provided JSON")
     return elements_dict
-
-
-
-if __name__ == "__main__":
-    ruta_json1 = '/Users/mherize/squadmakers/logderin/WebScrapingforRentalPlatforms/src/app/scrapy/somosalthena/somosalthena/data/somosalthena_refined.json'
-    ruta_json2 = '/Users/mherize/squadmakers/logderin/WebScrapingforRentalPlatforms/local/elements.json'
-    with open(ruta_json1, 'r', encoding='utf-8') as archivo1:
-            datos_json1 = json.load(archivo1)
-    with open(ruta_json2, 'r', encoding='utf-8') as archivo2:
-        datos_json2 = json.load(archivo2)
-
-    full_json = datos_json2[0]
-    mapping = {
-        "contract_types": ContractTypes,
-        "spaces_types": SpacesTypes,
-        "property_types": PropertyTypes,
-        "rental_units_types": RentalUnitsTypes,
-        "features": Features,
-        "furnitures": Furnitures,
-        "languages": Languages,
-        "pension_types": PensionTypes,
-        "api_key": ApiKey,
-    }
-    
-    elements_dict = parse_elements(full_json, mapping)
-    api_key = elements_dict['api_key']['data'][0]['name']
-
-    for data in datos_json1:
-        # Property
-        data_property, cost = retrive_lodgerin_property(data,elements_dict)
-        property_id = funcs.save_property(data_property,api_key)
-        data_property.id = property_id
-        # RentalUnit
-        data_rental_units = retrive_lodgerin_rental_units(data_property,elements_dict,cost)
-        rental_unit_id = funcs.save_rental_unit(data_rental_units,api_key)
-        data_rental_units.id = rental_unit_id
-        # Schedule
-        start_date, end_date, month = get_month()
-        calendar_unit=DatePayloadItem(
-            summary= f"Blocked until {start_date}",
-            description= f"Available from {month}",
-            startDate= start_date,
-            endDate= end_date,
-        )
-        funcs.check_and_insert_rental_unit_calendar(rental_unit_id, calendar_unit,api_key)
-        break
