@@ -78,12 +78,9 @@ def create_json_file(path_document: str, spider: Spider) -> None:
         spider (Spider): The instance of the spider for logging messages.
     """
     # Check if the file already exists
-    if not path.exists(path_document):
-        with open(path_document, "w") as file:
-            json.dump([], file)  # Create an empty JSON file
-        spider.logger.info("JSON file created at: %s", path_document)
-    else:
-        spider.logger.info("The file already exists at: %s", path_document)
+    with open(path_document, "w") as file:
+        json.dump([], file)  # Create an empty JSON file
+    spider.logger.info("JSON file created at: %s", path_document)
 
 
 def write_to_json_file(path_document: str, items: list[dict], spider: Spider) -> None:
