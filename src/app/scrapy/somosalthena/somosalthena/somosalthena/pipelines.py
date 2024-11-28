@@ -36,7 +36,8 @@ class SomosalthenaPipeline:
 
     def close_spider(self, spider: Spider) -> None:
         output_data_json = get_data_json(self.json_path_no_refined)
-        write_to_json_file(self.json_path_refined, output_data_json, spider)
+        # write_to_json_file(self.json_path_refined, output_data_json, spider)
+        write_json_file_refine(self.json_path_refined, output_data_json, spider)
 
         elements_dict = parse_elements(spider.context[0], mapping)
         api_key = elements_dict["api_key"]["data"][0]["name"]
@@ -104,5 +105,20 @@ def write_to_json_file(path_document: str, items: list[dict], spider: Spider) ->
             file.truncate()  # Remove any old content that remains
         spider.logger.info("Items written to the file: %s", path_document)
 
+    except Exception as e:
+        spider.logger.error("An error occurred while writing to the file: %s", e)
+
+def write_json_file_refine(file_path: str, data: list[dict], spider: Spider) -> None:
+    """
+    Write data to a JSON file specified by the file path.
+
+    :param file_path: The path of the JSON file to write to.
+    :param data: The data to be written to the JSON file.
+    """
+    try:
+        # Write the data to the JSON file
+        with open(file_path, 'w', encoding='utf-8') as json_file:
+            json.dump(data, json_file, ensure_ascii=False, indent=4)
+        spider.logger.info("JSON file created at: %s", file_path)
     except Exception as e:
         spider.logger.error("An error occurred while writing to the file: %s", e)
