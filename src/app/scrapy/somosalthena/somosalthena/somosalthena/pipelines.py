@@ -36,39 +36,38 @@ class SomosalthenaPipeline:
 
     def close_spider(self, spider: Spider) -> None:
         output_data_json = get_data_json(self.json_path_no_refined)
-        write_to_json_file(self.json_path_refined, output_data_json, spider)
+        # write_to_json_file(self.json_path_refined, output_data_json, spider)
+        write_json_file_refine(self.json_path_refined, output_data_json, spider)
 
-        elements_dict = parse_elements(spider.context, mapping)
+        elements_dict = parse_elements(spider.context[0], mapping)
         api_key = elements_dict["api_key"]["data"][0]["name"]
-
-        print(f"maps_elements: {spider.context}")
-        print(f"elements_dict: {elements_dict}")
+        
         print(f"api_key: {api_key}")
 
         for data in output_data_json:
             # Property
-            data_property, cost, furnitures = retrive_lodgerin_property(
+            data_property, cost = retrive_lodgerin_property(
                 data, elements_dict
             )
             property_id = funcs.save_property(data_property, api_key)
             data_property.id = property_id
             # RentalUnit
             data_rental_units = retrive_lodgerin_rental_units(
-                data_property, elements_dict, cost, furnitures
+                data_property, elements_dict, cost
             )
             rental_unit_id = funcs.save_rental_unit(data_rental_units, api_key)
             data_rental_units.id = rental_unit_id
             # Schedule
-            start_date, end_date, month = get_month()
-            calendar_unit = DatePayloadItem(
-                summary=f"Blocked until {start_date}",
-                description=f"Available from {month}",
-                startDate=start_date,
-                endDate=end_date,
-            )
-            funcs.check_and_insert_rental_unit_calendar(
-                rental_unit_id, calendar_unit, api_key
-            )
+            # start_date, end_date, month = get_month()
+            # calendar_unit = DatePayloadItem(
+            #     summary=f"Blocked until {start_date}",
+            #     description=f"Available from {month}",
+            #     startDate=start_date,
+            #     endDate=end_date,
+            # )
+            # funcs.check_and_insert_rental_unit_calendar(
+            #     rental_unit_id, calendar_unit, api_key
+            # )
 
 def create_json_file(path_document: str, spider: Spider) -> None:
     """Creates an empty JSON file at the specified path.

@@ -153,7 +153,7 @@ def save_property(property_item, api_key):
         if response["msg"] == "The property has been saved successfully!":
             data = response["data"]
             logger.info(
-                f"Property saved successfully! Property Code: {data.get('code')}, Property ID: {data.get('id')}, Property Name: {data.get('name')}"
+                f"Property saved successfully! Property Code: {data.get('code')}, Property ID: {data.get('id')}"
             )
             return data.get("id")
         else:
@@ -178,7 +178,7 @@ def save_rental_unit(rental_unit_item, api_key):
         else:
             logger.info(f"Unexpected message: {response['msg']}")
     else:
-        logger.info("Failed to save rental_unit. No valid response received.")
+        logger.info(f"Failed to save rental_unit. No valid response received. {rental_unit_dict}")
     return None
 
 
@@ -190,7 +190,7 @@ def check_and_insert_rental_unit_calendar(
 
     try:
         existing_schedule = lodgerin_api.get_rental_unit_calendar(rental_unit_id)
-        logger.info("existing_schedule",existing_schedule)
+        logger.info(f"existing_schedule: {existing_schedule}")
 
         if existing_schedule is None or not existing_schedule.get("data"):
             logger.info(f"Inserting new dates for rental unit ID {rental_unit_id}")

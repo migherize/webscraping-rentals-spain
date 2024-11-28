@@ -15,7 +15,16 @@ from app.models.schemas import (
 from app.models.enums import CurrencyCode, PaymentCycleEnum
 from datetime import datetime, timedelta
 import calendar
+from typing import Dict, Any, Type
+from pydantic import BaseModel, Field
 
+class PropertyTypeColiving(Enum):
+    PROPERTY_TYPE = (
+        'Pisos',
+        'Casas',
+        'Edificios',
+    )
+    OPERATION = 'alquiler'
 
 class FeaturesSomosAlthena(Enum):
 
@@ -58,7 +67,7 @@ class FeaturesSomosAlthena(Enum):
         "Horno",
     }
     EQUIVALENCES_FEATURES = {
-        "Habitaciones": "Bedroom lock",
+        # "Habitaciones": "Bedroom lock",
         "Banos": "Private bath",
         "AireAcondicionado": "Air conditioning",
         "Exterior": "Exterior",
@@ -95,7 +104,7 @@ class FeaturesSomosAlthena(Enum):
         "Trasteros": "Extra storage",
         "Despachos": "Filing Cabinet",
         "Altillo": "Bookshelf/Bookcase",
-        "Chimeneas": "Iron",
+        # "Chimeneas": "Iron"
     }
 
 class PropertyTypeColiving(Enum):
@@ -177,8 +186,13 @@ def refine_data_json(data_json: dict) -> dict:
         },
         "images": [],
         "features": [],
+        "GrupoInmueble":"",
+        "Operacion":"",
     }
 
+    output_json_data["GrupoInmueble"] = data_json["GrupoInmueble"]
+    output_json_data["Operacion"] = data_json["Operacion"]
+    
     output_json_data["title"] = data_json["Titulo"]
     output_json_data["referend_code"] = data_json["Referencia"]
     output_json_data["cost"] = data_json["Precio"]
@@ -272,17 +286,12 @@ def get_all_multidata(
 def get_all_features(data_json: dict):
 
     all_feature_somosalthena = FeaturesSomosAlthena.FEATURES.value
-
-    output_info_feature = {}
-    for feature_somosalthena in all_feature_somosalthena:
-        try:
-            if data_json[feature_somosalthena] in (0, "0", "", None, "None"):
-                pass
-            else:
-                output_info_feature[feature_somosalthena] = True
-        except:
-            pass
-
+    invalid_values = {0, "0", "", None, "None"}
+    output_info_feature = {
+        feature: True
+        for feature in all_feature_somosalthena
+        if data_json.get(feature) not in invalid_values
+    }
     return output_info_feature
 
 
@@ -307,6 +316,37 @@ def get_id_from_name(data_dict: dict, name: str, key_name: str) -> int:
             return item.get("id")
     return None
 
+def process_descriptions_with_fallback(
+    all_descriptions: dict,
+    all_titles: dict,
+    all_descriptions_short: dict,
+    languages_dict: dict,
+) -> tuple:
+    result = []
+    language_ids = []
+
+    for lang_key in all_titles.keys():
+        title = all_titles.get(lang_key, "").strip()
+        description = all_descriptions.get(lang_key, "").strip()
+        description_short = all_descriptions_short.get(lang_key, "").strip()
+
+        final_description = description if description else description_short
+
+        if title and final_description:
+            language_id = get_id_from_name(
+                languages_dict, lang_key.capitalize(), "name_en"
+            )
+            if language_id:
+                result.append(
+                    {
+                        "LanguagesId": language_id,
+                        "title": title,
+                        "description": final_description,
+                    }
+                )
+                language_ids.append(language_id)
+
+    return result, language_ids
 
 def process_descriptions(
     all_descriptions: dict, all_titles: dict, languages_dict: dict
@@ -366,85 +406,70 @@ def search_feature_with_map(
 
 
 def retrive_lodgerin_property(items, elements):
-    PropertyTypeId = get_id_from_name(elements["property_types"], "Host family", "name")
-    PensionTypeId = get_id_from_name(elements["pension_types"], "Full board", "name")
-    descriptions = process_descriptions(
-        items["all_descriptions"], items["all_titles"], elements["languages"]
-    )
-    element_feature = extract_id_name(elements["features"]["data"])
-    features_id = search_feature_with_map(
-        items["features"],
-        element_feature,
-        FeaturesSomosAlthena.EQUIVALENCES_FEATURES.value,
+    PropertyTypeId = get_id_from_name(elements["property_types"], "Studio/Entire flat", "name")
+    # PensionTypeId = get_id_from_name(elements["pension_types"], "Full board", "name")
+    # descriptions = process_descriptions(
+    #     items["all_descriptions"], items["all_titles"], elements["languages"]
+    # )# TODO: description short if haven't add description all_descriptions
+    descriptions, language_ids = process_descriptions_with_fallback(
+        items["all_descriptions"],
+        items["all_titles"],
+        items["all_descriptions_short"],
+        elements["languages"],
     )
 
-    element_furnitures = extract_id_name(elements["furnitures"]["data"])
-    furnitures_id = search_feature_with_map(
-        items["features"],
-        element_furnitures,
-        FeaturesSomosAlthena.EQUIVALENCES_FURNITURES.value,
-    )
+    element_feature = extract_id_name(elements['features']['data'])
+    features_id = search_feature_with_map(items['features'], element_feature, FeaturesSomosAlthena.EQUIVALENCES_FEATURES.value)
+    
+    # element_furnitures = extract_id_name(elements['furnitures']['data'])
+    # furnitures_id = search_feature_with_map(items['features'], element_furnitures, FeaturesSomosAlthena.EQUIVALENCES_FURNITURES.value)
 
     property_items = Property(
-        name=items["title"],
-        description=items["all_descriptions_short"]["spanish"],
+        name=items["title"], #TODO: comment later change API
+        description=items["all_descriptions_short"]["spanish"], #TODO: comment later change API
         referenceCode=items["referend_code"],
-        # minAge=items[''],
-        # maxAge=items[''],
         areaM2=items["area_building"],
-        areaM2Available=items["area_utils"],
-        # maxOccupancy=items[''],
-        # dateLastReform=items[''],
-        # tenantGender=items[''],
+        areaM2Available=items["area_utils"] if float(items["area_utils"]) != 0 else 1,
         cancellationPolicy=constants.CANCELLATION_POLICY,
         rentalType=constants.RENTAL_TYPE,
         isActive=True,
         isPublished=True,
         Features=features_id,
-        # Languages=items[''],
-        # videoUrl=items[''],
-        # tourUrl=items[''],
         PropertyTypeId=PropertyTypeId,
-        PensionTypeId=PensionTypeId,
         Descriptions=descriptions,
         Images=items["images"],
         Location=items["output_address"],
+        provider="somosalthena",
+        providerRef=items["referend_code"],
+        Languages=language_ids
     )
 
-    return property_items, items["cost"], furnitures_id
+    return property_items, items["cost"]
 
-
-def retrive_lodgerin_rental_units(
-    items_property: Property, elements_dict: dict, cost: str, furnitures_id: str
-):
+def retrive_lodgerin_rental_units(items_property: Property,elements_dict: dict, cost: str):
     data_rental_units = RentalUnits(
-        PropertyId=items_property.id,
-        referenceCode=items_property.referenceCode,
-        areaM2=items_property.areaM2,
-        areaM2Available=int(items_property.areaM2Available),
-        # maxCapacity=items_property[""],
-        # urlICalSync=items_property[""],
-        # bedType=items_property[""],
-        Features=items_property.Features,
-        Furnitures=furnitures_id,
-        isActive=True,
-        isPublished=True,
-        ContractsModels=[
-            ContractModel(
-                PropertyBusinessModelId=funcs.get_elements_types(
-                    constants.MODELS_CONTRACT, elements_dict["contract_types"]
-                ),
-                currency=CurrencyCode.EUR.value,
-                amount=int(cost),
-                depositAmount=constants.INT_ZERO,
-                reservationAmount=constants.INT_ZERO,
-                minPeriod=constants.INT_ONE,
-                paymentCycle=PaymentCycleEnum.MONTHLY.value,
-                extras=[],
-            )
-        ],
-        Descriptions=items_property.Descriptions,
-        Images=items_property.Images,
+    PropertyId=items_property.id,
+    referenceCode=f'{items_property.referenceCode}-001',
+    areaM2=items_property.areaM2,
+    areaM2Available=float(items_property.areaM2Available),
+    # Features=items_property.Features,
+    # Furnitures=furnitures_id,
+    isActive=True,
+    isPublished=True,
+    ContractsModels=[ContractModel(
+        PropertyBusinessModelId=funcs.get_elements_types(
+            constants.MODELS_CONTRACT,elements_dict['contract_types']
+        ),
+        currency=CurrencyCode.EUR.value,
+        amount=float(cost),
+        depositAmount=float(cost),
+        reservationAmount=constants.INT_ZERO,
+        minPeriod=constants.INT_ONE,
+        paymentCycle=PaymentCycleEnum.MONTHLY.value,
+        extras=[],
+    )],
+    Descriptions=items_property.Descriptions,
+    # Images=items_property.Images,
     )
     return data_rental_units
 
@@ -460,3 +485,22 @@ def get_month() -> tuple:
     end_date_str = end_date.strftime("%Y-%m-%d")
 
     return start_date_str, end_date_str, month_name
+
+def parse_elements(full_json: Dict, mapping: Dict[str, Type[BaseModel]]) -> Dict[str, dict]:
+    """
+    Procesa un JSON completo y lo convierte en un diccionario con clases Pydantic.
+
+    Args:
+        full_json (dict): El JSON que contiene los datos para procesar.
+        mapping (dict): Un mapeo de nombres de claves a clases Pydantic.
+
+    Returns:
+        dict: Un diccionario con los datos parseados.
+    """
+    elements_dict = {}
+    for key, model_class in mapping.items():
+        if key in full_json:
+            elements_dict[key] = model_class(**full_json[key]).dict()
+        else:
+            raise KeyError(f"Key '{key}' not found in the provided JSON")
+    return elements_dict
