@@ -106,6 +106,14 @@ class FeaturesSomosAlthena(Enum):
         # "Chimeneas": "Iron"
     }
 
+class PropertyTypeColiving(Enum):
+    PROPERTY_TYPE = (
+        'Pisos',
+        'Casas',
+        'Edificios',
+    )
+    OPERATION = 'alquiler'
+
 
 def get_data_json(json_path_no_refined: str) -> list[dict]:
     """
