@@ -190,7 +190,7 @@ def check_and_insert_rental_unit_calendar(
 
     try:
         existing_schedule = lodgerin_api.get_rental_unit_calendar(rental_unit_id)
-        logger.info("existing_schedule",existing_schedule)
+        logger.info(f"existing_schedule: {existing_schedule}")
 
         if existing_schedule is None or not existing_schedule.get("data"):
             logger.info(f"Inserting new dates for rental unit ID {rental_unit_id}")

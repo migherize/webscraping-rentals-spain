@@ -15,7 +15,8 @@ from app.models.schemas import (
 from app.models.enums import CurrencyCode, PaymentCycleEnum
 from datetime import datetime, timedelta
 import calendar
-
+from typing import Dict, Any, Type
+from pydantic import BaseModel, Field
 
 class PropertyTypeColiving(Enum):
     PROPERTY_TYPE = (
