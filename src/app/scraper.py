@@ -1,16 +1,22 @@
-import os
 import logging
-from socket import timeout
+import os
 import time
-from crochet import setup, wait_for
-from twisted.internet.defer import inlineCallbacks
-from scrapy.crawler import CrawlerRunner
-from app.models.enums import URLs
-import app.utils.constants as constants
+from socket import timeout
 
+from crochet import setup, wait_for
+from scrapy.crawler import CrawlerRunner
+from twisted.internet.defer import inlineCallbacks
+
+import app.utils.constants as constants
+from app.models.enums import URLs
 from app.scrapy.common import initialize_scraping_context
-from app.scrapy.flipcoliving.flipcoliving.flipcoliving.spiders.flipcoliving_spider import FlipcolivingSpiderSpider
-from app.scrapy.somosalthena.somosalthena.somosalthena.spiders.somosalthena_spider import SomosalthenaSpiderSpider
+from app.scrapy.flipcoliving.flipcoliving.flipcoliving.spiders.flipcoliving_spider import (
+    FlipcolivingSpiderSpider,
+)
+from app.scrapy.somosalthena.somosalthena.somosalthena.spiders.somosalthena_spider import (
+    SomosalthenaSpiderSpider,
+)
+
 # from app.scrapy.nodis.nodis.nodis.spiders.nodis_spider import NodisSpider
 
 os.makedirs(constants.LOG_DIR, exist_ok=True)
@@ -32,6 +38,7 @@ logger.setLevel(logging.DEBUG)
 setup()
 runner = CrawlerRunner()
 
+
 @wait_for(timeout=600)
 @inlineCallbacks
 def run_webscraping(url: URLs) -> None:
@@ -45,11 +52,15 @@ def run_webscraping(url: URLs) -> None:
         context = ""
         if url == URLs.flipcoliving:
             context = initialize_scraping_context(constants.EMAIL_FLIPCOLIVING)
-            yield runner.crawl(FlipcolivingSpiderSpider, start_urls=[url], context=context)
+            yield runner.crawl(
+                FlipcolivingSpiderSpider, start_urls=[url], context=context
+            )
 
         elif url == URLs.somosalthena:
             context = initialize_scraping_context(constants.EMAIL_SOMOSATHENEA)
-            yield runner.crawl(SomosalthenaSpiderSpider, start_urls=[url], context=context)
+            yield runner.crawl(
+                SomosalthenaSpiderSpider, start_urls=[url], context=context
+            )
 
         elif url == URLs.nodis:
             # context = initialize_scraping_context(constants.EMAIL_NODIS)

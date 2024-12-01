@@ -1,6 +1,8 @@
+from typing import Dict, List, Optional
+
 import requests
+
 from app.utils.constants import LODGERIN_API, LODGERIN_INTERNAL, TOKEN_API_INTERNAL
-from typing import Optional, List, Dict
 
 
 class LodgerinInternal:

@@ -1,30 +1,29 @@
-from asyncio import constants
-import re
+import calendar
 import json
-from scrapy import Spider
+import re
+from asyncio import constants
+from datetime import datetime, timedelta
 from enum import Enum
-from app.scrapy.common import clean_information_html, get_all_images
-from app.models.schemas import Property, RentalUnits
+from typing import Any, Dict, Type
+
+from pydantic import BaseModel, Field
+from scrapy import Spider
+
 import app.utils.constants as constants
 import app.utils.funcs as funcs
-from app.models.schemas import (
-    Property,
-    RentalUnits,
-    ContractModel,
-)
 from app.models.enums import CurrencyCode, PaymentCycleEnum
-from datetime import datetime, timedelta
-import calendar
-from typing import Dict, Any, Type
-from pydantic import BaseModel, Field
+from app.models.schemas import ContractModel, Property, RentalUnits
+from app.scrapy.common import clean_information_html, get_all_images
+
 
 class PropertyTypeColiving(Enum):
     PROPERTY_TYPE = (
-        'Pisos',
-        'Casas',
-        'Edificios',
+        "Pisos",
+        "Casas",
+        "Edificios",
     )
-    OPERATION = 'alquiler'
+    OPERATION = "alquiler"
+
 
 class FeaturesSomosAlthena(Enum):
 
@@ -107,13 +106,14 @@ class FeaturesSomosAlthena(Enum):
         # "Chimeneas": "Iron"
     }
 
+
 class PropertyTypeColiving(Enum):
     PROPERTY_TYPE = (
-        'Pisos',
-        'Casas',
-        'Edificios',
+        "Pisos",
+        "Casas",
+        "Edificios",
     )
-    OPERATION = 'alquiler'
+    OPERATION = "alquiler"
 
 
 def get_data_json(json_path_no_refined: str) -> list[dict]:
@@ -136,9 +136,11 @@ def get_data_json(json_path_no_refined: str) -> list[dict]:
         for data_json in all_data:
             if not data_json:
                 continue
-            if not (data_json['GrupoInmueble'] in PropertyTypeColiving.PROPERTY_TYPE.value):
+            if not (
+                data_json["GrupoInmueble"] in PropertyTypeColiving.PROPERTY_TYPE.value
+            ):
                 continue
-            if not (data_json['Operacion'] == PropertyTypeColiving.OPERATION.value):
+            if not (data_json["Operacion"] == PropertyTypeColiving.OPERATION.value):
                 continue
             refined_data_json = refine_data_json(data_json)
             output_data.append(refined_data_json)
@@ -186,13 +188,13 @@ def refine_data_json(data_json: dict) -> dict:
         },
         "images": [],
         "features": [],
-        "GrupoInmueble":"",
-        "Operacion":"",
+        "GrupoInmueble": "",
+        "Operacion": "",
     }
 
     output_json_data["GrupoInmueble"] = data_json["GrupoInmueble"]
     output_json_data["Operacion"] = data_json["Operacion"]
-    
+
     output_json_data["title"] = data_json["Titulo"]
     output_json_data["referend_code"] = data_json["Referencia"]
     output_json_data["cost"] = data_json["Precio"]
@@ -316,6 +318,7 @@ def get_id_from_name(data_dict: dict, name: str, key_name: str) -> int:
             return item.get("id")
     return None
 
+
 def process_descriptions_with_fallback(
     all_descriptions: dict,
     all_titles: dict,
@@ -347,6 +350,7 @@ def process_descriptions_with_fallback(
                 language_ids.append(language_id)
 
     return result, language_ids
+
 
 def process_descriptions(
     all_descriptions: dict, all_titles: dict, languages_dict: dict
@@ -406,7 +410,9 @@ def search_feature_with_map(
 
 
 def retrive_lodgerin_property(items, elements):
-    PropertyTypeId = get_id_from_name(elements["property_types"], "Studio/Entire flat", "name")
+    PropertyTypeId = get_id_from_name(
+        elements["property_types"], "Studio/Entire flat", "name"
+    )
     descriptions, language_ids = process_descriptions_with_fallback(
         items["all_descriptions"],
         items["all_titles"],
@@ -414,9 +420,13 @@ def retrive_lodgerin_property(items, elements):
         elements["languages"],
     )
 
-    element_feature = extract_id_name(elements['features']['data'])
-    features_id = search_feature_with_map(items['features'], element_feature, FeaturesSomosAlthena.EQUIVALENCES_FEATURES.value)
-    
+    element_feature = extract_id_name(elements["features"]["data"])
+    features_id = search_feature_with_map(
+        items["features"],
+        element_feature,
+        FeaturesSomosAlthena.EQUIVALENCES_FEATURES.value,
+    )
+
     property_items = Property(
         referenceCode=items["referend_code"],
         areaM2=items["area_building"],
@@ -432,32 +442,37 @@ def retrive_lodgerin_property(items, elements):
         Location=items["output_address"],
         provider="somosalthena",
         providerRef=items["referend_code"],
-        Languages=language_ids
+        Languages=language_ids,
     )
 
     return property_items, items["cost"]
 
-def retrive_lodgerin_rental_units(items_property: Property,elements_dict: dict, cost: str):
+
+def retrive_lodgerin_rental_units(
+    items_property: Property, elements_dict: dict, cost: str
+):
     data_rental_units = RentalUnits(
-    PropertyId=items_property.id,
-    referenceCode=f'{items_property.referenceCode}-001',
-    areaM2=items_property.areaM2,
-    areaM2Available=float(items_property.areaM2Available),
-    isActive=True,
-    isPublished=True,
-    ContractsModels=[ContractModel(
-        PropertyBusinessModelId=funcs.get_elements_types(
-            constants.MODELS_CONTRACT,elements_dict['contract_types']
-        ),
-        currency=CurrencyCode.EUR.value,
-        amount=float(cost),
-        depositAmount=float(cost),
-        reservationAmount=constants.INT_ZERO,
-        minPeriod=constants.INT_ONE,
-        paymentCycle=PaymentCycleEnum.MONTHLY.value,
-        extras=[],
-    )],
-    Descriptions=items_property.Descriptions,
+        PropertyId=items_property.id,
+        referenceCode=f"{items_property.referenceCode}-001",
+        areaM2=items_property.areaM2,
+        areaM2Available=float(items_property.areaM2Available),
+        isActive=True,
+        isPublished=True,
+        ContractsModels=[
+            ContractModel(
+                PropertyBusinessModelId=funcs.get_elements_types(
+                    constants.MODELS_CONTRACT, elements_dict["contract_types"]
+                ),
+                currency=CurrencyCode.EUR.value,
+                amount=float(cost),
+                depositAmount=float(cost),
+                reservationAmount=constants.INT_ZERO,
+                minPeriod=constants.INT_ONE,
+                paymentCycle=PaymentCycleEnum.MONTHLY.value,
+                extras=[],
+            )
+        ],
+        Descriptions=items_property.Descriptions,
     )
     return data_rental_units
 
@@ -474,7 +489,10 @@ def get_month() -> tuple:
 
     return start_date_str, end_date_str, month_name
 
-def parse_elements(full_json: Dict, mapping: Dict[str, Type[BaseModel]]) -> Dict[str, dict]:
+
+def parse_elements(
+    full_json: Dict, mapping: Dict[str, Type[BaseModel]]
+) -> Dict[str, dict]:
     """
     Procesa un JSON completo y lo convierte en un diccionario con clases Pydantic.
 

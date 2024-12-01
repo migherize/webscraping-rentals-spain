@@ -1,35 +1,37 @@
-import os
 import json
+import logging
+import os
 import re
 import unicodedata
-import logging
-from enum import Enum
-from typing import Union, List
-from os import path
-from pydantic import BaseModel
 from collections import defaultdict
+from enum import Enum
+from os import path
+from typing import List, Union
+
+from pydantic import BaseModel
 from scrapy import Spider
-import app.utils.constants as constants
+
 import app.models.enums as models
-from app.scrapy.common import get_all_imagenes, parse_elements
-from app.models.enums import feature_map, CurrencyCode, PaymentCycleEnum, Languages
+import app.utils.constants as constants
+from app.models.enums import CurrencyCode, Languages, PaymentCycleEnum, feature_map
 from app.models.schemas import (
-    Property,
-    RentalUnits,
     ContractModel,
+    DatePayloadItem,
     Description,
     LocationAddress,
-    DatePayloadItem,
+    Property,
+    RentalUnits,
     mapping,
 )
+from app.scrapy.common import get_all_imagenes, parse_elements
 from app.utils.funcs import (
-    find_feature_keys,
-    get_elements_types,
-    save_property,
-    save_rental_unit,
-    get_month_dates,
     check_and_insert_rental_unit_calendar,
     detect_language,
+    find_feature_keys,
+    get_elements_types,
+    get_month_dates,
+    save_property,
+    save_rental_unit,
 )
 
 os.makedirs(constants.LOG_DIR, exist_ok=True)

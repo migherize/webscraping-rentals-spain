@@ -1,10 +1,12 @@
-import os
 import logging
-from typing import Dict, Any
-from fastapi import FastAPI, HTTPException, Query, BackgroundTasks
-import app.utils.constants as constants
+import os
+from typing import Any, Dict
+
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Query
+
 import app.models.enums as models
 import app.scraper as scraper
+import app.utils.constants as constants
 
 os.makedirs(constants.LOG_DIR, exist_ok=True)
 
@@ -28,13 +30,18 @@ app = FastAPI(
     description="Esta API proporciona información sobre web scraping de diversas páginas web.",
 )
 
+
 @app.get("/")
 def home_page():
     """
     Clasica pagina de inicio de Fastapi
     """
     logger.info(f"Home Page: WebScrapingforRentalPlatforms")
-    return {"page": "API WebScrapingforRentalPlatforms", "Version": "1.0", "Update Date": "November 06 2024"}
+    return {
+        "page": "API WebScrapingforRentalPlatforms",
+        "Version": "1.0",
+        "Update Date": "November 06 2024",
+    }
 
 
 @app.get("/scrape")
@@ -52,7 +59,7 @@ async def scrape_page(
     Returns:
         dict: Mensaje confirmando que el scraping ha comenzado.
     """
- 
+
     url = getattr(models.URLs, page.value).value
     logger.info(f"Solicitud de scraping recibida para la URL: {url}")
 
@@ -111,7 +118,9 @@ def check_log_status(spider_name: models.Pages) -> Dict[str, Any]:
         return {"status": status, "details": details}
 
     except Exception as e:
-        logger.error(f"Error al leer el archivo de log para {spider_name.value}: {str(e)}")
+        logger.error(
+            f"Error al leer el archivo de log para {spider_name.value}: {str(e)}"
+        )
         raise HTTPException(
             status_code=500, detail="Error al procesar el archivo de log."
         )

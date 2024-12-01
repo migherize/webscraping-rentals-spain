@@ -1,19 +1,18 @@
 import json
 from os import path
+
 from scrapy import Spider
-from .utils import (
-    get_data_json,
-    retrive_lodgerin_property,
-    retrive_lodgerin_rental_units,
-    get_month
-)
 
 import app.utils.funcs as funcs
-from app.models.schemas import (
-    DatePayloadItem,
-    mapping
-)
+from app.models.schemas import DatePayloadItem, mapping
 from app.scrapy.common import parse_elements
+
+from .utils import (
+    get_data_json,
+    get_month,
+    retrive_lodgerin_property,
+    retrive_lodgerin_rental_units,
+)
 
 
 class SomosalthenaPipeline:
@@ -37,18 +36,14 @@ class SomosalthenaPipeline:
     def close_spider(self, spider: Spider) -> None:
         output_data_json = get_data_json(self.json_path_no_refined)
         # write_to_json_file(self.json_path_refined, output_data_json, spider)
-        write_json_file_refine(self.json_path_refined, output_data_json, spider)
+        write_to_json_file(self.json_path_refined, output_data_json, spider)
 
         elements_dict = parse_elements(spider.context[0], mapping)
         api_key = elements_dict["api_key"]["data"][0]["name"]
-        
-        print(f"api_key: {api_key}")
 
         for data in output_data_json:
             # Property
-            data_property, cost = retrive_lodgerin_property(
-                data, elements_dict
-            )
+            data_property, cost = retrive_lodgerin_property(data, elements_dict)
             property_id = funcs.save_property(data_property, api_key)
             data_property.id = property_id
             # RentalUnit
@@ -68,6 +63,7 @@ class SomosalthenaPipeline:
             # funcs.check_and_insert_rental_unit_calendar(
             #     rental_unit_id, calendar_unit, api_key
             # )
+
 
 def create_json_file(path_document: str, spider: Spider) -> None:
     """Creates an empty JSON file at the specified path.

@@ -1,17 +1,18 @@
-import re
-import os
 import logging
+import os
+import re
 from datetime import datetime, timedelta
+
+import app.utils.constants as constants
 from app.models.enums import (
-    Month,
-    PropertyType,
     ContractModels,
     CurrencyCode,
     Languages,
+    Month,
+    PropertyType,
 )
-from app.utils.lodgerinService import LodgerinAPI
-import app.utils.constants as constants
 from app.models.schemas import DatePayloadItem
+from app.utils.lodgerinService import LodgerinAPI
 
 os.makedirs(constants.LOG_DIR, exist_ok=True)
 
@@ -178,12 +179,14 @@ def save_rental_unit(rental_unit_item, api_key):
         else:
             logger.info(f"Unexpected message: {response['msg']}")
     else:
-        logger.info(f"Failed to save rental_unit. No valid response received. {rental_unit_dict}")
+        logger.info(
+            f"Failed to save rental_unit. No valid response received. {rental_unit_dict}"
+        )
     return None
 
 
 def check_and_insert_rental_unit_calendar(
-    rental_unit_id: str, calendar_unit: DatePayloadItem, api_key:str
+    rental_unit_id: str, calendar_unit: DatePayloadItem, api_key: str
 ):
     lodgerin_api = LodgerinAPI(api_key)
     dates_payload = [calendar_unit.model_dump()]
