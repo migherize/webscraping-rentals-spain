@@ -2,7 +2,7 @@ from enum import Enum
 
 
 class XpathGeneralColiving(Enum):
-    
+
     LANGUAGE_URL = "//div[contains(@class, 'languageDropdown')]//a/@href"
 
     CITIES_URL = '//ul[contains(@id, "menu-locations-menu-1")]//@href'
@@ -34,8 +34,7 @@ class XpathGeneralColiving(Enum):
     # xpath multiples rental unit
     MULTIPLE_NAME_RENTAL_UNIT = ".//h3[contains(@class, 'card__title')]//text()"
     MULTIPLE_AVAILABLE_RENTAL_UNIT = ".//span[contains(@class, 'card__label')]//text()"
-    MULTIPLE_DATA_RENTAL_UNIT = ".//div[contains(@class, 'card__features')]//span//text()"
+    MULTIPLE_DATA_RENTAL_UNIT = (
+        ".//div[contains(@class, 'card__features')]//span//text()"
+    )
     MULTIPLE_IMAGENES_RENTAL_UNIT = ".//img/@data-srcset"
-
-
-

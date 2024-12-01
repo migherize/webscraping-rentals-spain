@@ -1,5 +1,6 @@
+from typing import Dict, List, Optional
+
 from pydantic import BaseModel, Field
-from typing import Optional, List, Dict
 
 
 class Description(BaseModel):
@@ -46,8 +47,8 @@ class LocationAddress(BaseModel):
 
 class Property(BaseModel):
     id: Optional[str] = Field(None, description="ID de la propiedad.")
-    name: Optional[str] = Field(..., description="Nombre/etiqueta de la propiedad.")
-    description: Optional[str] = Field(..., description="Descripción de la propiedad.")
+    name: Optional[str] = Field(None, description="Nombre/etiqueta de la propiedad.")
+    description: Optional[str] = Field(None, description="Descripción de la propiedad.")
     referenceCode: str = Field(
         ..., min_length=3, description="Código de referencia (min: 3 caracteres)."
     )
@@ -143,27 +144,46 @@ class ContractModel(BaseModel):
 
 class RentalUnits(BaseModel):
     id: Optional[str] = Field(None, description="ID de la rental unit.")
-    PropertyId: str = Field(..., description="ID de la propiedad a la que pertenece la rental unit")
+    PropertyId: str = Field(
+        ..., description="ID de la propiedad a la que pertenece la rental unit"
+    )
     referenceCode: str = Field(
         ..., min_length=3, description="Código de referencia de la rental unit"
     )
-    areaM2: Optional[int] = Field(None, description="Área total de la rental unit en metros cuadrados.")
-    areaM2Available: Optional[int] = Field(None, description="Área disponible de la rental unit en metros cuadrados.")
-    maxCapacity: Optional[str] = Field(None, description="Capacidad máxima (número de personas) en la rental unit.")
-    urlICalSync: Optional[str] = Field(None, description="URL de sincronización iCal de la rental unit.")
+    areaM2: Optional[int] = Field(
+        None, description="Área total de la rental unit en metros cuadrados."
+    )
+    areaM2Available: Optional[int] = Field(
+        None, description="Área disponible de la rental unit en metros cuadrados."
+    )
+    maxCapacity: Optional[str] = Field(
+        None, description="Capacidad máxima (número de personas) en la rental unit."
+    )
+    urlICalSync: Optional[str] = Field(
+        None, description="URL de sincronización iCal de la rental unit."
+    )
     bedType: Optional[str] = Field(
-        None, description="Tipo de cama. Valores posibles: 'individual', 'double', 'queen', 'king'."
+        None,
+        description="Tipo de cama. Valores posibles: 'individual', 'double', 'queen', 'king'.",
     )
     Features: Optional[List[int]] = Field(
-        default_factory=list, description="Lista de IDs de características asociadas a la rental unit."
+        default_factory=list,
+        description="Lista de IDs de características asociadas a la rental unit.",
     )
     Furnitures: Optional[List[int]] = Field(
-        default_factory=list, description="Lista de IDs de mobiliario asociados a la rental unit."
+        default_factory=list,
+        description="Lista de IDs de mobiliario asociados a la rental unit.",
     )
-    isActive: Optional[bool] = Field(None, description="Indica si la rental unit está activa o archivada.")
-    isPublished: Optional[bool] = Field(None, description="Indica si la rental unit está publicada y visible para los usuarios.")
+    isActive: Optional[bool] = Field(
+        None, description="Indica si la rental unit está activa o archivada."
+    )
+    isPublished: Optional[bool] = Field(
+        None,
+        description="Indica si la rental unit está publicada y visible para los usuarios.",
+    )
     ContractsModels: List[ContractModel] = Field(
-        default_factory=list, description="Lista de modelos de contratación asociados a la rental unit."
+        default_factory=list,
+        description="Lista de modelos de contratación asociados a la rental unit.",
     )
     Descriptions: Optional[List[Description]] = Field(
         [], description="Listado de títulos y descripciones."
@@ -172,9 +192,16 @@ class RentalUnits(BaseModel):
         [], description="Listado de imágenes de la propiedad."
     )
 
+
 class DatePayloadItem(BaseModel):
-    summary: str = Field(..., description="Short summary for the date range, e.g., 'Blocked until August 2025'")
-    description: str = Field(..., description="Detailed description of availability, e.g., 'Available from August 2025'")
+    summary: str = Field(
+        ...,
+        description="Short summary for the date range, e.g., 'Blocked until August 2025'",
+    )
+    description: str = Field(
+        ...,
+        description="Detailed description of availability, e.g., 'Available from August 2025'",
+    )
     startDate: str = Field(..., description="Start date of the blocked range")
     endDate: str = Field(..., description="End date of the blocked range")
 
@@ -183,13 +210,16 @@ class DatePayloadItem(BaseModel):
 class DatePayload(BaseModel):
     dates: List[DatePayloadItem]
 
+
 class ContractTypeItem(BaseModel):
     id: int
     name: str
     description: Optional[str]
 
+
 class ContractTypes(BaseModel):
     data: List[ContractTypeItem]
+
 
 class SpaceTypeItem(BaseModel):
     id: int
@@ -199,24 +229,30 @@ class SpaceTypeItem(BaseModel):
     icon: Optional[str]
     canBeRentalUnit: bool
 
+
 class SpacesTypes(BaseModel):
     data: List[SpaceTypeItem]
+
 
 class PropertyTypeItem(BaseModel):
     id: int
     name: str
     description: str
 
+
 class PropertyTypes(BaseModel):
     data: List[PropertyTypeItem]
+
 
 class RentalUnitTypeItem(BaseModel):
     id: int
     name: str
     description: str
 
+
 class RentalUnitsTypes(BaseModel):
     data: List[RentalUnitTypeItem]
+
 
 class FeatureItem(BaseModel):
     id: int
@@ -224,8 +260,10 @@ class FeatureItem(BaseModel):
     description: str
     icon: Optional[str]
 
+
 class Features(BaseModel):
     data: List[FeatureItem]
+
 
 class FurnitureItem(BaseModel):
     id: int
@@ -233,8 +271,10 @@ class FurnitureItem(BaseModel):
     description: str
     icon: Optional[str]
 
+
 class Furnitures(BaseModel):
     data: List[FurnitureItem]
+
 
 class LanguageItem(BaseModel):
     id: int
@@ -242,22 +282,28 @@ class LanguageItem(BaseModel):
     name_en: str
     code: str
 
+
 class Languages(BaseModel):
     data: List[LanguageItem]
+
 
 class PensionTypeItem(BaseModel):
     id: int
     name: Optional[str]
 
+
 class PensionTypes(BaseModel):
     data: List[PensionTypeItem]
+
 
 class ApiKeyItem(BaseModel):
     id: str
     name: str
 
+
 class ApiKey(BaseModel):
     data: List[ApiKeyItem]
+
 
 mapping = {
     "contract_types": ContractTypes,

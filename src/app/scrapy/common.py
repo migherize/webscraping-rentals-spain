@@ -1,9 +1,12 @@
-import re
 import json
+import re
 from typing import Dict, Type
+
 from pydantic import BaseModel
-from app.utils.lodgerinService import LodgerinAPI, LodgerinInternal
+
 import app.utils.constants as constants
+from app.utils.lodgerinService import LodgerinAPI, LodgerinInternal
+
 
 def get_all_imagenes(space_images: list) -> list[dict]:
     all_imagenes = []
@@ -22,26 +25,30 @@ def get_all_imagenes(space_images: list) -> list[dict]:
 
 
 def get_all_images(all_url_images: list) -> list:
-    
+
     if not all_url_images:
         return []
-    
-    all_images = all_url_images.split(',')
-    all_images = list(map(lambda url: re.sub(r'\\/', '/', url), all_images))
+
+    all_images = all_url_images.split(",")
+    all_images = list(map(lambda url: re.sub(r"\\/", "/", url), all_images))
     all_images = get_all_imagenes(all_images)
     return all_images
+
 
 def clean_information_html(text):
     """
     This function receives a text with HTML tags and returns the cleaned text.
-    
+
     :param text: str - Text with HTML tags.
     :return: str - Cleaned text without HTML tags.
     """
     # Remove HTML tags
-    cleaned = re.sub(r'<.*?>', '', text)  # Remove any HTML tags
-    cleaned = re.sub(r'\s+', ' ', cleaned)  # Replace multiple spaces with a single space
+    cleaned = re.sub(r"<.*?>", "", text)  # Remove any HTML tags
+    cleaned = re.sub(
+        r"\s+", " ", cleaned
+    )  # Replace multiple spaces with a single space
     return cleaned.strip()  # Remove leading and trailing whitespace
+
 
 def initialize_scraping_context(email: str):
     try:
@@ -50,20 +57,16 @@ def initialize_scraping_context(email: str):
         api_client = LodgerinAPI(api_key)
         api_client.load_all_data()
         mapped_data = api_client.get_mapped_data()
-        mapped_data['api_key'] = {
-            "data": [
-                {
-                    "id": email,
-                    "name": api_key
-                }
-            ]
-        }
+        mapped_data["api_key"] = {"data": [{"id": email, "name": api_key}]}
         return mapped_data
     except Exception as e:
         print(f"Error durante la inicialización del contexto de scraping: {str(e)}")
         raise
 
-def parse_elements(full_json: Dict, mapping: Dict[str, Type[BaseModel]]) -> Dict[str, dict]:
+
+def parse_elements(
+    full_json: Dict, mapping: Dict[str, Type[BaseModel]]
+) -> Dict[str, dict]:
     """
     Procesa un JSON completo y lo convierte en un diccionario con clases Pydantic.
 

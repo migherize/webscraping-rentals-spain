@@ -1,19 +1,18 @@
 import json
 from os import path
+
 from scrapy import Spider
-from .utils import (
-    get_data_json,
-    retrive_lodgerin_property,
-    retrive_lodgerin_rental_units,
-    get_month
-)
 
 import app.utils.funcs as funcs
-from app.models.schemas import (
-    DatePayloadItem,
-    mapping
-)
+from app.models.schemas import DatePayloadItem, mapping
 from app.scrapy.common import parse_elements
+
+from .utils import (
+    get_data_json,
+    get_month,
+    retrive_lodgerin_property,
+    retrive_lodgerin_rental_units,
+)
 
 
 class SomosalthenaPipeline:
@@ -37,18 +36,14 @@ class SomosalthenaPipeline:
     def close_spider(self, spider: Spider) -> None:
         output_data_json = get_data_json(self.json_path_no_refined)
         # write_to_json_file(self.json_path_refined, output_data_json, spider)
-        write_json_file_refine(self.json_path_refined, output_data_json, spider)
+        write_to_json_file(self.json_path_refined, output_data_json, spider)
 
         elements_dict = parse_elements(spider.context[0], mapping)
         api_key = elements_dict["api_key"]["data"][0]["name"]
-        
-        print(f"api_key: {api_key}")
 
         for data in output_data_json:
             # Property
-            data_property, cost = retrive_lodgerin_property(
-                data, elements_dict
-            )
+            data_property, cost = retrive_lodgerin_property(data, elements_dict)
             property_id = funcs.save_property(data_property, api_key)
             data_property.id = property_id
             # RentalUnit
@@ -69,6 +64,7 @@ class SomosalthenaPipeline:
             #     rental_unit_id, calendar_unit, api_key
             # )
 
+
 def create_json_file(path_document: str, spider: Spider) -> None:
     """Creates an empty JSON file at the specified path.
 
@@ -77,12 +73,9 @@ def create_json_file(path_document: str, spider: Spider) -> None:
         spider (Spider): The instance of the spider for logging messages.
     """
     # Check if the file already exists
-    if not path.exists(path_document):
-        with open(path_document, "w") as file:
-            json.dump([], file)  # Create an empty JSON file
-        spider.logger.info("JSON file created at: %s", path_document)
-    else:
-        spider.logger.info("The file already exists at: %s", path_document)
+    with open(path_document, "w") as file:
+        json.dump([], file)  # Create an empty JSON file
+    spider.logger.info("JSON file created at: %s", path_document)
 
 
 def write_to_json_file(path_document: str, items: list[dict], spider: Spider) -> None:
@@ -105,20 +98,5 @@ def write_to_json_file(path_document: str, items: list[dict], spider: Spider) ->
             file.truncate()  # Remove any old content that remains
         spider.logger.info("Items written to the file: %s", path_document)
 
-    except Exception as e:
-        spider.logger.error("An error occurred while writing to the file: %s", e)
-
-def write_json_file_refine(file_path: str, data: list[dict], spider: Spider) -> None:
-    """
-    Write data to a JSON file specified by the file path.
-
-    :param file_path: The path of the JSON file to write to.
-    :param data: The data to be written to the JSON file.
-    """
-    try:
-        # Write the data to the JSON file
-        with open(file_path, 'w', encoding='utf-8') as json_file:
-            json.dump(data, json_file, ensure_ascii=False, indent=4)
-        spider.logger.info("JSON file created at: %s", file_path)
     except Exception as e:
         spider.logger.error("An error occurred while writing to the file: %s", e)
