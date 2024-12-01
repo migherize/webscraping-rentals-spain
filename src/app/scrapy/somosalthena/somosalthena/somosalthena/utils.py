@@ -3,7 +3,7 @@ import re
 import json
 from scrapy import Spider
 from enum import Enum
-from app.scrapy.common import clean_information_html, get_all_images, parse_elements
+from app.scrapy.common import clean_information_html, get_all_images
 from app.models.schemas import Property, RentalUnits
 import app.utils.constants as constants
 import app.utils.funcs as funcs
@@ -407,10 +407,6 @@ def search_feature_with_map(
 
 def retrive_lodgerin_property(items, elements):
     PropertyTypeId = get_id_from_name(elements["property_types"], "Studio/Entire flat", "name")
-    # PensionTypeId = get_id_from_name(elements["pension_types"], "Full board", "name")
-    # descriptions = process_descriptions(
-    #     items["all_descriptions"], items["all_titles"], elements["languages"]
-    # )# TODO: description short if haven't add description all_descriptions
     descriptions, language_ids = process_descriptions_with_fallback(
         items["all_descriptions"],
         items["all_titles"],
@@ -421,12 +417,7 @@ def retrive_lodgerin_property(items, elements):
     element_feature = extract_id_name(elements['features']['data'])
     features_id = search_feature_with_map(items['features'], element_feature, FeaturesSomosAlthena.EQUIVALENCES_FEATURES.value)
     
-    # element_furnitures = extract_id_name(elements['furnitures']['data'])
-    # furnitures_id = search_feature_with_map(items['features'], element_furnitures, FeaturesSomosAlthena.EQUIVALENCES_FURNITURES.value)
-
     property_items = Property(
-        name=items["title"], #TODO: comment later change API
-        description=items["all_descriptions_short"]["spanish"], #TODO: comment later change API
         referenceCode=items["referend_code"],
         areaM2=items["area_building"],
         areaM2Available=items["area_utils"] if float(items["area_utils"]) != 0 else 1,
@@ -452,8 +443,6 @@ def retrive_lodgerin_rental_units(items_property: Property,elements_dict: dict, 
     referenceCode=f'{items_property.referenceCode}-001',
     areaM2=items_property.areaM2,
     areaM2Available=float(items_property.areaM2Available),
-    # Features=items_property.Features,
-    # Furnitures=furnitures_id,
     isActive=True,
     isPublished=True,
     ContractsModels=[ContractModel(
@@ -469,7 +458,6 @@ def retrive_lodgerin_rental_units(items_property: Property,elements_dict: dict, 
         extras=[],
     )],
     Descriptions=items_property.Descriptions,
-    # Images=items_property.Images,
     )
     return data_rental_units
 

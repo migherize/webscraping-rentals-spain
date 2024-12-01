@@ -46,8 +46,8 @@ class LocationAddress(BaseModel):
 
 class Property(BaseModel):
     id: Optional[str] = Field(None, description="ID de la propiedad.")
-    name: Optional[str] = Field(..., description="Nombre/etiqueta de la propiedad.")
-    description: Optional[str] = Field(..., description="Descripción de la propiedad.")
+    name: Optional[str] = Field(None, description="Nombre/etiqueta de la propiedad.")
+    description: Optional[str] = Field(None, description="Descripción de la propiedad.")
     referenceCode: str = Field(
         ..., min_length=3, description="Código de referencia (min: 3 caracteres)."
     )
