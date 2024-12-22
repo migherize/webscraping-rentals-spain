@@ -62,3 +62,6 @@ def clean_all_images(data: list[str]) -> list[str]:
     if data and isinstance(data, list):
         return data
     return ['']
+
+def clean_data_languages(data: list) -> list:
+    return data

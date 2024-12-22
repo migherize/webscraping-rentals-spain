@@ -2,14 +2,17 @@
 import re
 import json
 import scrapy
+import requests
 import app.utils.constants as constants
 import app.models.enums as models
 
 from pprint import pprint
+
 from os import path
 from enum import Enum
 from pathlib import Path
 from ast import literal_eval
+from urllib.parse import urljoin
 from scrapy.utils.response import open_in_browser
 from scrapy.selector.unified import Selector
 
@@ -42,15 +45,22 @@ class ConfigXpath(Enum):
     ITEMS_PROPERTY = {
         "city_name": "//h5[@class='residence__city']/text()",
         "property_name": "//h1[@class='residence__title']/text()",
-        "address_contact_and_email": "//div[@class='residence__contact-details']//p//text()|//div[@class='address-desc']//p//text()",
-        "residence_description": "//div[@class='residence__description']/p//text()",
-        "student_rooms": "//a[contains(text(), 'View all rooms')]/@href",
-        "all_images": "//img[contains(@src, '1.web')]/@src"
+        "residence_description": "//div[@class='residence__description']//p//text()",
     }
+
+    ITEMS_PROPERTY_GENERAL = {
+        "address_contact_and_email": "//div[@class='residence__contact-details']//p//text()|//div[@class='address-desc']//p//text()",
+        "student_rooms": "//a[contains(text(), 'View all rooms')]/@href",
+        'tour_virtual': "//a[contains(@href, 'noupunt.com')]/@href",
+    }
+
+    ITEMS_PICTURE = "//section[contains(@class, 'media__container')]"
 
     ITEMS_FEATURE = {
         'all_feature': "//article[contains(@class, 'icon-logo')]/h6/text()|//div[@class='amenities-desc']/text()"
     }
+
+    ITEMS_LANGUAGES = "//ul[@id='weglot-listbox']//@href"
 
 
 
@@ -90,13 +100,13 @@ class YugoSpiderSpider(scrapy.Spider):
             return None
         
         self.url_base = "https://yugo.com"
-        url = "https://yugo.com/en-gb/global/spain"
+        url = "https://yugo.com/en-us/global/spain"
 
         yield scrapy.Request(
             url=url,
         )
 
-    def parse(self, response):
+    def parse(self, response: Selector):
 
         # ---------------------------------------
         # Proceso de busqueda de las ciudades de Spain
@@ -104,7 +114,7 @@ class YugoSpiderSpider(scrapy.Spider):
         if not response.xpath(ConfigXpath.ARTICLE_DATA.value):
             self.logger.warning('No existen ciudades para: %s', response.url)
             return None
-
+        
         for article_city in response.xpath(ConfigXpath.ARTICLE_DATA.value):
             data_city = extract_article_data(article_city, ConfigXpath.ITEMS_CITY_DATA.value)
             data_city['url_city'] = self.url_base + data_city['url_city']
@@ -117,7 +127,7 @@ class YugoSpiderSpider(scrapy.Spider):
             )
             # break
 
-    def parse_yugo_space(self, response):
+    def parse_yugo_space(self, response: Selector):
 
         # ---------------------------------------
         # Proceso de busqueda de los Property
@@ -138,18 +148,25 @@ class YugoSpiderSpider(scrapy.Spider):
                 callback=self.parse_property_space,
                 meta={"meta_data": meta_data}
             )
+            # break
 
-    def parse_property_space(self, response):
+    def parse_property_space(self, response: Selector):
 
         # Proceso de extraccion de data correspondiente al Property 
+        # open_in_browser(response)
         meta_data = response.meta.get("meta_data")
 
         items_property = extractor_all_data(response, ConfigXpath.ITEMS_PROPERTY.value)
+        items_property_general = extractor_all_data(response, ConfigXpath.ITEMS_PROPERTY_GENERAL.value)
         items_feature = extractor_all_data(response, ConfigXpath.ITEMS_FEATURE.value)
         items_geo = extraer_lat_long(response)
 
-        meta_data = meta_data | items_property | items_feature | items_geo
+        meta_data = meta_data | items_property_general | items_feature | items_geo | items_property
         meta_data['student_rooms'] = f"{response.url}/rooms"
+
+        meta_data['all_images'] = extract_image_urls(response, ConfigXpath.ITEMS_PICTURE.value)
+
+        meta_data['second_items_property'] = self.get_data_languages(response.url)
 
         meta_data = self.refine_data_property(meta_data)
         
@@ -159,7 +176,40 @@ class YugoSpiderSpider(scrapy.Spider):
             meta={'meta_data': meta_data}
         )
 
-    def parse_rental_units(self, response):
+    def get_data_languages(self, url: str):
+
+        all_data_languages = []
+        languages = (
+            'en-us',
+            'en-gb',
+            'zh-cn',
+            'es-es',
+            'ca-es',
+            'de-de',
+            'it-it',
+        )
+
+        aux_url = url.split('/spain/')[-1]
+        for index_language, language in enumerate(languages):
+            new_url = f"https://yugo.com/{language}/global/spain/{aux_url}"
+            response_with_requests = requests.get(new_url)
+            if not response_with_requests.status_code == 200:
+                self.logger.warning('No se obtuvo info en el lenguaje: %s', url)
+                continue
+
+            html_content = response_with_requests.text
+            new_selector_scrapy = Selector(text=html_content)
+            items_property = extractor_all_data(new_selector_scrapy, ConfigXpath.ITEMS_PROPERTY.value)
+            for key, value in items_property.items():
+                items_property[key] = "".join(value).strip()
+            items_property['language'] = language
+            items_property['index_language'] = index_language
+            all_data_languages.append(items_property)
+        
+        return all_data_languages
+
+
+    def parse_rental_units(self, response: Selector):
 
         item = items.YugoItem()
 
@@ -204,6 +254,7 @@ class YugoSpiderSpider(scrapy.Spider):
             "latitud": clean_latitud,
             "longitud": clean_longitud,
             "all_images": clean_all_images,
+            "second_items_property": clean_data_languages,
         }
 
         for key, funtion_item in items_refine.items():
@@ -215,7 +266,7 @@ class YugoSpiderSpider(scrapy.Spider):
                     key, 
                     items.keys()
                 )
-
+            
         return items
 
 
@@ -255,3 +306,39 @@ def extraer_lat_long(response):
         'longitud': '',
     }
 
+
+def extract_image_urls(response: Selector, xpath: str):
+    """
+    Extrae URLs de imágenes desde un atributo src o desde un JSON en data-cm-responsive-media.
+    
+    Si las URLs son relativas, se convierten a absolutas utilizando la URL base del response.
+    
+    :param response: El objeto Scrapy Response.
+    :param xpath: El XPath para seleccionar los elementos con atributo src o data-cm-responsive-media.
+    :return: Una lista de URLs absolutas de las imágenes.
+    """
+    image_urls = []
+    
+    # Manejar el caso del atributo `src`
+    src_values = response.xpath(f"{xpath}//@src").getall()
+    image_urls.extend([urljoin(response.url, src) for src in src_values if not src.startswith("data:")])
+    
+    # Manejar el caso del atributo `data-cm-responsive-media`
+    data_cm_values = response.xpath(f"{xpath}//@data-cm-responsive-media").getall()
+    
+    for data_cm in data_cm_values:
+        
+        try:
+            # Expresión regular para extraer el valor
+            pattern = r'"300":"(\/resource\/image\/[^"]+)"'
+
+            # Búsqueda en el texto
+            match = re.search(pattern, data_cm)
+
+            # Extraer el resultado si hay un match
+            if match:
+                image_urls.append(f"https://yugo.com/{match.group(1)}")
+        except Exception as error:
+            continue
+    
+    return image_urls
