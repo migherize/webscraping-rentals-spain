@@ -105,7 +105,7 @@ class YugoSpiderSpider(scrapy.Spider):
             parents=True, exist_ok=True
         )
         # # self.context = context
-        # self.context = read_json()
+        self.context = read_json()
 
     def start_requests(self):
         """

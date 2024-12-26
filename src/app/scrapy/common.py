@@ -85,6 +85,44 @@ def parse_elements(
             raise KeyError(f"Key '{key}' not found in the provided JSON")
     return elements_dict
 
+def extract_id_name(data):
+    return {item["id"]: item["name"] for item in data}
+
+def get_id_from_name(data_dict: dict, name: str, key_name: str) -> int:
+    """
+    Busca el ID asociado a un nombre en un diccionario con estructura similar a "property_types" o "pension_types".
+
+    Args:
+        data_dict (dict): Diccionario que contiene una lista de datos bajo la llave "data".
+        name (str): Nombre que se desea buscar.
+
+    Returns:
+        int: El ID asociado al nombre, si se encuentra. De lo contrario, retorna None.
+    """
+    for item in data_dict.get("data", []):
+        if item.get(key_name) == name:
+            return item.get("id")
+    return None
+
+def search_feature_with_map(items_features, elements_features, equivalences):
+    true_ids = []
+
+    for item_feature in items_features:
+        if item_feature in equivalences:
+            mapped_feature = equivalences[item_feature]
+            element_id = next(
+                (
+                    id_
+                    for id_, name in elements_features.items()
+                    if name == mapped_feature
+                ),
+                None,
+            )
+            if element_id is not None:
+                true_ids.append(element_id)
+
+    return true_ids
+
 
 def read_json() -> dict:
     """

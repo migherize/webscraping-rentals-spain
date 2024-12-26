@@ -13,7 +13,7 @@ import app.utils.constants as constants
 import app.utils.funcs as funcs
 from app.models.enums import CurrencyCode, PaymentCycleEnum
 from app.models.schemas import ContractModel, Property, RentalUnits
-from app.scrapy.common import clean_information_html, get_all_images
+from app.scrapy.common import clean_information_html, get_all_images, get_id_from_name
 
 
 class PropertyTypeColiving(Enum):
@@ -26,45 +26,6 @@ class PropertyTypeColiving(Enum):
 
 
 class FeaturesSomosAlthena(Enum):
-
-    FEATURES = {
-        "Habitaciones",
-        "Cocina",
-        "Trasteros",
-        "Altillo",
-        "ZonasComunes",
-        "Terrazas",
-        "Gas",
-        "AccesoDiscapacitados",
-        "Agua",
-        "AdmiteMascotas",
-        "Microondas",
-        "Vigilancia24h",
-        "PiscinaPrivada",
-        "SofaCama",
-        "Sillas",
-        "AireAcondicionado",
-        "Despachos",
-        "CocinaAmueblada",
-        "Chimeneas",
-        "Amueblado",
-        "Exterior",
-        "Televisor",
-        "CajaFuerte",
-        "Conserje",
-        "Luz",
-        "Ascensor",
-        "Alarma",
-        "Cama",
-        "Calefaccion",
-        "Internet",
-        "Banos",
-        "ZonaInfantil",
-        "Armarios",
-        "Mesa",
-        "Lavadero",
-        "Horno",
-    }
     EQUIVALENCES_FEATURES = {
         # "Habitaciones": "Bedroom lock",
         "Banos": "Private bath",
@@ -105,16 +66,6 @@ class FeaturesSomosAlthena(Enum):
         "Altillo": "Bookshelf/Bookcase",
         # "Chimeneas": "Iron"
     }
-
-
-class PropertyTypeColiving(Enum):
-    PROPERTY_TYPE = (
-        "Pisos",
-        "Casas",
-        "Edificios",
-    )
-    OPERATION = "alquiler"
-
 
 def get_data_json(json_path_no_refined: str) -> list[dict]:
     """
@@ -270,6 +221,29 @@ def get_address(address: dict) -> dict:
     aux_address["fullAddress"] = aux_address["address"]
     return aux_address
 
+def search_feature_with_map(
+    items_features: dict, elements_features: dict, equivalences: dict
+):
+
+    true_ids = []
+
+    for item_feature, status in items_features.items():
+        if status:
+            if item_feature in equivalences:
+                mapped_feature = equivalences[item_feature]
+                element_id = next(
+                    (
+                        id_
+                        for id_, name in elements_features.items()
+                        if name == mapped_feature
+                    ),
+                    None,
+                )
+                if element_id is not None:
+                    true_ids.append(element_id)
+
+    return true_ids
+
 
 def get_all_multidata(
     multidata: tuple[str],
@@ -298,25 +272,10 @@ def get_all_features(data_json: dict):
 
 
 def extract_id_name(data):
-    # data = features_json.get("features", {}).get("data", [])
     return {item["id"]: item["name"] for item in data}
 
 
-def get_id_from_name(data_dict: dict, name: str, key_name: str) -> int:
-    """
-    Busca el ID asociado a un nombre en un diccionario con estructura similar a "property_types" o "pension_types".
 
-    Args:
-        data_dict (dict): Diccionario que contiene una lista de datos bajo la llave "data".
-        name (str): Nombre que se desea buscar.
-
-    Returns:
-        int: El ID asociado al nombre, si se encuentra. De lo contrario, retorna None.
-    """
-    for item in data_dict.get("data", []):
-        if item.get(key_name) == name:
-            return item.get("id")
-    return None
 
 
 def process_descriptions_with_fallback(
@@ -383,31 +342,6 @@ def process_descriptions(
                     }
                 )
     return result
-
-
-def search_feature_with_map(
-    items_features: dict, elements_features: dict, equivalences: dict
-):
-
-    true_ids = []
-
-    for item_feature, status in items_features.items():
-        if status:
-            if item_feature in equivalences:
-                mapped_feature = equivalences[item_feature]
-                element_id = next(
-                    (
-                        id_
-                        for id_, name in elements_features.items()
-                        if name == mapped_feature
-                    ),
-                    None,
-                )
-                if element_id is not None:
-                    true_ids.append(element_id)
-
-    return true_ids
-
 
 def retrive_lodgerin_property(items, elements):
     PropertyTypeId = get_id_from_name(
