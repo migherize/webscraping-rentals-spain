@@ -62,6 +62,23 @@ class ConfigXpath(Enum):
 
     ITEMS_LANGUAGES = "//ul[@id='weglot-listbox']//@href"
 
+    ALL_LINK_RENTAL_UNITS = "//h4[contains(@class, 'product-tile')]/../@href"
+
+    # -----------------------------------------------------------------
+    # Rental units
+
+    ITEMS_RENTAL_UNITS = {
+        "PROPERTY_AND_CITY": "//div[@class='sticky']/h4/text()",
+        "NAME_RENTAL_UNIT": "//div[@class='sticky']/h3/text()",
+        "COST": "//div[@class='sticky']/h6/text()",
+        "TIME_RESERVETION": "//span[contains(@id, 'select2-tenancy-dropdown-container')]/@title",
+        "DESCRIPTION_RENTAL_UNIT": "//div[contains(@class, 'product__description')]//p//text()",
+        "ROOM_FEATURE": "//h2[contains(text(), 'Room features')]/..//article//text()",
+        "SOCIAL_SPACES": "//h2[contains(text(), 'included')]/..//article|//h2[contains(text(), 'Social Space')]/..//article//text()",
+        "STATUS": "//div[@id='cm-placement-product-details']//p[contains(text(), 'SOLD OUT')]/text()",
+    }
+
+    ITEMS_PICTURE_RENTAL_UNITS = "//picture[contains(@class, 'gallery-carousel__item--modal')]"
 
 
 class YugoSpiderSpider(scrapy.Spider):
@@ -169,12 +186,25 @@ class YugoSpiderSpider(scrapy.Spider):
         meta_data['second_items_property'] = self.get_data_languages(response.url)
 
         meta_data = self.refine_data_property(meta_data)
+
+        meta_data['aux_url_property'] = response.url
+
+        meta_data['referend_code'] = get_referend_code(response.url)
         
-        yield scrapy.Request(
-            url=meta_data['student_rooms'],
-            callback=self.parse_rental_units,
-            meta={'meta_data': meta_data}
-        )
+        # ---------------------------------------
+        # Proceso de busqueda de los rental units
+
+        if not response.xpath(ConfigXpath.ALL_LINK_RENTAL_UNITS.value):
+            self.logger.warning('No existen espacios o locacles (Rental Units) para: %s', response.url)
+
+        else:
+            urls_rental_units = response.xpath(ConfigXpath.ALL_LINK_RENTAL_UNITS.value).getall()
+            meta_data['all_rental_units'] = self.get_data_rental_units(urls_rental_units)
+        
+        item_output = items.YugoItem()
+        item_output['items_output'] = meta_data
+        
+        yield item_output
 
     def get_data_languages(self, url: str):
 
@@ -207,34 +237,6 @@ class YugoSpiderSpider(scrapy.Spider):
             all_data_languages.append(items_property)
         
         return all_data_languages
-
-
-    def parse_rental_units(self, response: Selector):
-
-        item = items.YugoItem()
-
-        meta_data = response.meta.get("meta_data")
-        item['items_output'] = meta_data
-        
-        yield item
-
-        # ---------------------------------------
-        # Proceso de busqueda de los rental units
-
-        # if not response.xpath(ConfigXpath.ARTICLE_DATA.value):
-        #     self.logger.warning('No existen espacios o locacles (Rental Units) para: %s', response.url)
-        #     return None
-
-        # for partial_url_rental_unit in response.xpath(ConfigXpath.ARTICLE_DATA.value):
-        #     # url_rental_unit = self.url_base + partial_url_rental_unit.get()
-        #     # yield scrapy.Request(
-        #     #     url=url_rental_unit,
-        #     #     dont_filter=True,
-        #     #     callback=self.parse_rental_units
-        #     # )
-        #     # break
-        #     pass
-        # pass
 
     def refine_data_property(self, items_output: dict) -> dict:
         items = items_output.copy()
@@ -269,6 +271,28 @@ class YugoSpiderSpider(scrapy.Spider):
             
         return items
 
+    def get_data_rental_units(self, urls_rental_units: list[str]):
+
+        all_data_rental_units = []
+
+        for partial_url_rental_unit in urls_rental_units:
+            url_rental_unit = self.url_base + partial_url_rental_unit
+
+            response_with_requests = requests.get(url_rental_unit)
+
+            if not response_with_requests.status_code == 200:
+                continue
+
+            new_scrapy_selector = Selector(text=response_with_requests.text)
+            
+            items_rental_units = extractor_all_data(new_scrapy_selector, ConfigXpath.ITEMS_RENTAL_UNITS.value)
+            items_rental_units['picture'] = extract_image_urls(new_scrapy_selector, ConfigXpath.ITEMS_PICTURE_RENTAL_UNITS.value)
+            items_rental_units['url_rental_unit'] = url_rental_unit
+            all_data_rental_units.append(items_rental_units)
+
+        return all_data_rental_units
+
+
 
 def extract_article_data(article: Selector, items_output: dict):
     return {
@@ -278,7 +302,7 @@ def extract_article_data(article: Selector, items_output: dict):
 
 def extractor_all_data(response: Selector, items_output: dict):
     return {
-        key: response.xpath(value).getall()
+        key: clean_list(response.xpath(value).getall())
         for key, value in items_output.items()
     }
 
@@ -342,3 +366,19 @@ def extract_image_urls(response: Selector, xpath: str):
             continue
     
     return image_urls
+
+
+def get_referend_code(url: str):
+
+    if not url:
+        return None
+
+    if not isinstance(url, str):
+        return None
+    
+    data_url = url.split('/')
+
+    return f"{data_url[-2]}-{data_url[-1]}" 
+
+def clean_list(data: list) -> list:
+    return list(filter(None, map(str.strip, data)))
