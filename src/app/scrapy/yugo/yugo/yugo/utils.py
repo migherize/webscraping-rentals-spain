@@ -1,26 +1,28 @@
-from urllib.parse import urlparse
 from enum import Enum
 # from deepparse import Deepparse
 
 import app.utils.funcs as funcs
 from app.scrapy.common import parse_elements, extract_id_name, search_feature_with_map
 import app.utils.constants as constants
-from app.scrapy.common import read_json, get_id_from_name, get_all_imagenes
+from app.scrapy.common import (
+    read_json,
+    get_id_from_name,
+    get_all_imagenes,
+    decode_clean_string,
+    extract_area,
+    extract_cost,
+    search_location
+)
+from app.models.enums import CurrencyCode, Languages, PaymentCycleEnum, feature_map
 from app.models.schemas import (
     ContractModel,
     Property,
     RentalUnits,
     DatePayloadItem,
+    LocationAddress,
+    LocationMaps,
     mapping,
 )
-
-# from .utils import (
-#     get_data_json,
-#     get_month,
-#     retrive_lodgerin_property,
-#     retrive_lodgerin_rental_units,
-# )
-
 
 class PropertyTypeColiving(Enum):
     PROPERTY_TYPE = (
@@ -88,9 +90,7 @@ class EquivalencesYugo(Enum):
 
 
 def map_property_descriptions(languages, property_descriptions):
-    print("languages", languages)
     language_dict = {lang["code"]: lang for lang in languages}
-    print("language_dict", language_dict)
 
     result = []
 
@@ -121,8 +121,24 @@ def map_property_descriptions(languages, property_descriptions):
     return result
 
 
-def retrive_lodgerin_property(item, elements):
-    item = item["items_output"]
+def get_name_by_location(data: list, location: str) -> str:
+    """
+    Busca en la lista por la ubicación (location) y devuelve el valor de 'name'.
+
+    Args:
+        data (list): Lista de diccionarios con las claves 'id', 'name' y 'location'.
+        location (str): La ubicación a buscar.
+
+    Returns:
+        str: El valor de 'name' correspondiente a la ubicación, o None si no se encuentra.
+    """
+    for item in data:
+        if item.get("location") == location:
+            return item.get("name")
+    return None
+
+def retrive_lodgerin_property(item, elements, list_api_key):
+    api_key = get_name_by_location(list_api_key, item["yugo_space_name"])
     PropertyTypeId = get_id_from_name(
         elements["property_types"], "Studio/Entire flat", "name"
     )
@@ -138,16 +154,18 @@ def retrive_lodgerin_property(item, elements):
         EquivalencesYugo.FEATURES.value,
     )
 
-    parsed_url = urlparse(item["url_yugo_space"])
-    path = parsed_url.path
-    referenceCode = path.replace("/en-us/global/spain/", "").replace("/", "-")
-    images = get_all_imagenes(item['all_images'])
-    if item['tour_virtual']:
-        tour_url = item['tour_virtual'][0]
+    address = search_location(item['address_contact_and_email'])
+
+    # clean reference_code
+    eference_code = decode_clean_string(item["url_yugo_space"])
+
+    images = get_all_imagenes(item["all_images"])
+    if item["tour_virtual"]:
+        tour_url = item["tour_virtual"][0]
     else:
-        tour_url = ""
+        tour_url = None
     property_items = Property(
-        referenceCode=referenceCode,
+        referenceCode=eference_code,
         cancellationPolicy=constants.CANCELLATION_POLICY,
         rentalType=constants.RENTAL_TYPE,
         isActive=True,
@@ -157,47 +175,64 @@ def retrive_lodgerin_property(item, elements):
         PropertyTypeId=PropertyTypeId,
         Descriptions=descriptions,
         Images=images,
-        # Location=parse_address(item['address_contact_and_email']),#TODO
+        Location=LocationAddress(
+            lat=str(address.lat),
+            lon=str(address.lon),
+            country=address.country,
+            countryCode=address.countryCode,
+            city=address.city,
+        ),
         provider="yugo",
-        providerRef=referenceCode,
+        providerRef=eference_code,
     )
 
-    return property_items
+    return property_items, api_key
 
 
-if __name__ == "__main__":
-    import json
-    with open(
-        "/Users/mherize/squadmakers/logderin/WebScrapingforRentalPlatforms/local/data/yugo/items.json",
-        "r",
-        encoding="utf-8",
-    ) as archivo:
-        items = json.load(archivo)
+def retrive_lodgerin_rental_units(
+    items_property: Property, elements_dict: dict, data_scrapy: list
+):
+    rental_units = []
+    for index, data in enumerate(data_scrapy, start=1):
+        description_unit = data.get("DESCRIPTION_RENTAL_UNIT", [])
+        description_text = description_unit[0] if description_unit else ""
 
-    elements_dict = parse_elements(read_json()[0], mapping)
-    api_key = elements_dict["api_key"]["data"][0]["name"]
+        area = extract_area(description_text)
+        area_m2 = int(area) if area is not None else None
 
-    for data in items:
-        # Property
-        data_property = retrive_lodgerin_property(data, elements_dict)
-        property_id = funcs.save_property(data_property, api_key)
-        data_property.id = property_id
-        
-        # RentalUnit
-        # data_rental_units = retrive_lodgerin_rental_units(
-        #     data_property, elements_dict, cost
-        # )
-        # rental_unit_id = funcs.save_rental_unit(data_rental_units, api_key)
-        # data_rental_units.id = rental_unit_id
-        
-        # Schedule
-        # start_date, end_date, month = get_month()
-        # calendar_unit = DatePayloadItem(
-        #     summary=f"Blocked until {start_date}",
-        #     description=f"Available from {month}",
-        #     startDate=start_date,
-        #     endDate=end_date,
-        # )
-        # funcs.check_and_insert_rental_unit_calendar(
-        #     rental_unit_id, calendar_unit, api_key
-        # )
+        cost_list = data.get("COST", [])
+        cost_text = cost_list[0] if cost_list else "" #TODO: Cost None
+
+        amount = int(extract_cost(cost_text)) if cost_text else 0
+
+        data_rental_unit = RentalUnits(
+            PropertyId=items_property.id,
+            referenceCode=f"{items_property.referenceCode}-{index:03}",
+            areaM2=area_m2,
+            isActive=True,
+            isPublished=True,
+            ContractsModels=[
+                ContractModel(
+                    PropertyBusinessModelId=funcs.get_elements_types(
+                        constants.MODELS_CONTRACT, elements_dict["contract_types"]
+                    ),
+                    currency=CurrencyCode.EUR.value,
+                    amount=amount,
+                    depositAmount=amount,
+                    reservationAmount=constants.INT_ZERO,
+                    minPeriod=constants.INT_ONE,
+                    paymentCycle=PaymentCycleEnum.MONTHLY.value,
+                    extras=[],
+                )
+            ],
+            Descriptions=items_property.Descriptions,
+        )
+        rental_units.append(data_rental_unit)
+
+    return rental_units
+
+def get_email_for_location(location_name):
+    email_mapping_str = os.getenv("EMAIL_MAPPING", "")
+    default_email = os.getenv("DEFAULT_EMAIL", "")
+    email_mapping = dict(item.split(":") for item in email_mapping_str.split(",") if ":" in item)
+    return email_mapping.get(location_name, default_email)

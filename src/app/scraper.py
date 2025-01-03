@@ -2,6 +2,7 @@ import logging
 import os
 import time
 from socket import timeout
+import json
 
 from crochet import setup, wait_for
 from scrapy.crawler import CrawlerRunner
@@ -9,7 +10,7 @@ from twisted.internet.defer import inlineCallbacks
 
 import app.utils.constants as constants
 from app.models.enums import URLs
-from app.scrapy.common import initialize_scraping_context
+from app.scrapy.common import initialize_scraping_context, initialize_scraping_context_maps
 from app.scrapy.flipcoliving.flipcoliving.flipcoliving.spiders.flipcoliving_spider import (
     FlipcolivingSpiderSpider,
 )
@@ -17,7 +18,7 @@ from app.scrapy.somosalthena.somosalthena.somosalthena.spiders.somosalthena_spid
     SomosalthenaSpiderSpider,
 )
 
-# from app.scrapy.nodis.nodis.nodis.spiders.nodis_spider import NodisSpider
+from app.scrapy.yugo.yugo.yugo.spiders.yugo_spider import YugoSpiderSpider
 
 os.makedirs(constants.LOG_DIR, exist_ok=True)
 
@@ -62,10 +63,10 @@ def run_webscraping(url: URLs) -> None:
                 SomosalthenaSpiderSpider, start_urls=[url], context=context
             )
 
-        elif url == URLs.nodis:
-            # context = initialize_scraping_context(constants.EMAIL_NODIS)
-            # yield runner.crawl(NodisSpider, start_urls=[url.value])
-            pass
+        elif url == URLs.yugo:
+            email_map = json.loads(constants.EMAIL_MAPPING_YUGO)
+            context = initialize_scraping_context_maps(email_map)
+            yield runner.crawl(YugoSpiderSpider, start_urls=[url.value], context=context)
 
     except Exception as e:
         logger.info(f"Error al hacer scraping para {url}: {str(e)}")

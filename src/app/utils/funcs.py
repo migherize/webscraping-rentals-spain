@@ -160,7 +160,7 @@ def save_property(property_item, api_key):
         else:
             logger.info(f"Unexpected message: {response['msg']}")
     else:
-        logger.info("Failed to save property. No valid response received.")
+        logger.info(f"Failed to save property. No valid response received. {property_item}")
     return None
 
 

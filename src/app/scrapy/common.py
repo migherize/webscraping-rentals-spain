@@ -1,13 +1,16 @@
 import json
 import re
 from typing import Dict, Type
-
+from urllib.parse import urlparse, unquote
+import unicodedata
 from pydantic import BaseModel
 
 import app.utils.constants as constants
 from app.utils.lodgerinService import LodgerinAPI, LodgerinInternal
 
-
+from app.models.schemas import (
+    LocationMaps
+)
 def get_all_imagenes(space_images: list) -> list[dict]:
     all_imagenes = []
 
@@ -42,13 +45,49 @@ def clean_information_html(text):
     :param text: str - Text with HTML tags.
     :return: str - Cleaned text without HTML tags.
     """
-    # Remove HTML tags
-    cleaned = re.sub(r"<.*?>", "", text)  # Remove any HTML tags
+    cleaned = re.sub(r"<.*?>", "", text)
     cleaned = re.sub(
         r"\s+", " ", cleaned
-    )  # Replace multiple spaces with a single space
-    return cleaned.strip()  # Remove leading and trailing whitespace
+    )
+    return cleaned.strip()
 
+def search_location(query) -> LocationMaps:
+    lodgerin_api = LodgerinInternal()
+    address = lodgerin_api.search_location(query)
+    if address:
+        location = LocationMaps(
+            boundingbox=address['boundingbox'],
+            lat=address['lat'],
+            lon=address['lon'],
+            address=address['address'],
+            fullAddress=address['fullAddress'],
+            number=address['number'],
+            country=address['country'],
+            countryCode=address['countryCode'],
+            state=address['state'],
+            city=address['city'],
+            street=address['street'],
+            postalCode=address['postalCode'],
+            prefixPhone=address['prefixPhone'],
+        )
+        return location
+    else:
+        location = LocationMaps(
+            boundingbox="",
+            lat="",
+            lon="",
+            address="",
+            fullAddress="",
+            number="",
+            country="",
+            countryCode="",
+            state="",
+            city="",
+            street="",
+            postalCode="",
+            prefixPhone="",
+        )
+        return location
 
 def initialize_scraping_context(email: str):
     try:
@@ -59,6 +98,38 @@ def initialize_scraping_context(email: str):
         mapped_data = api_client.get_mapped_data()
         mapped_data["api_key"] = {"data": [{"id": email, "name": api_key}]}
         return mapped_data
+    except Exception as e:
+        print(f"Error durante la inicialización del contexto de scraping: {str(e)}")
+        raise
+
+def initialize_scraping_context_maps(email_map):
+    """
+    Inicializa el contexto de scraping para un mapeo de identificadores y correos electrónicos.
+
+    :param email_map: Un diccionario donde las claves son identificadores (por ejemplo, ubicaciones)
+                      y los valores son correos electrónicos.
+    :return: Un diccionario con los datos mapeados.
+    """
+    try:
+        if not isinstance(email_map, dict) or not all(isinstance(k, str) and isinstance(v, str) for k, v in email_map.items()):
+            raise ValueError("El parámetro email_map debe ser un diccionario con claves y valores de tipo string.")
+
+        combined_mapped_data = {"api_key": {"data": []}}
+
+        for location, email in email_map.items():
+            lodgerin_api = LodgerinInternal(email)
+            api_key = lodgerin_api.get_api_key(email)
+            api_client = LodgerinAPI(api_key)
+            api_client.load_all_data()
+            mapped_data = api_client.get_mapped_data()
+            
+            combined_mapped_data["api_key"]["data"].append({
+                "id": email,
+                "location": location,
+                "name": api_key,
+            })
+
+        return combined_mapped_data
     except Exception as e:
         print(f"Error durante la inicialización del contexto de scraping: {str(e)}")
         raise
@@ -105,7 +176,7 @@ def get_id_from_name(data_dict: dict, name: str, key_name: str) -> int:
     return None
 
 def search_feature_with_map(items_features, elements_features, equivalences):
-    true_ids = []
+    true_ids = set()
 
     for item_feature in items_features:
         if item_feature in equivalences:
@@ -119,10 +190,64 @@ def search_feature_with_map(items_features, elements_features, equivalences):
                 None,
             )
             if element_id is not None:
-                true_ids.append(element_id)
+                true_ids.add(element_id)
 
-    return true_ids
+    return list(true_ids)
 
+def decode_clean_string(url):
+    """
+    Extrae y limpia el reference_code desde una URL.
+    - Decodifica caracteres URL.
+    - Elimina acentos del texto.
+
+    Args:
+        url (str): La URL de la cual extraer el reference_code.
+
+    Returns:
+        str: El reference_code limpio.
+    """
+    parsed_url = urlparse(url)
+    reference_code = parsed_url.path.split("/")[-1]
+
+    decoded_reference_code = unquote(reference_code)
+
+    normalized_reference_code = unicodedata.normalize('NFKD', decoded_reference_code)
+    reference_code_without_accents = ''.join(
+        char for char in normalized_reference_code if not unicodedata.combining(char)
+    )
+    
+    return reference_code_without_accents
+
+
+def extract_area(description):
+    """
+    Extrae el área en metros cuadrados de un texto si está presente.
+
+    Args:
+        description (str): El texto del que se desea extraer el área.
+
+    Returns:
+        float or None: El área en m2 si se encuentra, o None si no está presente.
+    """
+    match = re.search(r"\b(\d+(?:\.\d+)?)\s*m2\b", description, re.IGNORECASE)
+    if match:
+        return float(match.group(1))
+    return None
+
+def extract_cost(cost_text):
+    """
+    Extrae el costo en euros de un texto si está presente.
+
+    Args:
+        cost_text (str): El texto del que se desea extraer el costo.
+
+    Returns:
+        float or None: El costo en euros si se encuentra, o None si no está presente.
+    """
+    match = re.search(r"€\s*([\d,]+\.\d+)", cost_text)
+    if match:
+        return float(match.group(1).replace(",", ""))
+    return None
 
 def read_json() -> dict:
     """

@@ -44,6 +44,21 @@ class LocationAddress(BaseModel):
     )
     prefixPhone: Optional[str] = Field(None, description="Código telefónico del país.")
 
+class LocationMaps(BaseModel):
+    boundingbox: Optional[List[float]] = Field(None, description="Caja delimitadora de la ubicación (latitudes y longitudes).")
+    lat: Optional[float] = Field(None, description="Latitud de la dirección.")
+    lon: Optional[float] = Field(None, description="Longitud de la dirección.")
+    address: Optional[str] = Field(None, description="Dirección de la ubicación.")
+    fullAddress: Optional[str] = Field(None, description="Dirección completa de la ubicación.")
+    number: Optional[str] = Field(None, description="Número de la dirección.")
+    country: Optional[str] = Field(None, description="País de la dirección.")
+    countryCode: Optional[str] = Field(None, description="Código de país de la dirección.")
+    state: Optional[str] = Field(None, description="Estado de la dirección.")
+    city: Optional[str] = Field(None, description="Ciudad de la dirección.")
+    street: Optional[str] = Field(None, description="Calle o avenida de la dirección.")
+    postalCode: Optional[str] = Field(None, description="Código postal de la dirección.")
+    prefixPhone: Optional[str] = Field(None, description="Prefijo telefónico del país.")
+
 
 class Property(BaseModel):
     id: Optional[str] = Field(None, description="ID de la propiedad.")
@@ -299,6 +314,7 @@ class PensionTypes(BaseModel):
 class ApiKeyItem(BaseModel):
     id: str
     name: str
+    location: Optional[str]
 
 
 class ApiKey(BaseModel):

@@ -105,8 +105,7 @@ class YugoSpiderSpider(scrapy.Spider):
         Path(self.items_spider_output_document["output_folder"]).mkdir(
             parents=True, exist_ok=True
         )
-        # # self.context = context
-        self.context = read_json()
+        self.context = context
 
     def start_requests(self):
         """
