@@ -2,12 +2,18 @@ from typing import Dict, List, Optional
 
 import requests
 
-from app.utils.constants import LODGERIN_API, LODGERIN_INTERNAL, TOKEN_API_INTERNAL
+from app.utils.constants import (
+    LODGERIN_API,
+    LODGERIN_INTERNAL,
+    TOKEN_API_INTERNAL,
+    LODGERIN_MAPS_INTERNAL,
+)
 
 
 class LodgerinInternal:
     def __init__(self, lang="en"):
         self.base_url = LODGERIN_INTERNAL
+        self.base_url_maps = LODGERIN_MAPS_INTERNAL
         self.headers = {"x-access-token": TOKEN_API_INTERNAL, "x-access-lang": lang}
         self.data = {}
 
@@ -21,6 +27,26 @@ class LodgerinInternal:
             if not api_key:
                 raise Exception("La clave 'apiKey' no se encuentra en la respuesta.")
             return api_key
+        except requests.exceptions.HTTPError as err:
+            print(f"HTTP error occurred: {err}")
+        except Exception as err:
+            print(f"An error occurred: {err}")
+        return None
+
+    def search_location(self, query):
+        url = f"{self.base_url_maps}/maps/search"
+        try:
+            response = requests.get(
+                url,
+                headers=self.headers,
+                params={"q": query, "size": 50, "region[]": "ES"},
+            )
+            response.raise_for_status()
+            data = response.json()
+            address = data.get("data", {})[0]
+            if not address:
+                raise Exception("La clave 'address' no se encuentra en la respuesta.")
+            return address
         except requests.exceptions.HTTPError as err:
             print(f"HTTP error occurred: {err}")
         except Exception as err:

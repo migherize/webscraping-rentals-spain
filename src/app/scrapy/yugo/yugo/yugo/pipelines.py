@@ -9,7 +9,7 @@ import app.utils.constants as constants
 from app.models.schemas import ContractModel, Property, RentalUnits,  DatePayloadItem, mapping
 from .utils import (
     retrive_lodgerin_property,
-    # retrive_lodgerin_rental_units,
+    retrive_lodgerin_rental_units,
     # check_and_insert_rental_unit_calendar
 )
 
@@ -53,10 +53,23 @@ class YugoPipeline:
         spider.logger.info('- JSON file created with %d items.', len(self.items))
 
         elements_dict = parse_elements(spider.context[0], mapping)
-        api_key = elements_dict["api_key"]["data"][0]["name"]
+        list_api_key = elements_dict["api_key"]["data"]
 
         for data in self.items:
+            data = data["items_output"]
             # Property
-            data_property = retrive_lodgerin_property(data, elements_dict)
-            property_id = funcs.save_property(data_property, api_key)
-            data_property.id = property_id
+            data_property, api_key = retrive_lodgerin_property(data, elements_dict, list_api_key)
+            if api_key:
+                property_id = funcs.save_property(data_property, api_key)
+                print("property_id", property_id)
+                data_property.id = property_id
+                # RentalUnit
+                data_rental_units = retrive_lodgerin_rental_units(
+                    data_property, elements_dict, data["all_rental_units"]
+                )
+                list_rental_unit_id = []
+                for rental_unit in data_rental_units:
+                    rental_unit_id = funcs.save_rental_unit(rental_unit, api_key)
+                    rental_unit.id = rental_unit_id
+                    list_rental_unit_id.append(rental_unit)
+                    print("rental_unit_id", rental_unit_id)
