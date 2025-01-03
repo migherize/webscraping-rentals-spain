@@ -1,6 +1,6 @@
 from urllib.parse import urlparse
 from enum import Enum
-from deepparse import Deepparse
+# from deepparse import Deepparse
 
 import app.utils.funcs as funcs
 from app.scrapy.common import parse_elements, extract_id_name, search_feature_with_map
