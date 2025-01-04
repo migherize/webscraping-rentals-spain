@@ -1,19 +1,12 @@
 # coding=utf-8
-import re
-import json
 import scrapy
 import requests
 import app.utils.constants as constants
 import app.models.enums as models
 
-from pprint import pprint
-
 from os import path
 from enum import Enum
 from pathlib import Path
-from ast import literal_eval
-from urllib.parse import urljoin
-from scrapy.utils.response import open_in_browser
 from scrapy.selector.unified import Selector
 
 from app.scrapy.common import read_json
@@ -23,8 +16,6 @@ from ..constants_spider import item_custom_settings, item_input_output_archive
 
 from ..utils_refine_data import *
 
-# scrapy crawl yugo_spider -a refine=0
-# scrapy crawl yugo_spider -a refine=1
 
 class ConfigXpath(Enum):
     ARTICLE_DATA = "//article[contains(a/@href, '/spain/')]"
@@ -98,33 +89,40 @@ class YugoSpiderSpider(scrapy.Spider):
             self.items_spider_output_document["output_folder_name"],
         )
 
-        print("items_spider_output_document:", self.items_spider_output_document)
         # -----------------------------------------------------------------
         # if folder not exists create one
         Path(self.items_spider_output_document["output_folder"]).mkdir(
             parents=True, exist_ok=True
         )
-        self.context = context
 
         self.property_filter_city = (
-            'madrid'
+            'madrid',
         )
+
+        self.all_languages = (
+            'en-us',
+            'en-gb',
+            'zh-cn',
+            'es-es',
+            'ca-es',
+            'de-de',
+            'it-it',
+        )
+
+        self.context = context
+
 
     def start_requests(self):
         """
         Inicio de la pagina principal
         """
 
-        if self.items_spider_output_document["refine"] == "1":
-            self.logger.info("Proceso de Refinado")
-            return None
-        
         self.url_base = "https://yugo.com"
         url = "https://yugo.com/en-us/global/spain"
 
-        yield scrapy.Request(
+        return [scrapy.Request(
             url=url,
-        )
+        )]
 
     def parse(self, response: Selector):
 
@@ -149,7 +147,6 @@ class YugoSpiderSpider(scrapy.Spider):
                 callback=self.parse_yugo_space,
                 meta={"meta_data": data_city}
             )
-            # break
 
     def parse_yugo_space(self, response: Selector):
 
@@ -177,7 +174,6 @@ class YugoSpiderSpider(scrapy.Spider):
     def parse_property_space(self, response: Selector):
 
         # Proceso de extraccion de data correspondiente al Property 
-        # open_in_browser(response)
         meta_data = response.meta.get("meta_data")
 
         items_property = extractor_all_data(response, ConfigXpath.ITEMS_PROPERTY.value)
@@ -216,18 +212,11 @@ class YugoSpiderSpider(scrapy.Spider):
     def get_data_languages(self, url: str):
 
         all_data_languages = []
-        languages = (
-            'en-us',
-            'en-gb',
-            'zh-cn',
-            'es-es',
-            'ca-es',
-            'de-de',
-            'it-it',
-        )
 
         aux_url = url.split('/spain/')[-1]
-        for index_language, language in enumerate(languages):
+
+        for index_language, language in enumerate(self.all_languages):
+
             new_url = f"https://yugo.com/{language}/global/spain/{aux_url}"
             response_with_requests = requests.get(new_url)
             if not response_with_requests.status_code == 200:
@@ -239,6 +228,7 @@ class YugoSpiderSpider(scrapy.Spider):
             items_property = extractor_all_data(new_selector_scrapy, ConfigXpath.ITEMS_PROPERTY.value)
             for key, value in items_property.items():
                 items_property[key] = "".join(value).strip()
+
             items_property['language'] = language
             items_property['index_language'] = index_language
             all_data_languages.append(items_property)
@@ -246,22 +236,25 @@ class YugoSpiderSpider(scrapy.Spider):
         return all_data_languages
 
     def refine_data_property(self, items_output: dict) -> dict:
+        
         items = items_output.copy()
 
         items_refine: dict[str, function] = {
-            "city_name": clean_city_name,
-            "description_city": clean_description_city,
-            "url_city": clean_url_city,
-            "yugo_space_name": clean_yugo_space_name,
-            "description_yugo_space": clean_description_yugo_space,
-            "url_yugo_space": clean_url_yugo_space,
-            "property_name": clean_property_name,
+            "url_city": clean_default_only_data,
+            "description_city": clean_default_only_data,
+            "yugo_space_name": clean_default_only_data,
+            "description_yugo_space": clean_default_only_data,
+            "url_yugo_space": clean_default_only_data,
+            "student_rooms": clean_default_only_data,
+            "latitud": clean_default_only_data,
+            "longitud": clean_default_only_data,
+
+            "city_name": clean_default_only_data_list,
+            "property_name": clean_default_only_data_list,
+            
             "address_contact_and_email": clean_address_contact_and_email,
             "residence_description": clean_residence_description,
-            "student_rooms": clean_student_rooms,
             "all_feature": clean_all_feature,
-            "latitud": clean_latitud,
-            "longitud": clean_longitud,
             "all_images": clean_all_images,
             "second_items_property": clean_data_languages,
         }
@@ -298,94 +291,3 @@ class YugoSpiderSpider(scrapy.Spider):
             all_data_rental_units.append(items_rental_units)
 
         return all_data_rental_units
-
-
-
-def extract_article_data(article: Selector, items_output: dict):
-    return {
-        key: article.xpath(value).get(default="").strip()
-        for key, value in items_output.items()
-    }
-
-def extractor_all_data(response: Selector, items_output: dict):
-    return {
-        key: clean_list(response.xpath(value).getall())
-        for key, value in items_output.items()
-    }
-
-def extraer_lat_long(response):
-    # Busca todos los bloques de script que contienen JSON-LD y tienen 'latitude' y 'longitude'
-    json_ld_scripts = response.xpath("//script[contains(text(), 'latitude')]/text()").get()
-    for json_ld in json_ld_scripts:
-        try:
-            # Carga cada JSON en un diccionario
-            datos = json.loads(json_ld)
-            # Verifica si es un diccionario y contiene la clave 'geo'
-            if isinstance(datos, dict) and 'geo' in datos:
-                latitud = datos['geo'].get('latitude', '')
-                longitud = datos['geo'].get('longitude', '')
-                if latitud and longitud:  # Verifica que ambos valores existan
-                    return {
-                        'latitud': latitud, 
-                        'longitud': longitud
-                    }
-        except json.JSONDecodeError:
-            continue  # Ignora errores de decodificación
-
-    return {
-        'latitud': '', 
-        'longitud': '',
-    }
-
-
-def extract_image_urls(response: Selector, xpath: str):
-    """
-    Extrae URLs de imágenes desde un atributo src o desde un JSON en data-cm-responsive-media.
-    
-    Si las URLs son relativas, se convierten a absolutas utilizando la URL base del response.
-    
-    :param response: El objeto Scrapy Response.
-    :param xpath: El XPath para seleccionar los elementos con atributo src o data-cm-responsive-media.
-    :return: Una lista de URLs absolutas de las imágenes.
-    """
-    image_urls = []
-    
-    # Manejar el caso del atributo `src`
-    src_values = response.xpath(f"{xpath}//@src").getall()
-    image_urls.extend([urljoin(response.url, src) for src in src_values if not src.startswith("data:")])
-    
-    # Manejar el caso del atributo `data-cm-responsive-media`
-    data_cm_values = response.xpath(f"{xpath}//@data-cm-responsive-media").getall()
-    
-    for data_cm in data_cm_values:
-        
-        try:
-            # Expresión regular para extraer el valor
-            pattern = r'"300":"(\/resource\/image\/[^"]+)"'
-
-            # Búsqueda en el texto
-            match = re.search(pattern, data_cm)
-
-            # Extraer el resultado si hay un match
-            if match:
-                image_urls.append(f"https://yugo.com/{match.group(1)}")
-        except Exception as error:
-            continue
-    
-    return image_urls
-
-
-def get_referend_code(url: str):
-
-    if not url:
-        return None
-
-    if not isinstance(url, str):
-        return None
-    
-    data_url = url.split('/')
-
-    return f"{data_url[-2]}-{data_url[-1]}" 
-
-def clean_list(data: list) -> list:
-    return list(filter(None, map(str.strip, data)))
