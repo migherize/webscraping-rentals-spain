@@ -26,7 +26,6 @@ from ..utils_refine_data import *
 # scrapy crawl yugo_spider -a refine=0
 # scrapy crawl yugo_spider -a refine=1
 
-
 class ConfigXpath(Enum):
     ARTICLE_DATA = "//article[contains(a/@href, '/spain/')]"
 
@@ -107,6 +106,10 @@ class YugoSpiderSpider(scrapy.Spider):
         )
         self.context = context
 
+        self.property_filter_city = (
+            'madrid'
+        )
+
     def start_requests(self):
         """
         Inicio de la pagina principal
@@ -134,6 +137,10 @@ class YugoSpiderSpider(scrapy.Spider):
         
         for article_city in response.xpath(ConfigXpath.ARTICLE_DATA.value):
             data_city = extract_article_data(article_city, ConfigXpath.ITEMS_CITY_DATA.value)
+            
+            if not data_city['url_city'].split('/')[-1] in self.property_filter_city:
+                continue
+
             data_city['url_city'] = self.url_base + data_city['url_city']
 
             yield scrapy.Request(
