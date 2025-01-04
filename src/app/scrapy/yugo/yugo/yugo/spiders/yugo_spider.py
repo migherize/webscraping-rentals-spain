@@ -65,7 +65,7 @@ class ConfigXpath(Enum):
         "DESCRIPTION_RENTAL_UNIT": "//div[contains(@class, 'product__description')]//p//text()",
         "ALL_INCLUSIVE": "//div[contains(@class, 'product__description')]//ul//text()",
         "ROOM_FEATURE": "//h2[contains(text(), 'Room features')]/..//article//text()",
-        "SOCIAL_SPACES": "//h2[contains(text(), 'included')]/..//article|//h2[contains(text(), 'Social Space')]/..//article//text()",
+        "SOCIAL_SPACES": "//h2[contains(text(), 'included')]/..//article//h6/text()|//h2[contains(text(), 'Social Space')]/..//article//text()",
         "STATUS": "//div[@id='cm-placement-product-details']//p[contains(text(), 'SOLD OUT')]/text()",
     }
 
