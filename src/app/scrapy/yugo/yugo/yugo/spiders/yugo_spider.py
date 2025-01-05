@@ -237,9 +237,6 @@ class YugoSpiderSpider(scrapy.Spider):
             url = f"https://yugo.com/en-gb/tenancyOptionsByContentId/{aux_conten_id}"
             json_data: dict = requests.get(url).json()
 
-            if 'error' in json_data.keys():
-                continue
-
             json_data['url'] = url
             json_data['aux_conten_id'] = aux_conten_id
             api_all_rental_units.append(json_data)
