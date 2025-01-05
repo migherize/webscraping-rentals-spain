@@ -61,7 +61,6 @@ class ConfigXpath(Enum):
         "PROPERTY_AND_CITY": "//div[@class='sticky']/h4/text()",
         "NAME_RENTAL_UNIT": "//div[@class='sticky']/h3/text()",
         "COST": "//div[@class='sticky']/h6/text()",
-        "TIME_RESERVETION": "//span[contains(@id, 'select2-tenancy-dropdown-container')]//@title",
         "DESCRIPTION_RENTAL_UNIT": "//div[contains(@class, 'product__description')]//p//text()",
         "ALL_INCLUSIVE": "//div[contains(@class, 'product__description')]//ul//text()",
         "ROOM_FEATURE": "//h2[contains(text(), 'Room features')]/..//article//text()",
@@ -169,7 +168,6 @@ class YugoSpiderSpider(scrapy.Spider):
                 callback=self.parse_property_space,
                 meta={"meta_data": meta_data}
             )
-            # break
 
     def parse_property_space(self, response: Selector):
 
@@ -199,15 +197,96 @@ class YugoSpiderSpider(scrapy.Spider):
 
         if not response.xpath(ConfigXpath.ALL_LINK_RENTAL_UNITS.value):
             self.logger.warning('No existen espacios o locacles (Rental Units) para: %s', response.url)
+            item_output = items.YugoItem()
+            meta_data['all_rental_units'] = []
+            item_output['items_output'] = meta_data
+            yield item_output
 
         else:
             urls_rental_units = response.xpath(ConfigXpath.ALL_LINK_RENTAL_UNITS.value).getall()
-            meta_data['all_rental_units'] = self.get_data_rental_units(urls_rental_units)
+            urls_rental_units = list(map(lambda url_rental_units: self.url_base + url_rental_units, urls_rental_units))
+            meta_data['urls_rental_units'] = urls_rental_units
+
+            yield scrapy.Request(
+                url=meta_data['student_rooms'],
+                callback=self.get_all_rental_units,
+                meta={"meta_data": meta_data},
+                dont_filter=True
+            )
+
+    def get_all_rental_units(self, response):
         
         item_output = items.YugoItem()
-        item_output['items_output'] = meta_data
+
+        meta_data = response.meta.get("meta_data")
+        meta_data['all_rental_units'] = []
+
+        all_id_rental_units = re.findall(r'"contentId":\d+,', response.text)
         
+        if not all_id_rental_units:
+            self.logger.info('No existen Rental Units en la propiedad. %s', meta_data['aux_url_property'])
+            item_output['items_output'] = meta_data
+            yield item_output
+            return None
+            
+        api_all_rental_units = []
+
+        for conten_id in all_id_rental_units:
+    
+            aux_conten_id = re.search(r'(\d+)', conten_id).group(1)
+            url = f"https://yugo.com/en-gb/tenancyOptionsByContentId/{aux_conten_id}"
+            json_data: dict = requests.get(url).json()
+
+            if 'error' in json_data.keys():
+                continue
+
+            json_data['url'] = url
+            json_data['aux_conten_id'] = aux_conten_id
+            api_all_rental_units.append(json_data)
+
+        if not api_all_rental_units:
+            self.logger.info('No existen Rental Units disponibles. %s', meta_data['aux_url_property'])
+
+        else:
+            meta_data['all_rental_units'] = self.get_data_rental_units(
+                meta_data['urls_rental_units'],
+                api_all_rental_units
+            )
+
+        item_output = items.YugoItem()
+        item_output['items_output'] = meta_data
         yield item_output
+
+
+    def get_data_rental_units(self, urls_rental_units: list[str], api_all_rental_units: list[dict]):
+
+        all_data_rental_units = []
+
+        for api_data_rental_unit in api_all_rental_units:
+
+            content_id = api_data_rental_unit['aux_conten_id']
+
+            for url_rental_unit in urls_rental_units:
+
+                if not url_rental_unit.endswith(content_id):
+                    continue
+                
+                response_with_requests = requests.get(url_rental_unit)
+
+                if not response_with_requests.status_code == 200:
+                    continue
+
+                new_scrapy_selector = Selector(text=response_with_requests.text)
+                
+                items_rental_units = extractor_all_data(new_scrapy_selector, ConfigXpath.ITEMS_RENTAL_UNITS.value)
+                items_rental_units['picture'] = extract_image_urls(new_scrapy_selector, ConfigXpath.ITEMS_PICTURE_RENTAL_UNITS.value)
+                items_rental_units['url_rental_unit'] = url_rental_unit
+                all_data_rental_units.append({
+                    'api_data_rental_unit': api_data_rental_unit,
+                    'response_data_rental_units': items_rental_units,
+                })
+
+        return all_data_rental_units
 
     def get_data_languages(self, url: str):
 
@@ -270,24 +349,3 @@ class YugoSpiderSpider(scrapy.Spider):
                 )
             
         return items
-
-    def get_data_rental_units(self, urls_rental_units: list[str]):
-
-        all_data_rental_units = []
-
-        for partial_url_rental_unit in urls_rental_units:
-            url_rental_unit = self.url_base + partial_url_rental_unit
-
-            response_with_requests = requests.get(url_rental_unit)
-
-            if not response_with_requests.status_code == 200:
-                continue
-
-            new_scrapy_selector = Selector(text=response_with_requests.text)
-            
-            items_rental_units = extractor_all_data(new_scrapy_selector, ConfigXpath.ITEMS_RENTAL_UNITS.value)
-            items_rental_units['picture'] = extract_image_urls(new_scrapy_selector, ConfigXpath.ITEMS_PICTURE_RENTAL_UNITS.value)
-            items_rental_units['url_rental_unit'] = url_rental_unit
-            all_data_rental_units.append(items_rental_units)
-
-        return all_data_rental_units
