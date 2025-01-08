@@ -4,13 +4,12 @@ from scrapy import Spider
 from .items import YugoItem
 
 import app.utils.funcs as funcs
-from app.scrapy.common import parse_elements
+from app.scrapy.common import parse_elements, create_json
 import app.utils.constants as constants
 from app.models.schemas import ContractModel, Property, RentalUnits,  DatePayloadItem, mapping
 from .utils import (
     retrive_lodgerin_property,
-    retrive_lodgerin_rental_units,
-    # check_and_insert_rental_unit_calendar
+    retrive_lodgerin_rental_units
 )
 
 def save_to_json_file(data: list, output_path: str) -> None:
@@ -63,13 +62,25 @@ class YugoPipeline:
                 property_id = funcs.save_property(data_property, api_key)
                 print("property_id", property_id)
                 data_property.id = property_id
+                create_json(data_property)
                 # RentalUnit
-                data_rental_units = retrive_lodgerin_rental_units(
-                    data_property, elements_dict, data["all_rental_units"]
-                )
-                list_rental_unit_id = []
-                for rental_unit in data_rental_units:
-                    rental_unit_id = funcs.save_rental_unit(rental_unit, api_key)
-                    rental_unit.id = rental_unit_id
-                    list_rental_unit_id.append(rental_unit)
-                    print("rental_unit_id", rental_unit_id)
+                if data["all_rental_units"]:
+                    data_rental_units, calendar_unit_list = retrive_lodgerin_rental_units(
+                        data_property, elements_dict, data["all_rental_units"]
+                    )
+                    list_rental_unit_id = []
+                    for rental_unit in data_rental_units:
+                        create_json(rental_unit)
+                        rental_unit_id = funcs.save_rental_unit(rental_unit, api_key)
+                        rental_unit.id = rental_unit_id
+                        list_rental_unit_id.append(rental_unit)
+                        print("rental_unit_id", rental_unit_id)
+
+                    # schedule
+                    for rental_id, calendar_unit in zip(
+                        list_rental_unit_id, calendar_unit_list
+                    ):
+                        funcs.check_and_insert_rental_unit_calendar(rental_id, calendar_unit, api_key)
+
+                    for calendar_unit in calendar_unit_list:
+                        create_json(calendar_unit)

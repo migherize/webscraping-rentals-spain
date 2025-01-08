@@ -11,6 +11,16 @@ from app.utils.lodgerinService import LodgerinAPI, LodgerinInternal
 from app.models.schemas import (
     LocationMaps
 )
+import os
+from enum import Enum
+from typing import Union
+from app.models.schemas import (
+    DatePayloadItem,
+    Property,
+    RentalUnits
+)
+
+
 def get_all_imagenes(space_images: list) -> list[dict]:
     all_imagenes = []
 
@@ -266,3 +276,29 @@ def read_json() -> dict:
     except Exception as e:
         print(f"Error inesperado: {e}")
         return {}
+
+def create_json(item: Union[RentalUnits, Property, DatePayloadItem]) -> None:
+    class PathDocument(Enum):
+        PROPERTY = "data/property.json"
+        RENTAL_UNITS = "data/rental_units.json"
+        CALENDAR = "data/calendar.json"
+
+    current_dir = os.getcwd()
+
+    if isinstance(item, RentalUnits):
+        json_file_path = os.path.join(current_dir, PathDocument.RENTAL_UNITS.value)
+    elif isinstance(item, Property):
+        json_file_path = os.path.join(current_dir, PathDocument.PROPERTY.value)
+    elif isinstance(item, DatePayloadItem):
+        json_file_path = os.path.join(current_dir, PathDocument.CALENDAR.value)
+    else:
+        raise ValueError(
+            "item must be an instance of RentalUnits or Property or Calendar."
+        )
+
+    os.makedirs(os.path.dirname(json_file_path), exist_ok=True)
+
+    with open(json_file_path, "a", encoding="utf-8-sig") as json_file:
+        json.dump(item.dict(), json_file, indent=4)
+
+    print(f"Datos guardados en: {json_file_path}")

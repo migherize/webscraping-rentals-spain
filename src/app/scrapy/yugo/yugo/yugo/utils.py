@@ -1,6 +1,5 @@
 from enum import Enum
 # from deepparse import Deepparse
-
 import app.utils.funcs as funcs
 from app.scrapy.common import parse_elements, extract_id_name, search_feature_with_map
 import app.utils.constants as constants
@@ -193,17 +192,41 @@ def retrive_lodgerin_rental_units(
     items_property: Property, elements_dict: dict, data_scrapy: list
 ):
     rental_units = []
+    calendar_unit_list = []
+
     for index, data in enumerate(data_scrapy, start=1):
-        description_unit = data.get("DESCRIPTION_RENTAL_UNIT", [])
+        if not data.get("api_data_rental_unit", []).get("error", []):
+            start_date = data.get("api_data_rental_unit", []).get("tenancy-options", [])[0].get("tenancyOption", [])[0].get("startDate", [])
+            end_date = data.get("api_data_rental_unit", []).get("tenancy-options", [])[0].get("tenancyOption", [])[0].get("endDate", [])
+            date_text = data.get("api_data_rental_unit", []).get("tenancy-options", [])[0].get("tenancyOption", [])[0].get("formattedLabel", [])
+            fromYear = data.get("api_data_rental_unit", []).get("tenancy-options", [])[0].get("fromYear", [])
+            toYear = data.get("api_data_rental_unit", []).get("tenancy-options", [])[0].get("toYear", [])
+            
+            # amenities = data.get("api_data_rental_unit", []).get("residence", []).get("amenities", [])
+            # amenities_extras = data.get("api_data_rental_unit", []).get("residence", []).get("amenitiesExternalReference", [])
+            # name = data.get("api_data_rental_unit", []).get("room", []).get("name", [])
+            amount = data.get("api_data_rental_unit", []).get("room", []).get("minPriceForBillingCycle", [])
+
+        else:
+            start_date = None
+            end_date = None
+            amount = 0
+            date_text = ""
+            fromYear = ""
+            toYear = ""
+
+        description_unit = data.get("response_data_rental_units", []).get("DESCRIPTION_RENTAL_UNIT", [])
         description_text = description_unit[0] if description_unit else ""
 
         area = extract_area(description_text)
         area_m2 = int(area) if area is not None else None
 
-        cost_list = data.get("COST", [])
-        cost_text = cost_list[0] if cost_list else "" #TODO: Cost None
+        # cost_list = data.get("response_data_rental_units", []).get("COST", [])
+        # cost_text = cost_list[0] if cost_list else ""
+        # amount = int(extract_cost(cost_text)) if cost_text else 0
 
-        amount = int(extract_cost(cost_text)) if cost_text else 0
+        picture = data.get("response_data_rental_units", []).get("picture", [])
+        images = get_all_imagenes(picture) if picture else None
 
         data_rental_unit = RentalUnits(
             PropertyId=items_property.id,
@@ -225,14 +248,17 @@ def retrive_lodgerin_rental_units(
                     extras=[],
                 )
             ],
+            Features=items_property.Features,
             Descriptions=items_property.Descriptions,
+            Images=images
         )
         rental_units.append(data_rental_unit)
+        date_items = DatePayloadItem(
+            summary=f"Blocked until {fromYear} - {toYear}",
+            description=date_text,
+            startDate=start_date,
+            endDate=end_date,
+        )
+        calendar_unit_list.append(date_items)
 
-    return rental_units
-
-def get_email_for_location(location_name):
-    email_mapping_str = os.getenv("EMAIL_MAPPING", "")
-    default_email = os.getenv("DEFAULT_EMAIL", "")
-    email_mapping = dict(item.split(":") for item in email_mapping_str.split(",") if ":" in item)
-    return email_mapping.get(location_name, default_email)
+    return rental_units, calendar_unit_list
