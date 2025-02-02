@@ -3,7 +3,7 @@ from os import path
 
 from scrapy import Spider
 
-import app.utils.funcs as funcs
+import app.scrapy.funcs as funcs
 from app.models.schemas import DatePayloadItem, mapping
 from app.scrapy.common import parse_elements
 

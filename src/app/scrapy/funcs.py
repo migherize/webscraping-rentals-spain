@@ -3,7 +3,7 @@ import os
 import re
 from datetime import datetime, timedelta
 
-import app.utils.constants as constants
+import app.config.settings as settings
 from app.models.enums import (
     ContractModels,
     CurrencyCode,
@@ -14,7 +14,7 @@ from app.models.enums import (
 from app.models.schemas import DatePayloadItem
 from app.utils.lodgerinService import LodgerinAPI
 
-os.makedirs(constants.LOG_DIR, exist_ok=True)
+os.makedirs(settings.LOG_DIR, exist_ok=True)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -23,7 +23,7 @@ logging.basicConfig(
     handlers=[
         logging.StreamHandler(),
         logging.FileHandler(
-            os.path.join(constants.LOG_DIR, "app.log"), mode="a", encoding="utf-8"
+            os.path.join(settings.LOG_DIR, "app.log"), mode="a", encoding="utf-8"
         ),
     ],
 )
@@ -56,25 +56,6 @@ def detect_language(description: str) -> int:
     else:
         return None
 
-
-def get_currency_code(symbol: str) -> str:
-    """
-    Función para obtener el acrónimo de la moneda dado un símbolo.
-
-    Args:
-        symbol (str): Símbolo de la moneda (ejemplo: $, €, etc.).
-
-    Returns:
-        str: Acrónimo de la moneda correspondiente, o None si no se encuentra.
-    """
-    symbol_to_code = {
-        "$": CurrencyCode.USD.value,
-        "CAD": CurrencyCode.CAD.value,
-        "€": CurrencyCode.EUR.value,
-        "ZWL": CurrencyCode.ZWL.value,
-    }
-
-    return symbol_to_code.get(symbol, None)
 
 
 def get_month_dates(text: str):

@@ -5,7 +5,7 @@ from urllib.parse import urlparse, unquote
 import unicodedata
 from pydantic import BaseModel
 
-import app.utils.constants as constants
+import app.config.settings as settings
 from app.utils.lodgerinService import LodgerinAPI, LodgerinInternal
 
 from app.models.schemas import (
@@ -264,14 +264,14 @@ def read_json() -> dict:
     Lee un archivo JSON y lo convierte en un diccionario de Python.
     """
     try:
-        with open(constants.ELEMENTS_JSON, "r", encoding="utf-8") as file:
+        with open(settings.ELEMENTS_JSON, "r", encoding="utf-8") as file:
             data = json.load(file)
         return data
     except FileNotFoundError:
-        print(f"Error: El archivo {constants.ELEMENTS_JSON} no se encontró.")
+        print(f"Error: El archivo {settings.ELEMENTS_JSON} no se encontró.")
         return {}
     except json.JSONDecodeError:
-        print(f"Error: El archivo {constants.ELEMENTS_JSON} no es un JSON válido.")
+        print(f"Error: El archivo {settings.ELEMENTS_JSON} no es un JSON válido.")
         return {}
     except Exception as e:
         print(f"Error inesperado: {e}")

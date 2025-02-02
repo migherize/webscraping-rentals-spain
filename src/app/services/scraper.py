@@ -1,14 +1,12 @@
 import logging
 import os
-import time
-from socket import timeout
 import json
 
 from crochet import setup, wait_for
 from scrapy.crawler import CrawlerRunner
 from twisted.internet.defer import inlineCallbacks
 
-import app.utils.constants as constants
+import app.config.settings as settings
 from app.models.enums import URLs
 from app.scrapy.common import initialize_scraping_context, initialize_scraping_context_maps
 from app.scrapy.flipcoliving.flipcoliving.flipcoliving.spiders.flipcoliving_spider import (
@@ -20,7 +18,7 @@ from app.scrapy.somosalthena.somosalthena.somosalthena.spiders.somosalthena_spid
 
 from app.scrapy.yugo.yugo.yugo.spiders.yugo_spider import YugoSpiderSpider
 
-os.makedirs(constants.LOG_DIR, exist_ok=True)
+os.makedirs(settings.LOG_DIR, exist_ok=True)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -29,7 +27,7 @@ logging.basicConfig(
     handlers=[
         logging.StreamHandler(),
         logging.FileHandler(
-            os.path.join(constants.LOG_DIR, "app.log"), mode="a", encoding="utf-8"
+            os.path.join(settings.LOG_DIR, "app.log"), mode="a", encoding="utf-8"
         ),
     ],
 )
@@ -52,19 +50,19 @@ def run_webscraping(url: URLs) -> None:
     try:
         context = ""
         if url == URLs.flipcoliving:
-            context = initialize_scraping_context(constants.EMAIL_FLIPCOLIVING)
+            context = initialize_scraping_context(settings.EMAIL_FLIPCOLIVING)
             yield runner.crawl(
                 FlipcolivingSpiderSpider, start_urls=[url], context=context
             )
 
         elif url == URLs.somosalthena:
-            context = initialize_scraping_context(constants.EMAIL_SOMOSATHENEA)
+            context = initialize_scraping_context(settings.EMAIL_SOMOSATHENEA)
             yield runner.crawl(
                 SomosalthenaSpiderSpider, start_urls=[url], context=context
             )
 
         elif url == URLs.yugo:
-            email_map = json.loads(constants.EMAIL_MAPPING_YUGO)
+            email_map = json.loads(settings.EMAIL_MAPPING_YUGO)
             context = initialize_scraping_context_maps(email_map)
             yield runner.crawl(YugoSpiderSpider, start_urls=[url.value], context=context)
 

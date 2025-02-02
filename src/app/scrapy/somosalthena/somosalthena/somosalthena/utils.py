@@ -9,8 +9,8 @@ from typing import Any, Dict, Type
 from pydantic import BaseModel, Field
 from scrapy import Spider
 
-import app.utils.constants as constants
-import app.utils.funcs as funcs
+import app.config.settings as settings
+import app.scrapy.funcs as funcs
 from app.models.enums import CurrencyCode, PaymentCycleEnum
 from app.models.schemas import ContractModel, Property, RentalUnits
 from app.scrapy.common import clean_information_html, get_all_images, get_id_from_name
@@ -365,8 +365,8 @@ def retrive_lodgerin_property(items, elements):
         referenceCode=items["referend_code"],
         areaM2=items["area_building"],
         areaM2Available=items["area_utils"] if float(items["area_utils"]) != 0 else 1,
-        cancellationPolicy=constants.CANCELLATION_POLICY,
-        rentalType=constants.RENTAL_TYPE,
+        cancellationPolicy=settings.CANCELLATION_POLICY,
+        rentalType=settings.RENTAL_TYPE,
         isActive=True,
         isPublished=True,
         Features=features_id,
@@ -395,13 +395,13 @@ def retrive_lodgerin_rental_units(
         ContractsModels=[
             ContractModel(
                 PropertyBusinessModelId=funcs.get_elements_types(
-                    constants.MODELS_CONTRACT, elements_dict["contract_types"]
+                    settings.MODELS_CONTRACT, elements_dict["contract_types"]
                 ),
                 currency=CurrencyCode.EUR.value,
                 amount=float(cost),
                 depositAmount=float(cost),
-                reservationAmount=constants.INT_ZERO,
-                minPeriod=constants.INT_ONE,
+                reservationAmount=settings.INT_ZERO,
+                minPeriod=settings.INT_ONE,
                 paymentCycle=PaymentCycleEnum.MONTHLY.value,
                 extras=[],
             )

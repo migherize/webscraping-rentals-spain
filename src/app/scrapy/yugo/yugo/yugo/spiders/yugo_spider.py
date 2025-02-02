@@ -1,7 +1,7 @@
 # coding=utf-8
 import scrapy
 import requests
-import app.utils.constants as constants
+import app.config.settings as settings
 import app.models.enums as models
 
 from os import path

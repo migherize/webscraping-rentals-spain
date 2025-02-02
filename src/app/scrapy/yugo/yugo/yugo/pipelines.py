@@ -3,9 +3,9 @@ from os import path
 from scrapy import Spider
 from .items import YugoItem
 
-import app.utils.funcs as funcs
+import app.scrapy.funcs as funcs
 from app.scrapy.common import parse_elements, create_json
-import app.utils.constants as constants
+import app.config.settings as settings
 from app.models.schemas import ContractModel, Property, RentalUnits,  DatePayloadItem, mapping
 from .utils import (
     retrive_lodgerin_property,
