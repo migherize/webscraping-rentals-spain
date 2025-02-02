@@ -75,10 +75,10 @@ class PropertyTypeModel(BaseModel):
 
 
 class Text(BaseModel):
-    description_en: str = Field(..., description='')
-    description_es: str = Field(..., description='')
-    title_en: str = Field(..., description='')
-    title_es: str = Field(..., description='')
+    description_en: Optional[str] = Field(..., description='')
+    description_es: Optional[str] = Field(..., description='')
+    title_en: Optional[str] = Field(..., description='')
+    title_es: Optional[str] = Field(..., description='')
 
 
 class RentalUnits(BaseModel):
