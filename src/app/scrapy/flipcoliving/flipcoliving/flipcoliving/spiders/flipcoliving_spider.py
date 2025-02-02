@@ -10,13 +10,13 @@ import scrapy
 from scrapy import Selector
 
 import app.models.enums as models
-import app.utils.constants as constants
+import app.config.settings as settings
 
 from .. import items
 from ..constants_spider import item_custom_settings, item_input_output_archive
 from ..enum_path import XpathGeneralColiving
 
-os.makedirs(constants.LOG_DIR, exist_ok=True)
+os.makedirs(settings.LOG_DIR, exist_ok=True)
 
 spider_logger = logging.getLogger("scrapy_spider")
 spider_logger.setLevel(logging.DEBUG)
@@ -28,7 +28,7 @@ if not spider_logger.handlers:
     )
 
     file_handler = logging.FileHandler(
-        os.path.join(constants.LOG_DIR, f"{models.Pages.flipcoliving.value}.log"),
+        os.path.join(settings.LOG_DIR, f"{models.Pages.flipcoliving.value}.log"),
         mode="w",  # Usa "w" para sobrescribir cada vez, o "a" para agregar
         encoding="utf-8",
     )

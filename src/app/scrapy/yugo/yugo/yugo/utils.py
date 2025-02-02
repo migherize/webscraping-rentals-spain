@@ -1,8 +1,8 @@
 from enum import Enum
 # from deepparse import Deepparse
-import app.utils.funcs as funcs
+import app.scrapy.funcs as funcs
 from app.scrapy.common import parse_elements, extract_id_name, search_feature_with_map
-import app.utils.constants as constants
+import app.config.settings as settings
 from app.scrapy.common import (
     read_json,
     get_id_from_name,
@@ -165,8 +165,8 @@ def retrive_lodgerin_property(item, elements, list_api_key):
         tour_url = None
     property_items = Property(
         referenceCode=eference_code,
-        cancellationPolicy=constants.CANCELLATION_POLICY,
-        rentalType=constants.RENTAL_TYPE,
+        cancellationPolicy=settings.CANCELLATION_POLICY,
+        rentalType=settings.RENTAL_TYPE,
         isActive=True,
         isPublished=True,
         Features=features_id,
@@ -208,12 +208,12 @@ def retrive_lodgerin_rental_units(
             amount = data.get("api_data_rental_unit", []).get("room", []).get("minPriceForBillingCycle", [])
 
         else:
-            start_date = None
-            end_date = None
+            start_date = "None"
+            end_date = "None"
             amount = 0
-            date_text = ""
-            fromYear = ""
-            toYear = ""
+            date_text = "None"
+            fromYear = "None"
+            toYear = "None"
 
         description_unit = data.get("response_data_rental_units", []).get("DESCRIPTION_RENTAL_UNIT", [])
         description_text = description_unit[0] if description_unit else ""
@@ -237,13 +237,13 @@ def retrive_lodgerin_rental_units(
             ContractsModels=[
                 ContractModel(
                     PropertyBusinessModelId=funcs.get_elements_types(
-                        constants.MODELS_CONTRACT, elements_dict["contract_types"]
+                        settings.MODELS_CONTRACT, elements_dict["contract_types"]
                     ),
                     currency=CurrencyCode.EUR.value,
                     amount=amount,
                     depositAmount=amount,
-                    reservationAmount=constants.INT_ZERO,
-                    minPeriod=constants.INT_ONE,
+                    reservationAmount=settings.INT_ZERO,
+                    minPeriod=settings.INT_ONE,
                     paymentCycle=PaymentCycleEnum.MONTHLY.value,
                     extras=[],
                 )

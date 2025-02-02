@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from scrapy import Spider
 
 import app.models.enums as models
-import app.utils.constants as constants
+import app.config.settings as settings
 from app.models.enums import CurrencyCode, Languages, PaymentCycleEnum, feature_map
 from app.models.schemas import (
     ContractModel,
@@ -24,7 +24,7 @@ from app.models.schemas import (
     mapping,
 )
 from app.scrapy.common import get_all_imagenes, parse_elements
-from app.utils.funcs import (
+from app.scrapy.funcs import (
     check_and_insert_rental_unit_calendar,
     detect_language,
     find_feature_keys,
@@ -34,8 +34,8 @@ from app.utils.funcs import (
     save_rental_unit,
 )
 
-os.makedirs(constants.LOG_DIR, exist_ok=True)
-print(f"Log directory: {constants.LOG_DIR}")
+os.makedirs(settings.LOG_DIR, exist_ok=True)
+print(f"Log directory: {settings.LOG_DIR}")
 
 spider_logger = logging.getLogger("scrapy_spider")
 spider_logger.setLevel(logging.DEBUG)
@@ -47,7 +47,7 @@ if not spider_logger.handlers:
     )
 
     file_handler = logging.FileHandler(
-        os.path.join(constants.LOG_DIR, f"{models.Pages.flipcoliving.value}.log"),
+        os.path.join(settings.LOG_DIR, f"{models.Pages.flipcoliving.value}.log"),
         mode="a",
         encoding="utf-8",
     )
@@ -172,13 +172,13 @@ def create_rental_units(
                 ContractsModels=[
                     ContractModel(
                         PropertyBusinessModelId=get_elements_types(
-                            constants.MODELS_CONTRACT, elements_dict["contract_types"]
+                            settings.MODELS_CONTRACT, elements_dict["contract_types"]
                         ),
                         currency=CurrencyCode.EUR.value,
                         amount=int(room_data.amount),
-                        depositAmount=constants.INT_ZERO,
-                        reservationAmount=constants.INT_ZERO,
-                        minPeriod=constants.INT_ONE,
+                        depositAmount=settings.INT_ZERO,
+                        reservationAmount=settings.INT_ZERO,
+                        minPeriod=settings.INT_ONE,
                         paymentCycle=PaymentCycleEnum.MONTHLY.value,
                         extras=[],
                     )
@@ -207,16 +207,16 @@ def get_default_values(elements_dict) -> dict:
     Retorna un diccionario con los valores por defecto (hardcoded).
     """
     return {
-        "cancellationPolicy": constants.CANCELLATION_POLICY,
-        "rentalType": constants.RENTAL_TYPE,
-        "isActive": constants.BOOL_TRUE,
-        "isPublished": constants.BOOL_TRUE,
-        "Languages": constants.LANGUAGES,
+        "cancellationPolicy": settings.CANCELLATION_POLICY,
+        "rentalType": settings.RENTAL_TYPE,
+        "isActive": settings.BOOL_TRUE,
+        "isPublished": settings.BOOL_TRUE,
+        "Languages": settings.LANGUAGES,
         "PropertyTypeId": get_elements_types(
-            constants.PROPERTY_TYPE_ID, elements_dict["property_types"]
+            settings.PROPERTY_TYPE_ID, elements_dict["property_types"]
         ),  # 4
-        "country": constants.COUNTRY,
-        "countryCode": constants.COUNTRY_CODE,
+        "country": settings.COUNTRY,
+        "countryCode": settings.COUNTRY_CODE,
     }
 
 

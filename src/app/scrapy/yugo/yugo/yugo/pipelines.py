@@ -3,9 +3,9 @@ from os import path
 from scrapy import Spider
 from .items import YugoItem
 
-import app.utils.funcs as funcs
+import app.scrapy.funcs as funcs
 from app.scrapy.common import parse_elements, create_json
-import app.utils.constants as constants
+import app.config.settings as settings
 from app.models.schemas import ContractModel, Property, RentalUnits,  DatePayloadItem, mapping
 from .utils import (
     retrive_lodgerin_property,
@@ -69,17 +69,20 @@ class YugoPipeline:
                         data_property, elements_dict, data["all_rental_units"]
                     )
                     list_rental_unit_id = []
+                    print("data_rental_units",len(data_rental_units))
                     for rental_unit in data_rental_units:
                         create_json(rental_unit)
                         rental_unit_id = funcs.save_rental_unit(rental_unit, api_key)
+                        print("rental_unit_id", rental_unit_id)
                         rental_unit.id = rental_unit_id
                         list_rental_unit_id.append(rental_unit)
-                        print("rental_unit_id", rental_unit_id)
 
                     # schedule
                     for rental_id, calendar_unit in zip(
                         list_rental_unit_id, calendar_unit_list
                     ):
+                        if calendar_unit.startDate == "None":
+                            continue
                         funcs.check_and_insert_rental_unit_calendar(rental_id, calendar_unit, api_key)
 
                     for calendar_unit in calendar_unit_list:
