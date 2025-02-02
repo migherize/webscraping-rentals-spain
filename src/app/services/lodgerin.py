@@ -61,7 +61,6 @@ class LodgerinAPI:
         self.data = {}
 
     # GET
-
     def get_elements(self):
         """
         Realiza una solicitud GET al endpoint especificado y devuelve los datos JSON.

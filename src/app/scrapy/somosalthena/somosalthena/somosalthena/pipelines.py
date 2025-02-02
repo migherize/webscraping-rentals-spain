@@ -52,18 +52,7 @@ class SomosalthenaPipeline:
             )
             rental_unit_id = funcs.save_rental_unit(data_rental_units, api_key)
             data_rental_units.id = rental_unit_id
-            # Schedule
-            # start_date, end_date, month = get_month()
-            # calendar_unit = DatePayloadItem(
-            #     summary=f"Blocked until {start_date}",
-            #     description=f"Available from {month}",
-            #     startDate=start_date,
-            #     endDate=end_date,
-            # )
-            # funcs.check_and_insert_rental_unit_calendar(
-            #     rental_unit_id, calendar_unit, api_key
-            # )
-
+           
 
 def create_json_file(path_document: str, spider: Spider) -> None:
     """Creates an empty JSON file at the specified path.

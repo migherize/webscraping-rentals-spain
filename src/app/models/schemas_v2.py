@@ -2,32 +2,6 @@ from typing import Dict, List, Optional
 from pydantic import BaseModel, Field
 
 
-class Property(BaseModel):
-    CountersRU: Optional["CounterRU"] = Field(None, description="")
-    Features: Optional[List["Feature"]] = Field(None, description="")
-    Images: Optional[List["Image"]] = Field(None, description="")
-    Location: Optional["LocationAddress"] = Field(None, description="")
-    PropertyType: Optional["PropertyTypeModel"] = Field(None, description="")
-    Texts: Optional["Text"] = Field(None, description="")
-    areaM2: Optional[int] = Field(None, description="")
-    code: Optional[str] = Field(None, description="")
-    createdAt: Optional[str] = Field(None, description="")
-    id: Optional[str] = Field(None, description="")
-    isActive: Optional[bool] = Field(None, description="")
-    isEntirePropertyRental: Optional[bool] = Field(None, description="")
-    isPublished: Optional[bool] = Field(None, description="")
-    maxOccupancy: Optional[int] = Field(None, description="")
-    provider: Optional[str] = Field(None, description="")
-    providerRef: Optional[str] = Field(None, description="")
-    referenceCode: Optional[str] = Field(None, description="")
-    rentalType: Optional[str] = Field(None, description="")
-    typeSize: Optional[str] = Field(None, description="")
-    updatedAt: Optional[str] = Field(None, description="")
-    # TODO: Valores con None en el response
-    areaM2Available: Optional[str] = Field(None, description="")
-    dateLastReform: Optional[str] = Field(None, description="")
-    numBathrooms: Optional[str] = Field(None, description="")
-
 
 class CounterRU(BaseModel):
     occupiedRUs: Optional[int] = Field(..., description="")
@@ -87,8 +61,52 @@ class Text(BaseModel):
     title_es: Optional[str] = Field(..., description="")
 
 
+
+
+class Price(BaseModel):
+    amount: Optional[int] = Field(..., description="")
+    contractType: Optional[str] = Field(..., description="")
+    createdAt: Optional[str] = Field(..., description="")
+    currency: Optional[str] = Field(..., description="")
+    depositAmount: Optional[int] = Field(..., description="")
+    discountPercent: Optional[int] = Field(..., description="")
+    id: Optional[str] = Field(..., description="")
+    maxPeriod: Optional[int] = Field(..., description="")
+    minPeriod: Optional[int] = Field(..., description="")
+    paymentCycle: Optional[str] = Field(..., description="")
+    reservationAmount: Optional[int] = Field(..., description="")
+    updatedAt: Optional[str] = Field(..., description="")
+
+
+class Property(BaseModel):
+    CountersRU: Optional["CounterRU"] = Field(None, description="")
+    Features: Optional[List["Feature"]] = Field(None, description="")
+    Images: Optional[List["Image"]] = Field(None, description="")
+    Location: Optional["LocationAddress"] = Field(None, description="")
+    PropertyType: Optional["PropertyTypeModel"] = Field(None, description="")
+    Texts: Optional["Text"] = Field(None, description="")
+    areaM2: Optional[int] = Field(None, description="")
+    code: Optional[str] = Field(None, description="")
+    createdAt: Optional[str] = Field(None, description="")
+    id: Optional[str] = Field(None, description="")
+    isActive: Optional[bool] = Field(None, description="")
+    isEntirePropertyRental: Optional[bool] = Field(None, description="")
+    isPublished: Optional[bool] = Field(None, description="")
+    maxOccupancy: Optional[int] = Field(None, description="")
+    provider: Optional[str] = Field(None, description="")
+    providerRef: Optional[str] = Field(None, description="")
+    referenceCode: Optional[str] = Field(None, description="")
+    rentalType: Optional[str] = Field(None, description="")
+    typeSize: Optional[str] = Field(None, description="")
+    updatedAt: Optional[str] = Field(None, description="")
+    # TODO: Valores con None en el response
+    areaM2Available: Optional[str] = Field(None, description="")
+    dateLastReform: Optional[str] = Field(None, description="")
+    numBathrooms: Optional[str] = Field(None, description="")
+
+
 class RentalUnits(BaseModel):
-    Images: Optional["Image"] = Field(None, description="")
+    Images: Optional[List["Image"]] = Field(None, description="")
     Prices: Optional[List["Price"]] = Field(None, description="")
     Texts: Optional["Text"] = Field(None, description="")
     areaM2: Optional[int] = Field(None, description="")
@@ -116,16 +134,17 @@ class RentalUnits(BaseModel):
     ExtraFeatures: Optional[List] = Field(None, description="")
 
 
-class Price(BaseModel):
-    amount: Optional[int] = Field(..., description="")
-    contractType: Optional[str] = Field(..., description="")
-    createdAt: Optional[str] = Field(..., description="")
-    currency: Optional[str] = Field(..., description="")
-    depositAmount: Optional[int] = Field(..., description="")
-    discountPercent: Optional[int] = Field(..., description="")
-    id: Optional[str] = Field(..., description="")
-    maxPeriod: Optional[int] = Field(..., description="")
-    minPeriod: Optional[int] = Field(..., description="")
-    paymentCycle: Optional[str] = Field(..., description="")
-    reservationAmount: Optional[int] = Field(..., description="")
-    updatedAt: Optional[str] = Field(..., description="")
+class RentalUnitsCalendarItem(BaseModel):
+    summary: str = Field(
+        ...,
+        description="Short summary for the date range, e.g., 'Blocked until August 2025'",
+    )
+    description: str = Field(
+        ...,
+        description="Detailed description of availability, e.g., 'Available from August 2025'",
+    )
+    startDate: str = Field(..., description="Start date of the blocked range")
+    endDate: str = Field(..., description="End date of the blocked range")
+
+class RentalUnitsCalendar(BaseModel):
+    dates: List[RentalUnitsCalendarItem]

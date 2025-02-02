@@ -66,5 +66,6 @@ def run_webscraping(url: URLs) -> None:
             context = initialize_scraping_context_maps(email_map)
             yield runner.crawl(YugoSpiderSpider, start_urls=[url.value], context=context)
 
+
     except Exception as e:
         logger.info(f"Error al hacer scraping para {url}: {str(e)}")

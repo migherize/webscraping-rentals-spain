@@ -12,7 +12,7 @@ from app.models.enums import (
     PropertyType,
 )
 from app.models.schemas import DatePayloadItem
-from app.utils.lodgerinService import LodgerinAPI
+from app.services.lodgerin import LodgerinAPI
 
 os.makedirs(settings.LOG_DIR, exist_ok=True)
 
