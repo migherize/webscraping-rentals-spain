@@ -11,7 +11,7 @@ from app.models.enums import (
     Month,
     PropertyType,
 )
-from app.models.schemas import DatePayloadItem
+from app.models.schemas import RentalUnitsCalendarItem
 from app.services.lodgerin import LodgerinAPI
 
 os.makedirs(settings.LOG_DIR, exist_ok=True)
@@ -167,7 +167,7 @@ def save_rental_unit(rental_unit_item, api_key):
 
 
 def check_and_insert_rental_unit_calendar(
-    rental_unit_id: str, calendar_unit: DatePayloadItem, api_key: str
+    rental_unit_id: str, calendar_unit: RentalUnitsCalendarItem, api_key: str
 ):
     lodgerin_api = LodgerinAPI(api_key)
     dates_payload = [calendar_unit.model_dump()]

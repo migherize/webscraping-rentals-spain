@@ -35,7 +35,6 @@ class SomosalthenaPipeline:
 
     def close_spider(self, spider: Spider) -> None:
         output_data_json = get_data_json(self.json_path_no_refined)
-        # write_to_json_file(self.json_path_refined, output_data_json, spider)
         write_to_json_file(self.json_path_refined, output_data_json, spider)
 
         elements_dict = parse_elements(spider.context[0], mapping)

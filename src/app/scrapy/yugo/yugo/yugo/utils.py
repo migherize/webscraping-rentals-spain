@@ -1,26 +1,20 @@
 from enum import Enum
-# from deepparse import Deepparse
-import app.scrapy.funcs as funcs
-from app.scrapy.common import parse_elements, extract_id_name, search_feature_with_map
+from typing import List
+from app.scrapy.common import extract_id_name, search_feature_with_map
 import app.config.settings as settings
 from app.scrapy.common import (
-    read_json,
     get_id_from_name,
     get_all_imagenes,
     decode_clean_string,
     extract_area,
-    extract_cost,
     search_location
 )
-from app.models.enums import CurrencyCode, Languages, PaymentCycleEnum, feature_map
 from app.models.schemas import (
-    ContractModel,
     Property,
     RentalUnits,
-    DatePayloadItem,
+    RentalUnitsCalendarItem,
     LocationAddress,
-    LocationMaps,
-    mapping,
+    ApiKeyItem
 )
 
 class PropertyTypeColiving(Enum):
@@ -89,7 +83,7 @@ class EquivalencesYugo(Enum):
 
 
 def map_property_descriptions(languages, property_descriptions):
-    language_dict = {lang["code"]: lang for lang in languages}
+    language_dict = {lang.code: lang for lang in languages}
 
     result = []
 
@@ -100,7 +94,7 @@ def map_property_descriptions(languages, property_descriptions):
                 continue
             language = language_dict.get(lang_code)
             if language:
-                language_id = language["id"]
+                language_id = language.id
                 title = prop.get("property_name")
                 description = prop.get("residence_description")
                 result.append(
@@ -120,7 +114,7 @@ def map_property_descriptions(languages, property_descriptions):
     return result
 
 
-def get_name_by_location(data: list, location: str) -> str:
+def get_name_by_location(data: List[ApiKeyItem], location: str) -> str:
     """
     Busca en la lista por la ubicación (location) y devuelve el valor de 'name'.
 
@@ -132,19 +126,21 @@ def get_name_by_location(data: list, location: str) -> str:
         str: El valor de 'name' correspondiente a la ubicación, o None si no se encuentra.
     """
     for item in data:
-        if item.get("location") == location:
-            return item.get("name")
+        if item.location == location:
+            return item.name
     return None
 
 def retrive_lodgerin_property(item, elements, list_api_key):
     api_key = get_name_by_location(list_api_key, item["yugo_space_name"])
     PropertyTypeId = get_id_from_name(
-        elements["property_types"], "Studio/Entire flat", "name"
+        elements["propertiesTypes"].data, "Apartment / Entire flat", "name_en"
     )
     descriptions = map_property_descriptions(
-        elements["languages"]["data"],
+        elements["languages"].data,
         item["second_items_property"],
     )
+    print("descriptions",descriptions)
+    #######
 
     element_feature = extract_id_name(elements["features"]["data"])
     features_id = search_feature_with_map(
@@ -234,26 +230,26 @@ def retrive_lodgerin_rental_units(
             areaM2=area_m2,
             isActive=True,
             isPublished=True,
-            ContractsModels=[
-                ContractModel(
-                    PropertyBusinessModelId=funcs.get_elements_types(
-                        settings.MODELS_CONTRACT, elements_dict["contract_types"]
-                    ),
-                    currency=CurrencyCode.EUR.value,
-                    amount=amount,
-                    depositAmount=amount,
-                    reservationAmount=settings.INT_ZERO,
-                    minPeriod=settings.INT_ONE,
-                    paymentCycle=PaymentCycleEnum.MONTHLY.value,
-                    extras=[],
-                )
-            ],
+            # ContractsModels=[
+            #     ContractModel(
+            #         PropertyBusinessModelId=funcs.get_elements_types(
+            #             settings.MODELS_CONTRACT, elements_dict["contract_types"]
+            #         ),
+            #         currency=CurrencyCode.EUR.value,
+            #         amount=amount,
+            #         depositAmount=amount,
+            #         reservationAmount=settings.INT_ZERO,
+            #         minPeriod=settings.INT_ONE,
+            #         paymentCycle=PaymentCycleEnum.MONTHLY.value,
+            #         extras=[],
+            #     )
+            # ],
             Features=items_property.Features,
             Descriptions=items_property.Descriptions,
             Images=images
         )
         rental_units.append(data_rental_unit)
-        date_items = DatePayloadItem(
+        date_items = RentalUnitsCalendarItem(
             summary=f"Blocked until {fromYear} - {toYear}",
             description=date_text,
             startDate=start_date,

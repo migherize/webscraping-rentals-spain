@@ -5,17 +5,15 @@ from urllib.parse import urlparse, unquote
 import unicodedata
 from pydantic import BaseModel
 
-import app.config.settings as settings
+from app.config.settings import ElementsConfig
 from app.services.lodgerin import LodgerinAPI, LodgerinInternal
 
-from app.models.schemas import (
-    LocationMaps
-)
+from app.models.schemas import LocationMaps
 import os
 from enum import Enum
 from typing import Union
 from app.models.schemas import (
-    DatePayloadItem,
+    RentalUnitsCalendarItem,
     Property,
     RentalUnits
 )
@@ -101,12 +99,11 @@ def search_location(query) -> LocationMaps:
 
 def initialize_scraping_context(email: str):
     try:
-        lodgerin_api = LodgerinInternal(email)
+        lodgerin_api = LodgerinInternal()
         api_key = lodgerin_api.get_api_key(email)
         api_client = LodgerinAPI(api_key)
-        api_client.load_all_data()
-        mapped_data = api_client.get_mapped_data()
-        mapped_data["api_key"] = {"data": [{"id": email, "name": api_key}]}
+        mapped_data = api_client.get_elements()['data']
+        mapped_data["api_key"] = [{"id": email, "name": api_key}]
         return mapped_data
     except Exception as e:
         print(f"Error durante la inicialización del contexto de scraping: {str(e)}")
@@ -124,25 +121,25 @@ def initialize_scraping_context_maps(email_map):
         if not isinstance(email_map, dict) or not all(isinstance(k, str) and isinstance(v, str) for k, v in email_map.items()):
             raise ValueError("El parámetro email_map debe ser un diccionario con claves y valores de tipo string.")
 
-        combined_mapped_data = {"api_key": {"data": []}}
+        combined_mapped_data = {"api_key": []}
 
         for location, email in email_map.items():
-            lodgerin_api = LodgerinInternal(email)
+            lodgerin_api = LodgerinInternal()
             api_key = lodgerin_api.get_api_key(email)
             api_client = LodgerinAPI(api_key)
-            api_client.load_all_data()
-            mapped_data = api_client.get_mapped_data()
-            
-            combined_mapped_data["api_key"]["data"].append({
+            elements =api_client.get_elements()
+            combined_mapped_data["api_key"].append({
                 "id": email,
                 "location": location,
                 "name": api_key,
             })
+            combined_mapped_data.update(elements['data'])
 
         return combined_mapped_data
     except Exception as e:
         print(f"Error durante la inicialización del contexto de scraping: {str(e)}")
         raise
+
 
 
 def parse_elements(
@@ -159,17 +156,25 @@ def parse_elements(
         dict: Un diccionario con los datos parseados.
     """
     elements_dict = {}
+
     for key, model_class in mapping.items():
         if key in full_json:
-            elements_dict[key] = model_class(**full_json[key]).dict()
+            try:
+                if isinstance(full_json[key], list):
+                    elements_dict[key] = model_class(data=[model_class.__annotations__["data"].__args__[0](**item) for item in full_json[key]])
+                else:
+                    elements_dict[key] = model_class(**full_json[key])
+            except Exception as e:
+                raise ValueError(f"Error al procesar '{key}': {e}")
         else:
             raise KeyError(f"Key '{key}' not found in the provided JSON")
+    
     return elements_dict
 
 def extract_id_name(data):
     return {item["id"]: item["name"] for item in data}
 
-def get_id_from_name(data_dict: dict, name: str, key_name: str) -> int:
+def get_id_from_name(data_dict: list, name: str, key_name: str) -> int:
     """
     Busca el ID asociado a un nombre en un diccionario con estructura similar a "property_types" o "pension_types".
 
@@ -180,9 +185,9 @@ def get_id_from_name(data_dict: dict, name: str, key_name: str) -> int:
     Returns:
         int: El ID asociado al nombre, si se encuentra. De lo contrario, retorna None.
     """
-    for item in data_dict.get("data", []):
-        if item.get(key_name) == name:
-            return item.get("id")
+    for item in data_dict:
+        if getattr(item, key_name) == name:
+            return item.id
     return None
 
 def search_feature_with_map(items_features, elements_features, equivalences):
@@ -264,20 +269,20 @@ def read_json() -> dict:
     Lee un archivo JSON y lo convierte en un diccionario de Python.
     """
     try:
-        with open(settings.ELEMENTS_JSON, "r", encoding="utf-8") as file:
+        with open(ElementsConfig.ELEMENTS_JSON, "r", encoding="utf-8") as file:
             data = json.load(file)
         return data
     except FileNotFoundError:
-        print(f"Error: El archivo {settings.ELEMENTS_JSON} no se encontró.")
+        print(f"Error: El archivo {ElementsConfig.ELEMENTS_JSON} no se encontró.")
         return {}
     except json.JSONDecodeError:
-        print(f"Error: El archivo {settings.ELEMENTS_JSON} no es un JSON válido.")
+        print(f"Error: El archivo {ElementsConfig.ELEMENTS_JSON} no es un JSON válido.")
         return {}
     except Exception as e:
         print(f"Error inesperado: {e}")
         return {}
 
-def create_json(item: Union[RentalUnits, Property, DatePayloadItem]) -> None:
+def create_json(item: Union[RentalUnits, Property, RentalUnitsCalendarItem]) -> None:
     class PathDocument(Enum):
         PROPERTY = "data/property.json"
         RENTAL_UNITS = "data/rental_units.json"
@@ -289,7 +294,7 @@ def create_json(item: Union[RentalUnits, Property, DatePayloadItem]) -> None:
         json_file_path = os.path.join(current_dir, PathDocument.RENTAL_UNITS.value)
     elif isinstance(item, Property):
         json_file_path = os.path.join(current_dir, PathDocument.PROPERTY.value)
-    elif isinstance(item, DatePayloadItem):
+    elif isinstance(item, RentalUnitsCalendarItem):
         json_file_path = os.path.join(current_dir, PathDocument.CALENDAR.value)
     else:
         raise ValueError(

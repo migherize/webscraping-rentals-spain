@@ -1,13 +1,12 @@
 import json
 from os import path
 from scrapy import Spider
-from .items import YugoItem
 
 import app.scrapy.funcs as funcs
-from app.scrapy.common import parse_elements, create_json
-import app.config.settings as settings
-from app.models.schemas import ContractModel, Property, RentalUnits,  DatePayloadItem, mapping
-from .utils import (
+from app.scrapy.yugo.yugo.yugo.items import YugoItem
+from app.scrapy.common import parse_elements, create_json, read_json
+from app.models.schemas import mapping
+from app.scrapy.yugo.yugo.yugo.utils import (
     retrive_lodgerin_property,
     retrive_lodgerin_rental_units
 )

@@ -1,6 +1,6 @@
 import httpx
 import traceback
-from app.models.schemas_v2 import Property, RentalUnits, RentalUnitsCalendarItem, RentalUnitsCalendar
+from app.models.schemas import Property, RentalUnits, RentalUnitsCalendarItem, RentalUnitsCalendar
 from pydantic import ValidationError
 from app.tests.constants import API_BASE_URL, HEADERS
 

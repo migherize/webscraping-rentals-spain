@@ -1,20 +1,13 @@
 from typing import Dict, List, Optional
 
 import requests
-
-from app.config.settings import (
-    LODGERIN_API,
-    LODGERIN_INTERNAL,
-    TOKEN_API_INTERNAL,
-    LODGERIN_MAPS_INTERNAL,
-)
-
+from app.config.settings import GlobalConfig, LodgerinConfig, TokenConfig,EmailConfig, ElementsConfig
 
 class LodgerinInternal:
     def __init__(self, lang="en"):
-        self.base_url = LODGERIN_INTERNAL
-        self.base_url_maps = LODGERIN_MAPS_INTERNAL
-        self.headers = {"x-access-token": TOKEN_API_INTERNAL, "x-access-lang": lang}
+        self.base_url = LodgerinConfig.INTERNAL_URL
+        self.base_url_maps = LodgerinConfig.MAPS_INTERNAL_URL
+        self.headers = {"x-access-token": TokenConfig.API_INTERNAL, "x-access-lang": lang}
         self.data = {}
 
     def get_api_key(self, email):
@@ -56,7 +49,7 @@ class LodgerinInternal:
 
 class LodgerinAPI:
     def __init__(self, api_key, lang="en"):
-        self.base_url = LODGERIN_API
+        self.base_url = LodgerinConfig.API_URL
         self.headers = {"x-access-apikey": api_key, "x-access-lang": lang}
         self.data = {}
 
