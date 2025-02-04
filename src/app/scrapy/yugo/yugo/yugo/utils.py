@@ -228,24 +228,8 @@ def retrive_lodgerin_rental_units(
         area = extract_area(description_text)
         area_m2 = int(area) if area is not None else None
 
-        # cost_list = data.get("response_data_rental_units", []).get("COST", [])
-        # cost_text = cost_list[0] if cost_list else ""
-        # amount = int(extract_cost(cost_text)) if cost_text else 0
-
         picture = data.get("response_data_rental_units", []).get("picture", [])
         images = get_all_imagenes(picture) if picture else None
-
-        # Price=dict(PriceItem(
-        #     contractType=PaymentCycleEnum.MONTHLY.value,
-        #     currency=CurrencyCode.EUR.value,
-        #     amount=amount,
-        #     depositAmount=amount,
-        #     reservationAmount=GlobalConfig.INT_ZERO,
-        #     minPeriod=GlobalConfig.INT_ONE,
-        #     paymentCycle=PaymentCycleEnum.MONTHLY.value
-        # ))
-        # print("Price",Price)
-        # print("Price",PaymentCycleEnum.MONTHLY.value)
 
         data_rental_unit = RentalUnits(
             PropertyId=items_property.id,
@@ -262,31 +246,6 @@ def retrive_lodgerin_rental_units(
                 minPeriod=GlobalConfig.INT_ONE,
                 paymentCycle=PaymentCycleEnum.MONTHLY.value
             ),
-            # Price={
-            #     "contractType": "monthly",
-            #     "currency": "EUR",
-            #     "amount": 150,
-            #     "depositAmount": 150,
-            #     "reservationAmount": 150,
-            #     "discountPercent": 0,
-            #     "minPeriod": 30,
-            #     "maxPeriod": 90,
-            #     "paymentCycle": "monthly",
-            # },
-            # ContractsModels=[
-            #     ContractModel(
-            #         PropertyBusinessModelId=funcs.get_elements_types(
-            #             settings.MODELS_CONTRACT, elements_dict["contract_types"]
-            #         ),
-            #         currency=CurrencyCode.EUR.value,
-            #         amount=amount,
-            #         depositAmount=amount,
-            #         reservationAmount=settings.INT_ZERO,
-            #         minPeriod=settings.INT_ONE,
-            #         paymentCycle=PaymentCycleEnum.MONTHLY.value,
-            #         extras=[],
-            #     )
-            # ],
             Features=items_property.Features,
             Texts=items_property.Texts,
             Images=images
