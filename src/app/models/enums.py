@@ -7,14 +7,14 @@ class URLs(str, Enum):
     flipcoliving = "https://flipcoliving.com/"
     somosalthena = "https://somosalthena.com/"
     yugo = "https://yugo.com/en-us"
-    nodis = "https://nodis.es/"
+    vita = "https://www.vitastudent.com/es"
 
 
 class Pages(str, Enum):
     flipcoliving = "flipcoliving"
     somosalthena = "somosalthena"
     yugo = "yugo"
-    nodis = "nodis"
+    vita = "vita"
 
 
 class ScrapingBeeParams(str, Enum):

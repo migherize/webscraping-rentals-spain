@@ -35,7 +35,6 @@ class SomosalthenaPipeline:
 
     def close_spider(self, spider: Spider) -> None:
         output_data_json = get_data_json(self.json_path_no_refined)
-        # write_to_json_file(self.json_path_refined, output_data_json, spider)
         write_to_json_file(self.json_path_refined, output_data_json, spider)
 
         elements_dict = parse_elements(spider.context[0], mapping)
@@ -52,18 +51,7 @@ class SomosalthenaPipeline:
             )
             rental_unit_id = funcs.save_rental_unit(data_rental_units, api_key)
             data_rental_units.id = rental_unit_id
-            # Schedule
-            # start_date, end_date, month = get_month()
-            # calendar_unit = DatePayloadItem(
-            #     summary=f"Blocked until {start_date}",
-            #     description=f"Available from {month}",
-            #     startDate=start_date,
-            #     endDate=end_date,
-            # )
-            # funcs.check_and_insert_rental_unit_calendar(
-            #     rental_unit_id, calendar_unit, api_key
-            # )
-
+           
 
 def create_json_file(path_document: str, spider: Spider) -> None:
     """Creates an empty JSON file at the specified path.

@@ -1,26 +1,23 @@
 from enum import Enum
-# from deepparse import Deepparse
-import app.scrapy.funcs as funcs
-from app.scrapy.common import parse_elements, extract_id_name, search_feature_with_map
-import app.config.settings as settings
+from typing import List, Dict
+from app.scrapy.common import extract_id_name, search_feature_with_map
+from app.config.settings import GlobalConfig
 from app.scrapy.common import (
-    read_json,
     get_id_from_name,
     get_all_imagenes,
     decode_clean_string,
     extract_area,
-    extract_cost,
     search_location
 )
-from app.models.enums import CurrencyCode, Languages, PaymentCycleEnum, feature_map
+from app.models.enums import PaymentCycleEnum, CurrencyCode
 from app.models.schemas import (
-    ContractModel,
+    PriceItem,
     Property,
     RentalUnits,
-    DatePayloadItem,
+    RentalUnitsCalendarItem,
     LocationAddress,
-    LocationMaps,
-    mapping,
+    ApiKeyItem,
+    Text
 )
 
 class PropertyTypeColiving(Enum):
@@ -88,39 +85,44 @@ class EquivalencesYugo(Enum):
     }
 
 
-def map_property_descriptions(languages, property_descriptions):
-    language_dict = {lang["code"]: lang for lang in languages}
-
-    result = []
-
+def map_property_descriptions(languages, property_descriptions) -> List[Dict]:
+    language_dict = {lang.code: lang for lang in languages}
+    
+    texts = {
+        "title_en": None,
+        "title_es": None,
+        "description_en": None,
+        "description_es": None,
+    }
+    
     for prop in property_descriptions:
         try:
             lang_code = prop.get("language").split("-")[0].upper()
-            if prop.get("language") == "en-us" or prop.get("language") == "ca-es":
+            if prop.get("language") in ["en-us", "ca-es"]:
                 continue
+            
             language = language_dict.get(lang_code)
             if language:
-                language_id = language["id"]
                 title = prop.get("property_name")
                 description = prop.get("residence_description")
-                result.append(
-                    {
-                        "LanguagesId": language_id,
-                        "title": title,
-                        "description": description,
-                    }
-                )
+                
+                if lang_code == "EN":
+                    texts["title_en"] = title
+                    texts["description_en"] = description
+                elif lang_code == "ES":
+                    texts["title_es"] = title
+                    texts["description_es"] = description
             else:
                 print(
                     f"Advertencia: No se encontró el idioma para el código '{lang_code}' en la propiedad '{prop.get('property_name')}'."
                 )
         except Exception as e:
             print(f"Error al procesar la propiedad '{prop.get('property_name')}': {e}")
+    
+    return {"Texts": Text(**texts).dict()}
 
-    return result
 
-
-def get_name_by_location(data: list, location: str) -> str:
+def get_name_by_location(data: List[ApiKeyItem], location: str) -> str:
     """
     Busca en la lista por la ubicación (location) y devuelve el valor de 'name'.
 
@@ -132,47 +134,45 @@ def get_name_by_location(data: list, location: str) -> str:
         str: El valor de 'name' correspondiente a la ubicación, o None si no se encuentra.
     """
     for item in data:
-        if item.get("location") == location:
-            return item.get("name")
+        if item.location == location:
+            return item.name
     return None
 
 def retrive_lodgerin_property(item, elements, list_api_key):
     api_key = get_name_by_location(list_api_key, item["yugo_space_name"])
     PropertyTypeId = get_id_from_name(
-        elements["property_types"], "Studio/Entire flat", "name"
+        elements["propertiesTypes"].data, "Apartment / Entire flat", "name_en"
     )
     descriptions = map_property_descriptions(
-        elements["languages"]["data"],
+        elements["languages"].data,
         item["second_items_property"],
     )
-
-    element_feature = extract_id_name(elements["features"]["data"])
+    element_feature = extract_id_name(elements["features"].data)
     features_id = search_feature_with_map(
         item["all_feature"],
         element_feature,
         EquivalencesYugo.FEATURES.value,
     )
-
     address = search_location(item['address_contact_and_email'])
 
     # clean reference_code
-    eference_code = decode_clean_string(item["url_yugo_space"])
-
+    reference_code = decode_clean_string(item["url_yugo_space"])
     images = get_all_imagenes(item["all_images"])
+
     if item["tour_virtual"]:
         tour_url = item["tour_virtual"][0]
     else:
         tour_url = None
     property_items = Property(
-        referenceCode=eference_code,
-        cancellationPolicy=settings.CANCELLATION_POLICY,
-        rentalType=settings.RENTAL_TYPE,
+        referenceCode=reference_code,
+        cancellationPolicy=GlobalConfig.CANCELLATION_POLICY,
+        rentalType=GlobalConfig.RENTAL_TYPE,
         isActive=True,
         isPublished=True,
         Features=features_id,
         tourUrl=tour_url,
         PropertyTypeId=PropertyTypeId,
-        Descriptions=descriptions,
+        Texts=descriptions,
         Images=images,
         Location=LocationAddress(
             lat=str(address.lat),
@@ -180,9 +180,16 @@ def retrive_lodgerin_property(item, elements, list_api_key):
             country=address.country,
             countryCode=address.countryCode,
             city=address.city,
+            street=address.street,
+            state=address.state,
+            prefixPhone=address.prefixPhone,
+            postalCode=address.postalCode,
+            number=address.number,
+            fullAddress=address.fullAddress,
+            address=address.address,
         ),
         provider="yugo",
-        providerRef=eference_code,
+        providerRef=reference_code,
     )
 
     return property_items, api_key
@@ -210,7 +217,7 @@ def retrive_lodgerin_rental_units(
         else:
             start_date = "None"
             end_date = "None"
-            amount = 0
+            amount = 1
             date_text = "None"
             fromYear = "None"
             toYear = "None"
@@ -228,32 +235,64 @@ def retrive_lodgerin_rental_units(
         picture = data.get("response_data_rental_units", []).get("picture", [])
         images = get_all_imagenes(picture) if picture else None
 
+        # Price=dict(PriceItem(
+        #     contractType=PaymentCycleEnum.MONTHLY.value,
+        #     currency=CurrencyCode.EUR.value,
+        #     amount=amount,
+        #     depositAmount=amount,
+        #     reservationAmount=GlobalConfig.INT_ZERO,
+        #     minPeriod=GlobalConfig.INT_ONE,
+        #     paymentCycle=PaymentCycleEnum.MONTHLY.value
+        # ))
+        # print("Price",Price)
+        # print("Price",PaymentCycleEnum.MONTHLY.value)
+
         data_rental_unit = RentalUnits(
             PropertyId=items_property.id,
             referenceCode=f"{items_property.referenceCode}-{index:03}",
             areaM2=area_m2,
             isActive=True,
             isPublished=True,
-            ContractsModels=[
-                ContractModel(
-                    PropertyBusinessModelId=funcs.get_elements_types(
-                        settings.MODELS_CONTRACT, elements_dict["contract_types"]
-                    ),
-                    currency=CurrencyCode.EUR.value,
-                    amount=amount,
-                    depositAmount=amount,
-                    reservationAmount=settings.INT_ZERO,
-                    minPeriod=settings.INT_ONE,
-                    paymentCycle=PaymentCycleEnum.MONTHLY.value,
-                    extras=[],
-                )
-            ],
+            Price=PriceItem(
+                contractType=PaymentCycleEnum.MONTHLY.value,
+                currency=CurrencyCode.EUR.value,
+                amount=amount,
+                depositAmount=amount,
+                reservationAmount=GlobalConfig.INT_ZERO,
+                minPeriod=GlobalConfig.INT_ONE,
+                paymentCycle=PaymentCycleEnum.MONTHLY.value
+            ),
+            # Price={
+            #     "contractType": "monthly",
+            #     "currency": "EUR",
+            #     "amount": 150,
+            #     "depositAmount": 150,
+            #     "reservationAmount": 150,
+            #     "discountPercent": 0,
+            #     "minPeriod": 30,
+            #     "maxPeriod": 90,
+            #     "paymentCycle": "monthly",
+            # },
+            # ContractsModels=[
+            #     ContractModel(
+            #         PropertyBusinessModelId=funcs.get_elements_types(
+            #             settings.MODELS_CONTRACT, elements_dict["contract_types"]
+            #         ),
+            #         currency=CurrencyCode.EUR.value,
+            #         amount=amount,
+            #         depositAmount=amount,
+            #         reservationAmount=settings.INT_ZERO,
+            #         minPeriod=settings.INT_ONE,
+            #         paymentCycle=PaymentCycleEnum.MONTHLY.value,
+            #         extras=[],
+            #     )
+            # ],
             Features=items_property.Features,
-            Descriptions=items_property.Descriptions,
+            Texts=items_property.Texts,
             Images=images
         )
         rental_units.append(data_rental_unit)
-        date_items = DatePayloadItem(
+        date_items = RentalUnitsCalendarItem(
             summary=f"Blocked until {fromYear} - {toYear}",
             description=date_text,
             startDate=start_date,
