@@ -3,84 +3,75 @@ from pydantic import BaseModel, Field
 
 
 class CounterRU(BaseModel):
-    occupiedRUs: Optional[int] = Field(..., description="")
-    totalRUs: Optional[int] = Field(..., description="")
+    occupiedRUs: Optional[int] = Field(None, description="")
+    totalRUs: Optional[int] = Field(None, description="")
 
 
 class Feature(BaseModel):
-    id: Optional[int] = Field(..., description="")
-    label: Optional[str] = Field(..., description="")
-    icon: Optional[str] = Field(..., description="")
-    group: Optional[List[str]] = Field(..., description="")
-    name_en: Optional[str] = Field(..., description="")
-    name_es: Optional[str] = Field(..., description="")
+    id: Optional[int] = Field(None, description="Identificador de la característica.")
+    label: Optional[str] = Field(None, description="Etiqueta de la característica.")
+    icon: Optional[str] = Field(None, description="Ícono de la característica.")
+    group: Optional[List[str]] = Field(None, description="Grupo(s) de la característica.")
+    name_en: Optional[str] = Field(None, description="Nombre en inglés.")
+    name_es: Optional[str] = Field(None, description="Nombre en español.")
 
 
 class Image(BaseModel):
-    id: Optional[str] = Field(..., description="")
-    image: Optional[str] = Field(..., description="URL o Base64 de la imagen.")
-    isCover: Optional[bool] = Field(
-        ..., description="Indica si la imagen es portada / principal."
-    )
+    id: Optional[str] = Field(None, description="Identificador de la imagen.")
+    image: Optional[str] = Field(None, description="URL o Base64 de la imagen.")
+    isCover: Optional[bool] = Field(None, description="Indica si la imagen es portada/principal.")
 
 
 class LocationAddress(BaseModel):
-    address: Optional[str] = Field(..., description="Dirección de la dirección.")
-    city: Optional[str] = Field(..., description="Ciudad de la dirección.")
-    country: Optional[str] = Field(..., description="País de la dirección.")
-    countryCode: Optional[str] = Field(
-        ..., description="Código de país de la dirección."
-    )
-    fullAddress: Optional[str] = Field(
-        ..., description="Dirección completa de la dirección."
-    )
-    number: Optional[str] = Field(..., description="Número de la dirección.")
-    postalCode: Optional[str] = Field(..., description="Código postal de la dirección.")
-    prefixPhone: Optional[str] = Field(..., description="Código telefónico del país.")
-    state: Optional[str] = Field(..., description="Estado de la dirección.")
-    street: Optional[str] = Field(
-        ..., description="Calle/Avenida/Sector/Barrio de la ubicación."
-    )
+    address: Optional[str] = Field(None, description="Dirección de la dirección.")
+    city: Optional[str] = Field(None, description="Ciudad de la dirección.")
+    country: Optional[str] = Field(None, description="País de la dirección.")
+    countryCode: Optional[str] = Field(None, description="Código de país de la dirección.")
+    fullAddress: Optional[str] = Field(None, description="Dirección completa de la dirección.")
+    number: Optional[str] = Field(None, description="Número de la dirección.")
+    postalCode: Optional[str] = Field(None, description="Código postal de la dirección.")
+    prefixPhone: Optional[str] = Field(None, description="Código telefónico del país.")
+    state: Optional[str] = Field(None, description="Estado de la dirección.")
+    street: Optional[str] = Field(None, description="Calle/Avenida/Sector/Barrio de la ubicación.")
     lat: Optional[str] = Field(None, description="Latitud de la dirección.")
     lon: Optional[str] = Field(None, description="Longitud de la dirección.")
 
-
 class PropertyTypeModel(BaseModel):
-    id: Optional[int] = Field(..., description="")
-    label: Optional[str] = Field(..., description="")
-    name_en: Optional[str] = Field(..., description="")
-    name_es: Optional[str] = Field(..., description="")
+    id: Optional[int] = Field(None, description="")
+    label: Optional[str] = Field(None, description="")
+    name_en: Optional[str] = Field(None, description="")
+    name_es: Optional[str] = Field(None, description="")
 
 
 class Text(BaseModel):
-    description_en: Optional[str] = Field(..., description="")
-    description_es: Optional[str] = Field(..., description="")
-    title_en: Optional[str] = Field(..., description="")
-    title_es: Optional[str] = Field(..., description="")
+    description_en: Optional[str] = Field(None, description="")
+    description_es: Optional[str] = Field(None, description="")
+    title_en: Optional[str] = Field(None, description="")
+    title_es: Optional[str] = Field(None, description="")
 
 
-class Price(BaseModel):
-    amount: Optional[int] = Field(..., description="")
-    contractType: Optional[str] = Field(..., description="")
-    createdAt: Optional[str] = Field(..., description="")
-    currency: Optional[str] = Field(..., description="")
-    depositAmount: Optional[int] = Field(..., description="")
-    discountPercent: Optional[int] = Field(..., description="")
-    id: Optional[str] = Field(..., description="")
-    maxPeriod: Optional[int] = Field(..., description="")
-    minPeriod: Optional[int] = Field(..., description="")
-    paymentCycle: Optional[str] = Field(..., description="")
-    reservationAmount: Optional[int] = Field(..., description="")
-    updatedAt: Optional[str] = Field(..., description="")
+class PriceItem(BaseModel):
+    contractType: Optional[str] = Field(None, description="")
+    currency: Optional[str] = Field(None, description="")
+    amount: Optional[int] = Field(None, description="")
+    depositAmount: Optional[int] = Field(None, description="")
+    reservationAmount: Optional[int] = Field(None, description="")
+    discountPercent: Optional[int] = Field(None, description="")
+    minPeriod: Optional[int] = Field(None, description="")
+    maxPeriod: Optional[int] = Field(None, description="")
+    paymentCycle: Optional[str] = Field(None, description="")
+    # createdAt: Optional[str] = Field(None, description="")
+    # id: Optional[str] = Field(None, description="")
+    # updatedAt: Optional[str] = Field(None, description="")
 
 
 class Property(BaseModel):
-    CountersRU: Optional["CounterRU"] = Field(None, description="")
-    Features: Optional[List["Feature"]] = Field(None, description="")
-    Images: Optional[List["Image"]] = Field(None, description="")
-    Location: Optional["LocationAddress"] = Field(None, description="")
-    PropertyType: Optional["PropertyTypeModel"] = Field(None, description="")
-    Texts: Optional["Text"] = Field(None, description="")
+    CountersRU: Optional[CounterRU] = Field(None, description="")
+    Features: Optional[List[int]] = Field(None, description="")
+    Images: Optional[List[Image]] = Field(None, description="")
+    Location: Optional[LocationAddress] = Field(None, description="")
+    PropertyType: Optional[PropertyTypeModel] = Field(None, description="")
+    Texts: Text = Field(..., description="")
     areaM2: Optional[int] = Field(None, description="")
     code: Optional[str] = Field(None, description="")
     createdAt: Optional[str] = Field(None, description="")
@@ -101,9 +92,12 @@ class Property(BaseModel):
 
 
 class RentalUnits(BaseModel):
-    Images: Optional[List["Image"]] = Field(None, description="")
-    Prices: Optional[List["Price"]] = Field(None, description="")
-    Texts: Optional["Text"] = Field(None, description="")
+    PropertyId: str = Field(
+        ..., description="ID de la propiedad a la que pertenece la rental unit"
+    )
+    Images: Optional[List[Image]] = Field(None, description="")
+    Price: Optional[PriceItem] = Field(None, description="")
+    Texts: Optional[Text] = Field(None, description="")
     areaM2: Optional[int] = Field(None, description="")
     areaM2Available: Optional[int] = Field(None, description="")
     bedType: Optional[str] = Field(None, description="")
@@ -127,6 +121,7 @@ class RentalUnits(BaseModel):
     updatedAt: Optional[str] = Field(None, description="")
     urlICalSync: Optional[str] = Field(None, description="")
     ExtraFeatures: Optional[List] = Field(None, description="")
+   
 
 
 class RentalUnitsCalendarItem(BaseModel):

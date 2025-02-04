@@ -86,3 +86,52 @@ class YugoPipeline:
 
                     for calendar_unit in calendar_unit_list:
                         create_json(calendar_unit)
+
+
+
+if __name__=="__main__":
+    elements_dict = parse_elements(read_json(), mapping)
+    list_api_key = elements_dict["api_key"].data
+
+    try:
+        with open("/Users/mherize/squadmakers/logderin/WebScrapingforRentalPlatforms/src/app/scrapy/yugo/yugo/data/data/yugo.json", "r", encoding="utf-8") as file:
+            items = json.load(file)
+    
+    except FileNotFoundError:
+        print(f"Error: El archivo no se encontró.")
+
+    for data in items:
+        data = data["items_output"]
+        # Property
+        data_property, api_key = retrive_lodgerin_property(data, elements_dict, list_api_key)
+        if api_key:
+            property_id = funcs.save_property(data_property, api_key)
+            print("property_id", property_id)
+            data_property.id = property_id
+            create_json(data_property)
+            # RentalUnit
+            if data["all_rental_units"]:
+                data_rental_units, calendar_unit_list = retrive_lodgerin_rental_units(
+                    data_property, elements_dict, data["all_rental_units"]
+                )
+                list_rental_unit_id = []
+                print("data_rental_units",len(data_rental_units))
+                for rental_unit in data_rental_units:
+                    create_json(rental_unit)
+                    rental_unit_id = funcs.save_rental_unit(rental_unit, api_key)
+                    print("rental_unit_id", rental_unit_id)
+                    rental_unit.id = rental_unit_id
+                    list_rental_unit_id.append(rental_unit)
+
+                # schedule
+                for rental_id, calendar_unit in zip(
+                    list_rental_unit_id, calendar_unit_list
+                ):
+                    print("calendar_unit", calendar_unit)
+                    print("rental_id.id", rental_id.id)
+                    if calendar_unit.startDate == "None":
+                        continue
+                    funcs.check_and_insert_rental_unit_calendar(rental_id.id, calendar_unit, api_key)
+
+                for calendar_unit in calendar_unit_list:
+                    create_json(calendar_unit)

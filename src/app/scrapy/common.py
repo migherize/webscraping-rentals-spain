@@ -172,7 +172,7 @@ def parse_elements(
     return elements_dict
 
 def extract_id_name(data):
-    return {item["id"]: item["name"] for item in data}
+    return {item.id: item.name_en for item in data}
 
 def get_id_from_name(data_dict: list, name: str, key_name: str) -> int:
     """
