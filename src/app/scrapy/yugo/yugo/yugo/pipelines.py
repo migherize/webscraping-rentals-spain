@@ -53,8 +53,7 @@ class YugoPipeline:
         """
         save_to_json_file(self.items, self.output_path)
         spider.logger.info("- JSON file created with %d items.", len(self.items))
-
-        elements_dict = parse_elements(spider.context[0], mapping)
+        elements_dict = parse_elements(spider.context, mapping)
         list_api_key = elements_dict["api_key"].data
 
         for data in self.items:

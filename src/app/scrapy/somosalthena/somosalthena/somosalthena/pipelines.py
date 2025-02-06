@@ -4,9 +4,8 @@ from os import path
 from scrapy import Spider
 
 import app.scrapy.funcs as funcs
-from app.models.schemas import DatePayloadItem, mapping
-from app.scrapy.common import parse_elements
-
+from app.models.schemas import mapping
+from app.scrapy.common import parse_elements, create_json
 from .utils import (
     get_data_json,
     get_month,
@@ -36,19 +35,20 @@ class SomosalthenaPipeline:
     def close_spider(self, spider: Spider) -> None:
         output_data_json = get_data_json(self.json_path_no_refined)
         write_to_json_file(self.json_path_refined, output_data_json, spider)
-
-        elements_dict = parse_elements(spider.context[0], mapping)
-        api_key = elements_dict["api_key"]["data"][0]["name"]
+        elements_dict = parse_elements(spider.context, mapping)
+        api_key = elements_dict['api_key'].data[0].name
 
         for data in output_data_json:
             # Property
             data_property, cost = retrive_lodgerin_property(data, elements_dict)
+            create_json(data_property)
             property_id = funcs.save_property(data_property, api_key)
             data_property.id = property_id
             # RentalUnit
             data_rental_units = retrive_lodgerin_rental_units(
                 data_property, elements_dict, cost
             )
+            create_json(data_rental_units)
             rental_unit_id = funcs.save_rental_unit(data_rental_units, api_key)
             data_rental_units.id = rental_unit_id
            
