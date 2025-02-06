@@ -44,12 +44,14 @@ class SomosalthenaPipeline:
         for data in output_data_json:
             # Property
             data_property, cost = retrive_lodgerin_property(data, elements_dict)
+            create_json(data_property)
             property_id = funcs.save_property(data_property, api_key)
             data_property.id = property_id
             # RentalUnit
             data_rental_units = retrive_lodgerin_rental_units(
                 data_property, elements_dict, cost
             )
+            create_json(data_rental_units)
             rental_unit_id = funcs.save_rental_unit(data_rental_units, api_key)
             data_rental_units.id = rental_unit_id
            

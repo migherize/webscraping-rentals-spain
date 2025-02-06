@@ -83,7 +83,7 @@ class Property(BaseModel):
     rentalType: Optional[str] = Field(None, description="")
     typeSize: Optional[str] = Field(None, description="")
     updatedAt: Optional[str] = Field(None, description="")
-    areaM2Available: Optional[str] = Field(None, description="")
+    areaM2Available: Optional[float] = Field(None, description="")
     dateLastReform: Optional[str] = Field(None, description="")
     numBathrooms: Optional[str] = Field(None, description="")
     videoUrl: Optional[str] = Field(None, description="URL del video de la propiedad.")
@@ -96,7 +96,7 @@ class RentalUnits(BaseModel):
     PropertyId: str = Field(
         ..., description="ID de la propiedad a la que pertenece la rental unit"
     )
-    Images: Optional[List[Image]] = Field(None, description="")
+    Images: List[Image] = Field(..., description="")
     Price: Optional[PriceItem] = Field(None, description="")
     Texts: Optional[Text] = Field(None, description="")
     areaM2: Optional[int] = Field(None, description="")

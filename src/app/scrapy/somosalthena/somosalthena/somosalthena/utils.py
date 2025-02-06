@@ -1,14 +1,18 @@
 import calendar
 import json
 import re
+from asyncio import constants
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Dict, Type
+from typing import Any, Dict, Type
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from scrapy import Spider
 
 import app.config.settings as settings
-from app.models.schemas import Property, RentalUnits
+import app.scrapy.funcs as funcs
+from app.models.enums import CurrencyCode, PaymentCycleEnum
+from app.models.schemas import Property, RentalUnits, PriceItem
 from app.scrapy.common import clean_information_html, get_all_images, get_id_from_name
 
 
@@ -257,7 +261,7 @@ def get_all_multidata(
 
 def get_all_features(data_json: dict):
 
-    all_feature_somosalthena = FeaturesSomosAlthena.FEATURES.value
+    all_feature_somosalthena = FeaturesSomosAlthena.EQUIVALENCES_FEATURES.value
     invalid_values = {0, "0", "", None, "None"}
     output_info_feature = {
         feature: True
@@ -268,8 +272,7 @@ def get_all_features(data_json: dict):
 
 
 def extract_id_name(data):
-    return {item["id"]: item["name"] for item in data}
-
+    return {item.id: item.name_en for item in data}
 
 
 
@@ -278,33 +281,38 @@ def process_descriptions_with_fallback(
     all_descriptions: dict,
     all_titles: dict,
     all_descriptions_short: dict,
-    languages_dict: dict,
-) -> tuple:
-    result = []
-    language_ids = []
+) -> dict:
+    """
+    Procesa títulos y descripciones en español e inglés y devuelve un diccionario con formato estándar.
 
-    for lang_key in all_titles.keys():
+    :param all_descriptions: Diccionario de descripciones largas por idioma.
+    :param all_titles: Diccionario de títulos por idioma.
+    :param all_descriptions_short: Diccionario de descripciones cortas por idioma.
+    :return: Diccionario con títulos y descripciones en español e inglés.
+    """
+
+    language_map = {
+        "spanish": "es",
+        "english": "en"
+    }
+
+    result = {
+        "title_en": "None",
+        "title_es": "None",
+        "description_en": "None",
+        "description_es": "None",
+    }
+
+    for lang_key, lang_code in language_map.items():
         title = all_titles.get(lang_key, "").strip()
         description = all_descriptions.get(lang_key, "").strip()
         description_short = all_descriptions_short.get(lang_key, "").strip()
-
         final_description = description if description else description_short
-
-        if title and final_description:
-            language_id = get_id_from_name(
-                languages_dict, lang_key.capitalize(), "name_en"
-            )
-            if language_id:
-                result.append(
-                    {
-                        "LanguagesId": language_id,
-                        "title": title,
-                        "description": final_description,
-                    }
-                )
-                language_ids.append(language_id)
-
-    return result, language_ids
+        if title:
+            result[f"title_{lang_code}"] = title
+        if final_description:
+            result[f"description_{lang_code}"] = final_description
+    return result
 
 
 def process_descriptions(
@@ -341,16 +349,15 @@ def process_descriptions(
 
 def retrive_lodgerin_property(items, elements):
     PropertyTypeId = get_id_from_name(
-        elements["property_types"], "Studio/Entire flat", "name"
+        elements["propertiesTypes"].data, "Apartment / Entire flat", "name_en"
     )
-    descriptions, language_ids = process_descriptions_with_fallback(
+    descriptions = process_descriptions_with_fallback(
         items["all_descriptions"],
         items["all_titles"],
         items["all_descriptions_short"],
-        elements["languages"],
     )
 
-    element_feature = extract_id_name(elements["features"]["data"])
+    element_feature = extract_id_name(elements["features"].data)
     features_id = search_feature_with_map(
         items["features"],
         element_feature,
@@ -360,19 +367,19 @@ def retrive_lodgerin_property(items, elements):
     property_items = Property(
         referenceCode=items["referend_code"],
         areaM2=items["area_building"],
-        areaM2Available=items["area_utils"] if float(items["area_utils"]) != 0 else 1,
-        cancellationPolicy=settings.CANCELLATION_POLICY,
-        rentalType=settings.RENTAL_TYPE,
+        areaM2Available=float(items["area_utils"]) if float(items["area_utils"]) != 0 else 1,
+        cancellationPolicy=settings.GlobalConfig.CANCELLATION_POLICY,
+        rentalType=settings.GlobalConfig.RENTAL_TYPE,
         isActive=True,
         isPublished=True,
         Features=features_id,
         PropertyTypeId=PropertyTypeId,
-        Descriptions=descriptions,
+        Texts=descriptions,
         Images=items["images"],
         Location=items["output_address"],
         provider="somosalthena",
         providerRef=items["referend_code"],
-        Languages=language_ids,
+        # Languages=language_ids,
     )
 
     return property_items, items["cost"]
@@ -381,29 +388,27 @@ def retrive_lodgerin_property(items, elements):
 def retrive_lodgerin_rental_units(
     items_property: Property, elements_dict: dict, cost: str
 ):
+    
     data_rental_units = RentalUnits(
+        Images=items_property.Images,
         PropertyId=items_property.id,
         referenceCode=f"{items_property.referenceCode}-001",
         areaM2=items_property.areaM2,
         areaM2Available=float(items_property.areaM2Available),
         isActive=True,
         isPublished=True,
-        # ContractsModels=[
-        #     ContractModel(
-        #         PropertyBusinessModelId=funcs.get_elements_types(
-        #             settings.MODELS_CONTRACT, elements_dict["contract_types"]
-        #         ),
-        #         currency=CurrencyCode.EUR.value,
-        #         amount=float(cost),
-        #         depositAmount=float(cost),
-        #         reservationAmount=settings.INT_ZERO,
-        #         minPeriod=settings.INT_ONE,
-        #         paymentCycle=PaymentCycleEnum.MONTHLY.value,
-        #         extras=[],
-        #     )
-        # ],
-        Descriptions=items_property.Descriptions,
+        Price=PriceItem(
+            contractType=PaymentCycleEnum.MONTHLY.value,
+            currency=CurrencyCode.EUR.value,
+            amount=float(cost),
+            depositAmount=float(cost),
+            reservationAmount=settings.GlobalConfig.INT_ZERO,
+            minPeriod=settings.GlobalConfig.INT_ONE,
+            paymentCycle=PaymentCycleEnum.MONTHLY.value
+        ),
+        Texts=items_property.Texts,
     )
+
     return data_rental_units
 
 
