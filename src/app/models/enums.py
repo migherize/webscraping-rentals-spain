@@ -7,7 +7,7 @@ class URLs(str, Enum):
     flipcoliving = "https://flipcoliving.com/"
     somosalthena = "https://somosalthena.com/"
     yugo = "https://yugo.com/en-us"
-    vita = "https://www.vitastudent.com/es"
+    vita = "https://www.vitastudent.com/en"
 
 
 class Pages(str, Enum):

@@ -35,7 +35,6 @@ from app.scrapy.funcs import (
 )
 
 os.makedirs(LOG_DIR, exist_ok=True)
-print(f"Log directory: {LOG_DIR}")
 
 spider_logger = logging.getLogger("scrapy_spider")
 spider_logger.setLevel(logging.DEBUG)
@@ -54,8 +53,6 @@ if not spider_logger.handlers:
     file_handler.setFormatter(formatter)
 
     spider_logger.addHandler(file_handler)
-
-print(f"Iniciando la pipeline '{models.Pages.flipcoliving.value}'.log")
 
 
 class RoomData(BaseModel):
@@ -252,12 +249,15 @@ def parse_banner_features(banner_features):
 
 class FlipcolivingPipeline:
     def open_spider(self, spider: Spider):
+        spider.logger.info("open_spider")
+        print("open_spider - open_spider")
         self.json_path = path.join(spider.output_folder, spider.output_filename)
         self.items = []
 
     def process_item(self, item, spider: Spider):
+        spider.logger.info("process_item")
+        print("process_item - process_item")
         self.items.append(dict(item))
-        spider.logger.info("entre a guardar")
         elements_dict = parse_elements(spider.context, mapping)
         api_key = elements_dict["api_key"].data[0].name
 
@@ -353,6 +353,7 @@ class FlipcolivingPipeline:
 
     def close_spider(self, spider: Spider):
         spider.logger.info(f"close_spider {models.Pages.flipcoliving.value}")
+        print("close_spider - close_spider")
         with open(self.json_path, "w", encoding="utf-8") as json_file:
             json.dump(self.items, json_file, ensure_ascii=False, indent=4)
         spider.logger.info("Spider finished successfully")

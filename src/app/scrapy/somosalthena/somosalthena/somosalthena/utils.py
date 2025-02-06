@@ -1,18 +1,14 @@
 import calendar
 import json
 import re
-from asyncio import constants
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, Dict, Type
+from typing import Dict, Type
 
-from pydantic import BaseModel, Field
-from scrapy import Spider
+from pydantic import BaseModel
 
 import app.config.settings as settings
-import app.scrapy.funcs as funcs
-from app.models.enums import CurrencyCode, PaymentCycleEnum
-from app.models.schemas import ContractModel, Property, RentalUnits
+from app.models.schemas import Property, RentalUnits
 from app.scrapy.common import clean_information_html, get_all_images, get_id_from_name
 
 
@@ -392,20 +388,20 @@ def retrive_lodgerin_rental_units(
         areaM2Available=float(items_property.areaM2Available),
         isActive=True,
         isPublished=True,
-        ContractsModels=[
-            ContractModel(
-                PropertyBusinessModelId=funcs.get_elements_types(
-                    settings.MODELS_CONTRACT, elements_dict["contract_types"]
-                ),
-                currency=CurrencyCode.EUR.value,
-                amount=float(cost),
-                depositAmount=float(cost),
-                reservationAmount=settings.INT_ZERO,
-                minPeriod=settings.INT_ONE,
-                paymentCycle=PaymentCycleEnum.MONTHLY.value,
-                extras=[],
-            )
-        ],
+        # ContractsModels=[
+        #     ContractModel(
+        #         PropertyBusinessModelId=funcs.get_elements_types(
+        #             settings.MODELS_CONTRACT, elements_dict["contract_types"]
+        #         ),
+        #         currency=CurrencyCode.EUR.value,
+        #         amount=float(cost),
+        #         depositAmount=float(cost),
+        #         reservationAmount=settings.INT_ZERO,
+        #         minPeriod=settings.INT_ONE,
+        #         paymentCycle=PaymentCycleEnum.MONTHLY.value,
+        #         extras=[],
+        #     )
+        # ],
         Descriptions=items_property.Descriptions,
     )
     return data_rental_units
