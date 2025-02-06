@@ -62,7 +62,7 @@ def run_webscraping(url: URLs) -> None:
         elif url == URLs.yugo:
             email_map = json.loads(EmailConfig.YUGO_MAPPING)
             context = initialize_scraping_context_maps(email_map)
-            # yield runner.crawl(YugoSpiderSpider, start_urls=[url.value], context=context)
+            yield runner.crawl(YugoSpiderSpider, start_urls=[url.value], context=context)
         
         elif url == URLs.vita:
             context = initialize_scraping_context(EmailConfig.VITASTUDENTS)

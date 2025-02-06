@@ -116,11 +116,11 @@ def find_feature_keys(features_list: str, feature_map: dict):
 
 def get_elements_types(term, elements):
     if elements:
-        contract_types = elements.get("data", [])
+        contract_types = elements.data
 
         for contract_type in contract_types:
-            if contract_type.get("name") == term:
-                return contract_type.get("id")
+            if contract_type.label == term:
+                return contract_type.id
         return None
     else:
         return None

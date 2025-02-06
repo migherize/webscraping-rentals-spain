@@ -37,7 +37,6 @@ class SomosalthenaSpiderSpider(scrapy.Spider):
             self.items_spider_output_document["output_folder_name"],
         )
 
-        print("items_spider_output_document:", self.items_spider_output_document)
         # -----------------------------------------------------------------
         # if folder not exists create one
         Path(self.items_spider_output_document["output_folder"]).mkdir(

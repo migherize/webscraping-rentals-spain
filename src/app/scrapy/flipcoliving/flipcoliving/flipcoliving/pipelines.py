@@ -12,18 +12,18 @@ from pydantic import BaseModel
 from scrapy import Spider
 
 import app.models.enums as models
-import app.config.settings as settings
+from app.config.settings import GlobalConfig, LOG_DIR
 from app.models.enums import CurrencyCode, Languages, PaymentCycleEnum, feature_map
 from app.models.schemas import (
-    ContractModel,
-    DatePayloadItem,
-    Description,
+    PriceItem,
+    RentalUnitsCalendarItem,
+    Text,
     LocationAddress,
     Property,
     RentalUnits,
     mapping,
 )
-from app.scrapy.common import get_all_imagenes, parse_elements
+from app.scrapy.common import get_all_imagenes, parse_elements, read_json
 from app.scrapy.funcs import (
     check_and_insert_rental_unit_calendar,
     detect_language,
@@ -34,8 +34,7 @@ from app.scrapy.funcs import (
     save_rental_unit,
 )
 
-os.makedirs(settings.LOG_DIR, exist_ok=True)
-print(f"Log directory: {settings.LOG_DIR}")
+os.makedirs(LOG_DIR, exist_ok=True)
 
 spider_logger = logging.getLogger("scrapy_spider")
 spider_logger.setLevel(logging.DEBUG)
@@ -47,15 +46,13 @@ if not spider_logger.handlers:
     )
 
     file_handler = logging.FileHandler(
-        os.path.join(settings.LOG_DIR, f"{models.Pages.flipcoliving.value}.log"),
+        os.path.join(LOG_DIR, f"{models.Pages.flipcoliving.value}.log"),
         mode="a",
         encoding="utf-8",
     )
     file_handler.setFormatter(formatter)
 
     spider_logger.addHandler(file_handler)
-
-print(f"Iniciando la pipeline '{models.Pages.flipcoliving.value}'.log")
 
 
 class RoomData(BaseModel):
@@ -80,7 +77,13 @@ def remove_accents(text: str) -> str:
 
 
 def get_all_descriptions(parse_description: list, parse_coliving_name: str):
-    all_descriptions = []
+    descriptions_dict = {
+        "title_en": None,
+        "description_en": None,
+        "title_es": None,
+        "description_es": None,
+    }
+
     dict_language = {
         Languages.SPANISH.value: "Propiedades",
         Languages.ENGLISH.value: "Property",
@@ -91,19 +94,18 @@ def get_all_descriptions(parse_description: list, parse_coliving_name: str):
         if not lang_id:
             continue
 
-        descriptions = {
-            "LanguagesId": lang_id,
-            "title": f'{dict_language.get(lang_id, "")} {parse_coliving_name}',
-            "description": remove_accents(description),
-        }
+        if lang_id == Languages.ENGLISH.value:
+            descriptions_dict["title_en"] = f'{dict_language.get(lang_id, "")} {parse_coliving_name}'
+            descriptions_dict["description_en"] = remove_accents(description)
+        elif lang_id == Languages.SPANISH.value:
+            descriptions_dict["title_es"] = f'{dict_language.get(lang_id, "")} {parse_coliving_name}'
+            descriptions_dict["description_es"] = remove_accents(description)
 
-        if descriptions["description"]:
-            all_descriptions.append(descriptions)
-
-    return all_descriptions
+    # Devolvemos el diccionario dentro de una lista
+    return [descriptions_dict]
 
 
-def create_json(item: Union[RentalUnits, Property, DatePayloadItem]) -> None:
+def create_json(item: Union[RentalUnits, Property, RentalUnitsCalendarItem]) -> None:
     class PathDocument(Enum):
         PROPERTY = "data/property.json"
         RENTAL_UNITS = "data/rental_units.json"
@@ -115,7 +117,7 @@ def create_json(item: Union[RentalUnits, Property, DatePayloadItem]) -> None:
         json_file_path = os.path.join(current_dir, PathDocument.RENTAL_UNITS.value)
     elif isinstance(item, Property):
         json_file_path = os.path.join(current_dir, PathDocument.PROPERTY.value)
-    elif isinstance(item, DatePayloadItem):
+    elif isinstance(item, RentalUnitsCalendarItem):
         json_file_path = os.path.join(current_dir, PathDocument.CALENDAR.value)
     else:
         raise ValueError(
@@ -125,7 +127,7 @@ def create_json(item: Union[RentalUnits, Property, DatePayloadItem]) -> None:
     os.makedirs(os.path.dirname(json_file_path), exist_ok=True)
 
     with open(json_file_path, "a", encoding="utf-8-sig") as json_file:
-        json.dump(item.dict(), json_file, indent=4)
+        json.dump(item.model_dump(), json_file, indent=4)
 
     logging.info(f"Datos guardados en: {json_file_path}")
 
@@ -169,29 +171,38 @@ def create_rental_units(
                 Features=property_data.Features,
                 isActive=True,
                 isPublished=True,
-                ContractsModels=[
-                    ContractModel(
-                        PropertyBusinessModelId=get_elements_types(
-                            settings.MODELS_CONTRACT, elements_dict["contract_types"]
-                        ),
-                        currency=CurrencyCode.EUR.value,
-                        amount=int(room_data.amount),
-                        depositAmount=settings.INT_ZERO,
-                        reservationAmount=settings.INT_ZERO,
-                        minPeriod=settings.INT_ONE,
-                        paymentCycle=PaymentCycleEnum.MONTHLY.value,
-                        extras=[],
-                    )
-                ],
-                Descriptions=property_data.Descriptions,
+                # ContractsModels=[
+                #     ContractModel(
+                #         PropertyBusinessModelId=get_elements_types(
+                #             settings.MODELS_CONTRACT, elements_dict["contract_types"]
+                #         ),
+                #         currency=CurrencyCode.EUR.value,
+                #         amount=int(room_data.amount),
+                #         depositAmount=settings.INT_ZERO,
+                #         reservationAmount=settings.INT_ZERO,
+                #         minPeriod=settings.INT_ONE,
+                #         paymentCycle=PaymentCycleEnum.MONTHLY.value,
+                #         extras=[],
+                #     )
+                # ],
+                Texts=property_data.Texts,
                 Images=get_all_imagenes(room_data.images),
+                Price=PriceItem(
+                    contractType=PaymentCycleEnum.MONTHLY.value,
+                    currency=CurrencyCode.EUR.value,
+                    amount=int(room_data.amount),
+                    depositAmount=int(room_data.amount),
+                    reservationAmount=GlobalConfig.INT_ZERO,
+                    minPeriod=GlobalConfig.INT_ONE,
+                    paymentCycle=PaymentCycleEnum.MONTHLY.value
+                ),
             )
 
             rental_units.append(rental_unit)
             # Calendar
             month_year = room_data.schedule.split("from")[-1].strip()
             start_date, end_date = get_month_dates(room_data.schedule)
-            date_items = DatePayloadItem(
+            date_items = RentalUnitsCalendarItem(
                 summary=f"Blocked until {month_year}",
                 description=room_data.schedule,
                 startDate=start_date,
@@ -207,16 +218,16 @@ def get_default_values(elements_dict) -> dict:
     Retorna un diccionario con los valores por defecto (hardcoded).
     """
     return {
-        "cancellationPolicy": settings.CANCELLATION_POLICY,
-        "rentalType": settings.RENTAL_TYPE,
-        "isActive": settings.BOOL_TRUE,
-        "isPublished": settings.BOOL_TRUE,
-        "Languages": settings.LANGUAGES,
-        "PropertyTypeId": get_elements_types(
-            settings.PROPERTY_TYPE_ID, elements_dict["property_types"]
+        "cancellationPolicy": GlobalConfig.CANCELLATION_POLICY,
+        "rentalType": GlobalConfig.RENTAL_TYPE,
+        "isActive": GlobalConfig.BOOL_TRUE,
+        "isPublished": GlobalConfig.BOOL_TRUE,
+        "Languages": GlobalConfig.LANGUAGES,
+        "propertiesTypes": get_elements_types(
+            GlobalConfig.PROPERTY_TYPE_ID, elements_dict["propertiesTypes"]
         ),  # 4
-        "country": settings.COUNTRY,
-        "countryCode": settings.COUNTRY_CODE,
+        "country": GlobalConfig.COUNTRY,
+        "countryCode": GlobalConfig.COUNTRY_CODE,
     }
 
 
@@ -236,33 +247,23 @@ def parse_banner_features(banner_features):
     return location, int(max_price), currency, int(sqm), int(bedrooms)
 
 
-def merge_by_language(descriptions):
-    merged = defaultdict(lambda: {"LanguagesId": None, "title": "", "description": ""})
-
-    for item in descriptions:
-        lang_id = item["LanguagesId"]
-
-        if merged[lang_id]["LanguagesId"] is None:
-            merged[lang_id]["LanguagesId"] = lang_id
-            merged[lang_id]["title"] = item["title"]
-
-        merged[lang_id]["description"] += item["description"] + ". "
-
-    return [dict(value) for value in merged.values()]
-
-
 class FlipcolivingPipeline:
     def open_spider(self, spider: Spider):
+        spider.logger.info("open_spider")
+        print("open_spider - open_spider")
         self.json_path = path.join(spider.output_folder, spider.output_filename)
         self.items = []
 
     def process_item(self, item, spider: Spider):
+        spider.logger.info("process_item")
+        print("process_item - process_item")
         self.items.append(dict(item))
-        spider.logger.info("entre a guardar")
         elements_dict = parse_elements(spider.context, mapping)
-        api_key = elements_dict["api_key"]["data"][0]["name"]
+        api_key = elements_dict["api_key"].data[0].name
+
         # save lodgerin
         defaults = get_default_values(elements_dict)
+
         item = item["items_output"]
         _, _, _, areaM2, bedrooms = parse_banner_features(item["banner_features"])
 
@@ -272,13 +273,11 @@ class FlipcolivingPipeline:
         result_description = get_all_descriptions(
             item["parse_description"], parse_coliving_name
         )
-        result_description = merge_by_language(result_description)
-        spider.logger.info(f"result_description {result_description}")
 
         try:
             property_item = Property(
-                name=parse_coliving_name,
-                description=item["parse_description"][0],
+                # name=parse_coliving_name,
+                # description=item["parse_description"][0],
                 referenceCode=f'{item["city_name"]}-{parse_coliving_name}-001',
                 areaM2=areaM2,
                 rentalType=defaults["rentalType"],
@@ -290,15 +289,8 @@ class FlipcolivingPipeline:
                     if "tour_url" in item and item["tour_url"]
                     else None
                 ),
-                PropertyTypeId=defaults["PropertyTypeId"],
-                Descriptions=[
-                    Description(
-                        LanguagesId=data_description["LanguagesId"],
-                        title=data_description["title"],
-                        description=data_description["description"],
-                    ).dict()
-                    for data_description in result_description
-                ],
+                PropertyTypeId=defaults["propertiesTypes"],
+                Texts=result_description[0],
                 Images=item.get("all_firts_imagenes", []),
                 Location=LocationAddress(
                     lat=item["latitude"][0],
@@ -361,6 +353,7 @@ class FlipcolivingPipeline:
 
     def close_spider(self, spider: Spider):
         spider.logger.info(f"close_spider {models.Pages.flipcoliving.value}")
+        print("close_spider - close_spider")
         with open(self.json_path, "w", encoding="utf-8") as json_file:
             json.dump(self.items, json_file, ensure_ascii=False, indent=4)
         spider.logger.info("Spider finished successfully")
