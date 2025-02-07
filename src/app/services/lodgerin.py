@@ -127,7 +127,7 @@ class LodgerinAPI:
                 if response.content
                 else "No additional error details provided"
             )
-            logging.info(
+            logging.error(
                 f"HTTP error occurred: {http_err} - Response content: {error_message}"
             )
         except requests.exceptions.RequestException as req_err:
@@ -148,7 +148,7 @@ class LodgerinAPI:
                 if response.content
                 else "No additional error details provided"
             )
-            logging.info(
+            logging.error(
                 f"HTTP error occurred: {http_err} - Response content: {error_message}"
             )
         except requests.exceptions.RequestException as req_err:
@@ -169,7 +169,7 @@ class LodgerinAPI:
                 if response.content
                 else "No additional error details provided"
             )
-            logging.info(
+            logging.error(
                 f"HTTP error occurred: {http_err} - Response content: {error_message}"
             )
         except requests.exceptions.RequestException as req_err:
@@ -205,7 +205,7 @@ class LodgerinAPI:
                 if response.content
                 else "No additional error details provided"
             )
-            logging.info(
+            logging.error(
                 f"HTTP error occurred: {http_err} - Response content: {error_message}"
             )
         except requests.exceptions.RequestException as req_err:

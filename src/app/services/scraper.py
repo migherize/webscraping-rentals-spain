@@ -66,7 +66,9 @@ def run_webscraping(url: URLs) -> None:
         output_folder_path = os.path.join(BASE_DIR, "logs", f"{scrapy_path}.log")
         logger.info(f"Ejecutando Scrapy con la araña: {spider_name}")
 
-        # Ejecutar Scrapy como un proceso externo con argumentos adicionales
+        if os.path.exists(output_folder_path):
+            os.remove(output_folder_path)
+
         process = subprocess.Popen(
             ["scrapy", "crawl", spider_name, "-a", f"context={json.dumps(context)}", "-s", f"LOG_FILE={output_folder_path}"],
             stdout=subprocess.PIPE,
@@ -77,7 +79,6 @@ def run_webscraping(url: URLs) -> None:
 
         logger.info(f"Scraping iniciado para {spider_name} (PID: {process.pid})")
 
-        # Capturar salida y errores
         stdout, stderr = process.communicate()
         if stdout:
             logger.info(f"Scrapy Output para {spider_name}:\n{stdout}")

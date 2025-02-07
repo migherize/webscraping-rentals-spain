@@ -17,7 +17,7 @@ from app.scrapy.somosalthena.somosalthena.somosalthena.utils import (
 class SomosalthenaPipeline:
 
     def open_spider(self, spider: Spider) -> None:
-        print("********* open_spider *********")
+        spider.logger.info("open_spider")
         self.json_path_no_refined: str = path.join(
             spider.items_spider_output_document["output_folder"],
             spider.items_spider_output_document["file_name"],
@@ -30,12 +30,10 @@ class SomosalthenaPipeline:
         create_json_file(self.json_path_refined, spider)
 
     def process_item(self, item: dict, spider: Spider) -> dict:
-        print("********* process_item *********")
         write_to_json_file(self.json_path_no_refined, item["items_output"], spider)
         return item
 
     def close_spider(self, spider: Spider) -> None:
-        print("********* close_spider *********")
         output_data_json = get_data_json(self.json_path_no_refined)
         write_to_json_file(self.json_path_refined, output_data_json, spider)
         elements_dict = parse_elements(spider.context, mapping)
@@ -54,6 +52,8 @@ class SomosalthenaPipeline:
             create_json(data_rental_units)
             rental_unit_id = funcs.save_rental_unit(data_rental_units, api_key)
             data_rental_units.id = rental_unit_id
+        
+        spider.logger.info("close_spider")
            
 
 def create_json_file(path_document: str, spider: Spider) -> None:

@@ -49,6 +49,7 @@ def check_log_status(spider_name: models.Pages) -> Dict[str, Any]:
     """
     Verifica el estado del log de un spider basado en el Enum Pages.
     """
+
     log_path = f"logs/{spider_name.value}.log"
     logger.info(f"Verificando el estado del log para el spider: {spider_name.value}")
 
@@ -60,12 +61,20 @@ def check_log_status(spider_name: models.Pages) -> Dict[str, Any]:
         with open(log_path, "r", encoding="utf-8") as log_file:
             log_content = log_file.readlines()
 
-        is_running = any("Parseando" in line for line in log_content)
+        is_running = any("open_spider" in line for line in log_content)
         is_finished = any("close_spider" in line for line in log_content)
+        has_error = any("[app.scrapy.funcs] ERROR:" in line for line in log_content)
 
-        status = "running" if is_running and not is_finished else "finished" if is_finished else "not_started"
+        if has_error:
+            status = "error"
+        elif is_running and not is_finished:
+            status = "running"
+        elif is_finished:
+            status = "finished"
+        else:
+            status = "not_started"
 
-        return {"status": status, "details": log_content[-10:]}  # Últimas 10 líneas
+        return {"status": status, "details": log_content[-10:]}  # Últimas 10 líneas del log
 
     except Exception as e:
         logger.error(f"Error al leer el log: {str(e)}")

@@ -319,8 +319,6 @@ class FlipcolivingPipeline:
             spider.logger.error(f"Error al iniciar el scraping para {str(e)}")
 
     def close_spider(self, spider: Spider):
-        spider.logger.info(f"close_spider {models.Pages.flipcoliving.value}")
-        logging.info("close_spider - close_spider")
         with open(self.json_path, "w", encoding="utf-8") as json_file:
             json.dump(self.items, json_file, ensure_ascii=False, indent=4)
-        spider.logger.info("Spider finished successfully")
+        spider.logger.info("close_spider")
