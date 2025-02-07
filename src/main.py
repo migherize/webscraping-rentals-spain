@@ -9,21 +9,13 @@ SENTRY_ENABLE = os.getenv("SENTRY_ENABLE", "false").lower() == "true"
 SENTRY_DSN = os.getenv("SENTRY_DSN", "")
 SENTRY_ENV = os.getenv("SENTRY_ENV", "development")
 
-
 if SENTRY_ENABLE and SENTRY_DSN:
     sentry_sdk.init(
         dsn=SENTRY_DSN,
-        environment=SENTRY_ENV if SENTRY_ENV else "development",
-        # Add data like request headers and IP for users,
-        # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
+        environment=SENTRY_ENV,
         send_default_pii=True,
-        # Set traces_sample_rate to 1.0 to capture 100%
-        # of transactions for tracing.
         traces_sample_rate=1.0,
         _experiments={
-            # Set continuous_profiling_auto_start to True
-            # to automatically start the profiler on when
-            # possible.
             "continuous_profiling_auto_start": True,
         },
     )
