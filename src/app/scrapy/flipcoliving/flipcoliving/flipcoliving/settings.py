@@ -18,8 +18,6 @@ NEWSPIDER_MODULE = "flipcoliving.spiders"
 
 # Obey robots.txt rules
 ROBOTSTXT_OBEY = True
-LOG_FILE = "scrapy_log.txt"
-LOG_LEVEL = "DEBUG"
 
 # Configure maximum concurrent requests performed by Scrapy (default: 16)
 # CONCURRENT_REQUESTS = 32

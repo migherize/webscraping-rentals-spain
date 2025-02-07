@@ -3,11 +3,26 @@ import os
 from typing import Any, Dict
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 import app.models.enums as models
+from app.config.settings import LOG_DIR
 import app.services.scraper as scraper
 
 router = APIRouter()
 
+os.makedirs(LOG_DIR, exist_ok=True)
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler(
+            os.path.join(LOG_DIR, "app.log"), mode="a", encoding="utf-8"
+        ),
+    ],
+)
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 @router.get("/scrape")
 async def scrape_page(
@@ -18,6 +33,7 @@ async def scrape_page(
     Inicia el proceso de scraping en segundo plano.
     """
     url = getattr(models.URLs, page.value).value
+    logger.info(f"Log desde Scraper endpoint: {url}")
     logger.info(f"Solicitud de scraping recibida para la URL: {url}")
 
     try:

@@ -5,7 +5,7 @@ router = APIRouter()
 
 logger = logging.getLogger(__name__)
 
-@router.get("/", tags=["Health Check"])
+@router.get("/", tags=["Health"])
 def health_check():
     """
     Health check: Verifica si la API está operativa.

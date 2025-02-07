@@ -1,12 +1,11 @@
 import logging
 import os
+import subprocess
 import json
 import traceback
-from crochet import setup, wait_for
-from scrapy.crawler import CrawlerRunner
-from twisted.internet.defer import inlineCallbacks
-from app.config.settings import EmailConfig, LOG_DIR
-from app.models.enums import URLs
+
+from app.config.settings import EmailConfig, LOG_DIR, BASE_DIR, SCRAPY_DIR
+from app.models.enums import URLs, Pages
 from app.scrapy.common import initialize_scraping_context, initialize_scraping_context_maps
 
 # Spider
@@ -31,43 +30,59 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-setup()
-runner = CrawlerRunner()
-
-
-@wait_for(timeout=600)
-@inlineCallbacks
 def run_webscraping(url: URLs) -> None:
     """
-    Ejecuta el proceso de scraping y guarda los resultados.
+    Ejecuta Scrapy en un proceso separado usando subprocess con contexto adicional.
 
     Args:
         url (URLs): URL de la página que será scrapeada.
     """
-
     try:
-        context = ""
+        context = None
+        scrapy_path = None
+
         if url == URLs.flipcoliving:
+            scrapy_path = Pages.flipcoliving.value
             context = initialize_scraping_context(EmailConfig.FLIPCOLIVING)
-            yield runner.crawl(
-                FlipcolivingSpiderSpider, start_urls=[url], context=context
-            )
 
         elif url == URLs.somosalthena:
+            scrapy_path = Pages.somosalthena.value
             context = initialize_scraping_context(EmailConfig.SOMOSATHENEA)
-            yield runner.crawl(
-                SomosalthenaSpiderSpider, start_urls=[url], context=context
-            )
 
         elif url == URLs.yugo:
+            scrapy_path = Pages.yugo.value
             email_map = json.loads(EmailConfig.YUGO_MAPPING)
             context = initialize_scraping_context_maps(email_map)
-            yield runner.crawl(YugoSpiderSpider, start_urls=[url.value], context=context)
-        
-        elif url == URLs.vita:
-            context = initialize_scraping_context(EmailConfig.VITASTUDENTS)
-            yield runner.crawl(VitastudentSpiderSpider, start_urls=[url.value], context=context)
 
+        elif url == URLs.vita:
+            scrapy_path = Pages.vita.value
+            context = initialize_scraping_context(EmailConfig.VITASTUDENTS)
+
+        else:
+            logger.error(f"No se encontró una araña para la URL: {url}")
+            return
+
+        spider_name = f"{scrapy_path}_spider"
+        output_folder_path = os.path.join(BASE_DIR, "logs", f"{scrapy_path}.log")
+        logger.info(f"Ejecutando Scrapy con la araña: {spider_name}")
+
+        # Ejecutar Scrapy como un proceso externo con argumentos adicionales
+        process = subprocess.Popen(
+            ["scrapy", "crawl", spider_name, "-a", f"context={json.dumps(context)}", "-s", f"LOG_FILE={output_folder_path}"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            cwd=str(SCRAPY_DIR / scrapy_path / scrapy_path)
+        )
+
+        logger.info(f"Scraping iniciado para {spider_name} (PID: {process.pid})")
+
+        # Capturar salida y errores
+        stdout, stderr = process.communicate()
+        if stdout:
+            logger.info(f"Scrapy Output para {spider_name}:\n{stdout}")
+        if stderr:
+            logger.error(f"Scrapy Error para {spider_name}:\n{stderr}")
 
     except Exception as e:
         logger.error(f"Error al hacer scraping para {url}: {str(e)}")

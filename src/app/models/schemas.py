@@ -96,7 +96,7 @@ class RentalUnits(BaseModel):
     PropertyId: str = Field(
         ..., description="ID de la propiedad a la que pertenece la rental unit"
     )
-    Images: List[Image] = Field(..., description="")
+    Images: List[Image] = Field(default_factory=list, description="Lista de imágenes")
     Price: Optional[PriceItem] = Field(None, description="")
     Texts: Optional[Text] = Field(None, description="")
     areaM2: Optional[int] = Field(None, description="")
@@ -262,7 +262,7 @@ class Services(BaseModel):
 class ApiKeyItem(BaseModel):
     id: str
     name: str
-    location: Optional[str]
+    location: Optional[str] = Field(None, description="")
 
 
 class ApiKey(BaseModel):

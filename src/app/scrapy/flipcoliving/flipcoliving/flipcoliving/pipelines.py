@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from scrapy import Spider
 
 import app.models.enums as models
-from app.config.settings import GlobalConfig, LOG_DIR
+from app.config.settings import GlobalConfig, LOG_DIR, BASE_DIR
 from app.models.enums import CurrencyCode, Languages, PaymentCycleEnum, feature_map
 from app.models.schemas import (
     PriceItem,
@@ -33,27 +33,6 @@ from app.scrapy.funcs import (
     save_property,
     save_rental_unit,
 )
-
-os.makedirs(LOG_DIR, exist_ok=True)
-
-spider_logger = logging.getLogger("scrapy_spider")
-spider_logger.setLevel(logging.DEBUG)
-
-if not spider_logger.handlers:
-    formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
-
-    file_handler = logging.FileHandler(
-        os.path.join(LOG_DIR, f"{models.Pages.flipcoliving.value}.log"),
-        mode="a",
-        encoding="utf-8",
-    )
-    file_handler.setFormatter(formatter)
-
-    spider_logger.addHandler(file_handler)
-
 
 class RoomData(BaseModel):
     areaM2: int
@@ -107,9 +86,9 @@ def get_all_descriptions(parse_description: list, parse_coliving_name: str):
 
 def create_json(item: Union[RentalUnits, Property, RentalUnitsCalendarItem]) -> None:
     class PathDocument(Enum):
-        PROPERTY = "data/property.json"
-        RENTAL_UNITS = "data/rental_units.json"
-        CALENDAR = "data/calendar.json"
+        PROPERTY = os.path.join(BASE_DIR, "data", "property.json")
+        RENTAL_UNITS = os.path.join(BASE_DIR, "data", "rental_units.json")
+        CALENDAR = os.path.join(BASE_DIR, "data", "calendar.json")
 
     current_dir = os.getcwd()
 
@@ -246,23 +225,38 @@ def parse_banner_features(banner_features):
 
     return location, int(max_price), currency, int(sqm), int(bedrooms)
 
+def generate_reference_code(city_name: str, coliving_name: str) -> str:
+    """
+    Genera un referenceCode basado en city_name y coliving_name.
+    
+    - Si la longitud total supera los 30 caracteres, usa solo coliving_name.
+    - Agrega '-001' al final en ambos casos.
+
+    Args:
+        city_name (str): Nombre de la ciudad.
+        coliving_name (str): Nombre del coliving.
+
+    Returns:
+        str: Código de referencia generado.
+    """
+    base_code = f"{city_name}-{coliving_name}-001"
+    if len(base_code) > 30:
+        return f"{coliving_name}-001"
+    return base_code
+
 
 class FlipcolivingPipeline:
     def open_spider(self, spider: Spider):
         spider.logger.info("open_spider")
-        print("open_spider - open_spider")
         self.json_path = path.join(spider.output_folder, spider.output_filename)
         self.items = []
+        self.elements_dict = parse_elements(spider.context, mapping)
+        self.api_key = self.elements_dict["api_key"].data[0].name
 
     def process_item(self, item, spider: Spider):
-        spider.logger.info("process_item")
-        print("process_item - process_item")
         self.items.append(dict(item))
-        elements_dict = parse_elements(spider.context, mapping)
-        api_key = elements_dict["api_key"].data[0].name
-
         # save lodgerin
-        defaults = get_default_values(elements_dict)
+        defaults = get_default_values(self.elements_dict)
 
         item = item["items_output"]
         _, _, _, areaM2, bedrooms = parse_banner_features(item["banner_features"])
@@ -274,11 +268,11 @@ class FlipcolivingPipeline:
             item["parse_description"], parse_coliving_name
         )
 
+        reference_code = generate_reference_code(item["city_name"], parse_coliving_name)
+
         try:
             property_item = Property(
-                # name=parse_coliving_name,
-                # description=item["parse_description"][0],
-                referenceCode=f'{item["city_name"]}-{parse_coliving_name}-001',
+                referenceCode=reference_code,
                 areaM2=areaM2,
                 rentalType=defaults["rentalType"],
                 isActive=defaults["isActive"],
@@ -301,9 +295,9 @@ class FlipcolivingPipeline:
                 ),
             )
 
-            spider.logger.info(f"property_item creado con éxito: {property_item}")
-            property_id = save_property(property_item, api_key)
+            property_id = save_property(property_item, self.api_key)
             property_item.id = property_id
+            spider.logger.info(f"property_item creado con éxito: {property_item.id}")
             create_json(property_item)
             rooms_data = [
                 RoomData(
@@ -325,11 +319,11 @@ class FlipcolivingPipeline:
                 for rental_unit in item["rental_units"]
             ]
             rental_units_items, calendar_unit_list = create_rental_units(
-                property_item, int(bedrooms), rooms_data, elements_dict
+                property_item, int(bedrooms), rooms_data, self.elements_dict
             )
             list_rental_unit_id = []
             for unit in rental_units_items:
-                rental_unit = save_rental_unit(unit, api_key)
+                rental_unit = save_rental_unit(unit, self.api_key)
                 unit.id = rental_unit
                 list_rental_unit_id.append(rental_unit)
 
@@ -341,7 +335,7 @@ class FlipcolivingPipeline:
             for rental_id, calendar_unit in zip(
                 list_rental_unit_id, calendar_unit_list
             ):
-                check_and_insert_rental_unit_calendar(rental_id, calendar_unit, api_key)
+                check_and_insert_rental_unit_calendar(rental_id, calendar_unit, self.api_key)
 
             for calendar_unit in calendar_unit_list:
                 create_json(calendar_unit)
@@ -353,7 +347,7 @@ class FlipcolivingPipeline:
 
     def close_spider(self, spider: Spider):
         spider.logger.info(f"close_spider {models.Pages.flipcoliving.value}")
-        print("close_spider - close_spider")
+        logging.info("close_spider - close_spider")
         with open(self.json_path, "w", encoding="utf-8") as json_file:
             json.dump(self.items, json_file, ensure_ascii=False, indent=4)
         spider.logger.info("Spider finished successfully")

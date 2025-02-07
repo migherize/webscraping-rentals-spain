@@ -1,3 +1,4 @@
+import logging
 from typing import Dict, List, Optional
 
 import requests
@@ -21,9 +22,9 @@ class LodgerinInternal:
                 raise Exception("La clave 'apiKey' no se encuentra en la respuesta.")
             return api_key
         except requests.exceptions.HTTPError as err:
-            print(f"HTTP error occurred: {err}")
+            logging.info(f"HTTP error occurred: {err}")
         except Exception as err:
-            print(f"An error occurred: {err}")
+            logging.info(f"An error occurred: {err}")
         return None
 
     def search_location(self, query):
@@ -41,9 +42,9 @@ class LodgerinInternal:
                 raise Exception("La clave 'address' no se encuentra en la respuesta.")
             return address
         except requests.exceptions.HTTPError as err:
-            print(f"HTTP error occurred: {err}")
+            logging.info(f"HTTP error occurred: {err}")
         except Exception as err:
-            print(f"An error occurred: {err}")
+            logging.info(f"An error occurred: {err}")
         return None
 
 
@@ -70,9 +71,9 @@ class LodgerinAPI:
             response.raise_for_status()
             return response.json()
         except requests.exceptions.HTTPError as err:
-            print(f"HTTP error occurred: {err}")
+            logging.info(f"HTTP error occurred: {err}")
         except Exception as err:
-            print(f"An error occurred: {err}")
+            logging.info(f"An error occurred: {err}")
         return None
 
     def get_properties(self, limit=100):
@@ -82,9 +83,9 @@ class LodgerinAPI:
             response.raise_for_status()
             return response.json()
         except requests.exceptions.HTTPError as err:
-            print(f"HTTP error occurred: {err}")
+            logging.info(f"HTTP error occurred: {err}")
         except Exception as err:
-            print(f"An error occurred: {err}")
+            logging.info(f"An error occurred: {err}")
         return None
 
     def get_rental_units(self, limit=100):
@@ -94,9 +95,9 @@ class LodgerinAPI:
             response.raise_for_status()
             return response.json()
         except requests.exceptions.HTTPError as err:
-            print(f"HTTP error occurred: {err}")
+            logging.info(f"HTTP error occurred: {err}")
         except Exception as err:
-            print(f"An error occurred: {err}")
+            logging.info(f"An error occurred: {err}")
         return None
  
     def get_rental_unit_calendar(
@@ -126,13 +127,13 @@ class LodgerinAPI:
                 if response.content
                 else "No additional error details provided"
             )
-            print(
+            logging.info(
                 f"HTTP error occurred: {http_err} - Response content: {error_message}"
             )
         except requests.exceptions.RequestException as req_err:
-            print(f"Request error occurred: {req_err}")
+            logging.info(f"Request error occurred: {req_err}")
         except Exception as err:
-            print(f"An unexpected error occurred: {err}")
+            logging.info(f"An unexpected error occurred: {err}")
     
     # POST
     def create_or_update_property(self, property_data):
@@ -147,13 +148,13 @@ class LodgerinAPI:
                 if response.content
                 else "No additional error details provided"
             )
-            print(
+            logging.info(
                 f"HTTP error occurred: {http_err} - Response content: {error_message}"
             )
         except requests.exceptions.RequestException as req_err:
-            print(f"Request error occurred: {req_err}")
+            logging.info(f"Request error occurred: {req_err}")
         except Exception as err:
-            print(f"An unexpected error occurred: {err}")
+            logging.info(f"An unexpected error occurred: {err}")
         return None
 
     def create_or_update_rental_unit(self, rental_unit_data):
@@ -168,13 +169,13 @@ class LodgerinAPI:
                 if response.content
                 else "No additional error details provided"
             )
-            print(
+            logging.info(
                 f"HTTP error occurred: {http_err} - Response content: {error_message}"
             )
         except requests.exceptions.RequestException as req_err:
-            print(f"Request error occurred: {req_err}")
+            logging.info(f"Request error occurred: {req_err}")
         except Exception as err:
-            print(f"An unexpected error occurred: {err}")
+            logging.info(f"An unexpected error occurred: {err}")
         return None
 
     def create_rental_unit_calendar(
@@ -204,10 +205,10 @@ class LodgerinAPI:
                 if response.content
                 else "No additional error details provided"
             )
-            print(
+            logging.info(
                 f"HTTP error occurred: {http_err} - Response content: {error_message}"
             )
         except requests.exceptions.RequestException as req_err:
-            print(f"Request error occurred: {req_err}")
+            logging.info(f"Request error occurred: {req_err}")
         except Exception as err:
-            print(f"An unexpected error occurred: {err}")
+            logging.info(f"An unexpected error occurred: {err}")
