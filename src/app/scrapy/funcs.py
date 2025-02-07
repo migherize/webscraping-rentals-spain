@@ -160,7 +160,7 @@ def save_rental_unit(rental_unit_item, api_key):
         else:
             logger.info(f"Unexpected message: {response['msg']}")
     else:
-        logger.info(
+        logger.error(
             f"Failed to save rental_unit. No valid response received. {rental_unit_dict}"
         )
     return None

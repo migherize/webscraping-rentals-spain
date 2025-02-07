@@ -11,6 +11,10 @@ load_dotenv()
 BASE_DIR = Path.cwd()
 LOG_DIR = BASE_DIR / "logs"
 
+# 📌 Verificar qué directorio de Scrapy existe
+SCRAPY_DIRS = [BASE_DIR / "src/app/scrapy", BASE_DIR / "app/scrapy"]
+SCRAPY_DIR = next((path for path in SCRAPY_DIRS if path.exists()), None)
+
 # 📌 Constantes globales
 class GlobalConfig:
     MODELS_CONTRACT = "Medium-term"
@@ -53,3 +57,5 @@ class EmailConfig:
 # 📌 Configuración de Elementos JSON
 class ElementsConfig:
     ELEMENTS_JSON = os.getenv("ELEMENTS_JSON", "{}")
+    PATH_LOGS = os.getenv("LOGS", "./logs")
+    PATH_DATA = os.getenv("DATA", "./data")

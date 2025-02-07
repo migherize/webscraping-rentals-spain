@@ -19,5 +19,15 @@ services:
       - "8080:8080"
 
     environment:
-      - PYTHONPATH=/app:$PYTHONPATH 
-      - LODGERIN_API=/app:$LODGERIN_API 
+      - PYTHONPATH=/app:$PYTHONPATH
+      - LOGS=/app/logs
+      - DATA=/app/data
+      - LODGERIN_API=${LODGERIN_API:-http://example.com/api}
+      - LODGERIN_INTERNAL=${LODGERIN_INTERNAL:-http://internal.example.com}
+      - LODGERIN_MAPS_INTERNAL=${LODGERIN_MAPS_INTERNAL:-http://maps.internal.example.com}
+      - TOKEN_API_INTERNAL=${TOKEN_API_INTERNAL:-your_secure_token_here}
+      - EMAIL_FLIPCOLIVING=${EMAIL_FLIPCOLIVING:-flipcoliving@example.com}
+      - EMAIL_SOMOSATHENEA=${EMAIL_SOMOSATHENEA:-somosathenea@example.com}
+      - EMAIL_MAPPING_YUGO=${EMAIL_MAPPING_YUGO:-mapping_yugo.json}
+      - EMAIL_YUGO_DEFAULT=${EMAIL_YUGO_DEFAULT:-default_yugo@example.com}
+      - ELEMENTS_JSON=${ELEMENTS_JSON:-elements.json}

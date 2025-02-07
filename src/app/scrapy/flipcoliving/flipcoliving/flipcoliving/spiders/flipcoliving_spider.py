@@ -1,6 +1,7 @@
 # coding=utf-8
 import logging
 import os
+import json
 import re
 from os import path
 from pathlib import Path
@@ -16,29 +17,6 @@ from .. import items
 from ..constants_spider import item_custom_settings, item_input_output_archive
 from ..enum_path import XpathGeneralColiving
 
-os.makedirs(settings.LOG_DIR, exist_ok=True)
-
-spider_logger = logging.getLogger("scrapy_spider")
-spider_logger.setLevel(logging.DEBUG)
-
-if not spider_logger.handlers:
-    formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
-
-    file_handler = logging.FileHandler(
-        os.path.join(settings.LOG_DIR, f"{models.Pages.flipcoliving.value}.log"),
-        mode="w",  # Usa "w" para sobrescribir cada vez, o "a" para agregar
-        encoding="utf-8",
-    )
-    file_handler.setFormatter(formatter)
-
-    spider_logger.addHandler(file_handler)
-
-spider_logger.info(f"Iniciando la pipeline '{models.Pages.flipcoliving.value}'.log")
-
-
 class FlipcolivingSpiderSpider(scrapy.Spider):
     name = "flipcoliving_spider"
     custom_settings = item_custom_settings
@@ -46,6 +24,10 @@ class FlipcolivingSpiderSpider(scrapy.Spider):
     def __init__(self, context=None, *args, **kwargs):
 
         super(FlipcolivingSpiderSpider, self).__init__(*args, **kwargs)
+
+        # Obtener LOG_FILE desde los argumentos
+        log_path = kwargs.get("LOG_FILE", None)
+        self.logger.info(f"log_path: {log_path}")
 
         # -----------------------------------------------------------------
         # Ruta de la carpeta donde se almancera la data extraida
@@ -72,7 +54,7 @@ class FlipcolivingSpiderSpider(scrapy.Spider):
         # -----------------------------------------------------------------
         # if folder not exists create one
         Path(self.output_folder).mkdir(parents=True, exist_ok=True)
-        self.context = context
+        self.context = json.loads(context) if context else {}
 
     def start_requests(self):
         """
@@ -93,7 +75,7 @@ class FlipcolivingSpiderSpider(scrapy.Spider):
         cities_url = response.xpath(XpathGeneralColiving.CITIES_URL.value)
 
         if not cities_url:
-            spider_logger.warning("No se obtuvieron las URL de las ciudades")
+            logging.info("No se obtuvieron las URL de las ciudades")
             return None
 
         # Recorrer ciudades
@@ -102,14 +84,14 @@ class FlipcolivingSpiderSpider(scrapy.Spider):
             aux_city_url = city_url.get()
             aux_city_url = response.url + aux_city_url
             if aux_city_url is None:
-                spider_logger.warning(
+                logging.info(
                     "Se obtuvo un valor para la url de la ciudad: %s", aux_city_url
                 )
                 continue
 
             city_name = re.sub(r"[^A-Za-z]", " ", aux_city_url.split("-")[-1]).strip()
 
-            spider_logger.info(
+            logging.info(
                 "Parseando -> ciudad: %s. url: %s", city_name, aux_city_url
             )
             yield scrapy.Request(
@@ -130,7 +112,7 @@ class FlipcolivingSpiderSpider(scrapy.Spider):
         colivings_url = response.xpath(XpathGeneralColiving.COLIVING_URL.value)
 
         if not colivings_url:
-            spider_logger.warning("No se obtuvieron las URL de los colivings")
+            logging.info("No se obtuvieron las URL de los colivings")
             return None
 
         items_meta = response.meta
@@ -141,7 +123,7 @@ class FlipcolivingSpiderSpider(scrapy.Spider):
             coliving_url = coliving_url.get()
 
             if coliving_url is None:
-                spider_logger.warning(
+                logging.info(
                     "Se obtuvo un valor para el coliving: %s", coliving_url
                 )
                 continue
@@ -150,7 +132,7 @@ class FlipcolivingSpiderSpider(scrapy.Spider):
                 r"[^A-Za-z]", " ", coliving_url.split("/")[-2]
             ).strip()
 
-            spider_logger.info("Parseando -> URL Coliving: %s", coliving_url)
+            logging.info("Parseando -> URL Coliving: %s", coliving_url)
 
             yield scrapy.Request(
                 url=coliving_url,
@@ -284,7 +266,7 @@ class FlipcolivingSpiderSpider(scrapy.Spider):
                     items_rental_units.append(data_rental_unit)
 
         else:
-            spider_logger.info(
+            logging.info(
                 "No presenta rental_units el coliving: %s. Ciudad: %s. URL: %s",
                 items_meta["coliving_name"],
                 items_meta["city_name"],

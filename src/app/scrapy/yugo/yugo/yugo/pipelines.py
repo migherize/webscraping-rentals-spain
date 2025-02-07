@@ -4,7 +4,7 @@ from scrapy import Spider
 
 import app.scrapy.funcs as funcs
 from app.scrapy.yugo.yugo.yugo.items import YugoItem
-from app.scrapy.common import parse_elements, create_json, read_json
+from app.scrapy.common import parse_elements, create_json, create_json
 from app.models.schemas import mapping
 from app.scrapy.yugo.yugo.yugo.utils import (
     retrive_lodgerin_property,
@@ -29,6 +29,7 @@ class YugoPipeline:
         """
         Initializes the pipeline by setting up storage for items.
         """
+        spider.logger.info("open_spider")
         self.items = []
         self.output_path: str = path.join(
             spider.items_spider_output_document["output_folder"],
@@ -75,11 +76,9 @@ class YugoPipeline:
                         )
                     )
                     list_rental_unit_id = []
-                    print("data_rental_units", len(data_rental_units))
                     for rental_unit in data_rental_units:
                         create_json(rental_unit)
                         rental_unit_id = funcs.save_rental_unit(rental_unit, api_key)
-                        print("rental_unit_id", rental_unit_id)
                         rental_unit.id = rental_unit_id
                         list_rental_unit_id.append(rental_unit)
 
@@ -87,8 +86,6 @@ class YugoPipeline:
                     for rental_id, calendar_unit in zip(
                         list_rental_unit_id, calendar_unit_list
                     ):
-                        print("calendar_unit", calendar_unit)
-                        print("rental_id.id", rental_id.id)
                         if calendar_unit.startDate == "None":
                             continue
                         funcs.check_and_insert_rental_unit_calendar(
@@ -97,3 +94,5 @@ class YugoPipeline:
 
                     for calendar_unit in calendar_unit_list:
                         create_json(calendar_unit)
+
+        spider.logger.info("close_spider")

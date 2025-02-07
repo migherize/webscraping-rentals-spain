@@ -108,8 +108,7 @@ class YugoSpiderSpider(scrapy.Spider):
             'it-it',
         )
 
-        self.context = context
-
+        self.context = json.loads(context) if context else {}
 
     def start_requests(self):
         """
