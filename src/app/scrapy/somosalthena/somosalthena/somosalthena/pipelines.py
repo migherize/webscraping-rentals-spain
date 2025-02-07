@@ -5,7 +5,7 @@ from scrapy import Spider
 
 import app.scrapy.funcs as funcs
 from app.models.schemas import mapping
-from app.scrapy.common import parse_elements, read_json
+from app.scrapy.common import parse_elements, create_json
 
 from app.scrapy.somosalthena.somosalthena.somosalthena.utils import (
     get_data_json,
@@ -38,7 +38,7 @@ class SomosalthenaPipeline:
         print("********* close_spider *********")
         output_data_json = get_data_json(self.json_path_no_refined)
         write_to_json_file(self.json_path_refined, output_data_json, spider)
-        elements_dict = parse_elements(spider.context[0], mapping)
+        elements_dict = parse_elements(spider.context, mapping)
         api_key = elements_dict["api_key"].data[0].name
 
         for data in output_data_json:

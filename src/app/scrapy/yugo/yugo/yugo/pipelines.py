@@ -4,7 +4,7 @@ from scrapy import Spider
 
 import app.scrapy.funcs as funcs
 from app.scrapy.yugo.yugo.yugo.items import YugoItem
-from app.scrapy.common import parse_elements, create_json, read_json
+from app.scrapy.common import parse_elements, create_json, create_json
 from app.models.schemas import mapping
 from app.scrapy.yugo.yugo.yugo.utils import (
     retrive_lodgerin_property,

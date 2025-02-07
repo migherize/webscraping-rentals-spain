@@ -56,8 +56,6 @@ class FlipcolivingSpiderSpider(scrapy.Spider):
         Path(self.output_folder).mkdir(parents=True, exist_ok=True)
         self.context = json.loads(context) if context else {}
 
-        self.logger.info(f"Contexto recibido: {self.context}")
-
     def start_requests(self):
         """
         Inicio de la pagina principal

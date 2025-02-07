@@ -23,7 +23,7 @@ from app.models.schemas import (
     RentalUnits,
     mapping,
 )
-from app.scrapy.common import get_all_imagenes, parse_elements, read_json
+from app.scrapy.common import get_all_imagenes, parse_elements, create_json
 from app.scrapy.funcs import (
     check_and_insert_rental_unit_calendar,
     detect_language,
@@ -82,33 +82,6 @@ def get_all_descriptions(parse_description: list, parse_coliving_name: str):
 
     # Devolvemos el diccionario dentro de una lista
     return [descriptions_dict]
-
-
-def create_json(item: Union[RentalUnits, Property, RentalUnitsCalendarItem]) -> None:
-    class PathDocument(Enum):
-        PROPERTY = os.path.join(BASE_DIR, "data", "property.json")
-        RENTAL_UNITS = os.path.join(BASE_DIR, "data", "rental_units.json")
-        CALENDAR = os.path.join(BASE_DIR, "data", "calendar.json")
-
-    current_dir = os.getcwd()
-
-    if isinstance(item, RentalUnits):
-        json_file_path = os.path.join(current_dir, PathDocument.RENTAL_UNITS.value)
-    elif isinstance(item, Property):
-        json_file_path = os.path.join(current_dir, PathDocument.PROPERTY.value)
-    elif isinstance(item, RentalUnitsCalendarItem):
-        json_file_path = os.path.join(current_dir, PathDocument.CALENDAR.value)
-    else:
-        raise ValueError(
-            "item must be an instance of RentalUnits or Property or Calendar."
-        )
-
-    os.makedirs(os.path.dirname(json_file_path), exist_ok=True)
-
-    with open(json_file_path, "a", encoding="utf-8-sig") as json_file:
-        json.dump(item.model_dump(), json_file, indent=4)
-
-    logging.info(f"Datos guardados en: {json_file_path}")
 
 
 def create_rental_units(

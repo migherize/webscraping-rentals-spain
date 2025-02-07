@@ -1,5 +1,6 @@
 # coding=utf-8
 import re
+import json
 from ast import literal_eval
 from os import path
 from pathlib import Path
@@ -11,14 +12,6 @@ from app.scrapy.common import read_json
 from .. import items
 from ..constants_spider import item_custom_settings, item_input_output_archive
 from ..enum_path import RegexProperty
-
-# import app.utils.constants as constants
-# import app.models.enums as models
-
-
-# scrapy crawl somosalthena_spider -a refine=0
-# scrapy crawl somosalthena_spider -a refine=1
-
 
 class SomosalthenaSpiderSpider(scrapy.Spider):
     name = "somosalthena_spider"
@@ -42,7 +35,7 @@ class SomosalthenaSpiderSpider(scrapy.Spider):
         Path(self.items_spider_output_document["output_folder"]).mkdir(
             parents=True, exist_ok=True
         )
-        self.context = context
+        self.context = json.loads(context) if context else {}
 
     def start_requests(self):
         """

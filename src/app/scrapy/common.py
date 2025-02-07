@@ -5,7 +5,7 @@ from urllib.parse import urlparse, unquote
 import unicodedata
 from pydantic import BaseModel
 
-from app.config.settings import ElementsConfig
+from app.config.settings import ElementsConfig, BASE_DIR
 from app.services.lodgerin import LodgerinAPI, LodgerinInternal
 
 from app.models.schemas import LocationMaps
@@ -284,9 +284,9 @@ def read_json() -> dict:
 
 def create_json(item: Union[RentalUnits, Property, RentalUnitsCalendarItem]) -> None:
     class PathDocument(Enum):
-        PROPERTY = "data/property.json"
-        RENTAL_UNITS = "data/rental_units.json"
-        CALENDAR = "data/calendar.json"
+        PROPERTY = os.path.join(BASE_DIR, "data", "property.json")
+        RENTAL_UNITS = os.path.join(BASE_DIR, "data", "rental_units.json")
+        CALENDAR = os.path.join(BASE_DIR, "data", "calendar.json")
 
     current_dir = os.getcwd()
 
@@ -304,6 +304,6 @@ def create_json(item: Union[RentalUnits, Property, RentalUnitsCalendarItem]) -> 
     os.makedirs(os.path.dirname(json_file_path), exist_ok=True)
 
     with open(json_file_path, "a", encoding="utf-8-sig") as json_file:
-        json.dump(item.dict(), json_file, indent=4)
+        json.dump(item.model_dump(), json_file, indent=4)
 
     print(f"Datos guardados en: {json_file_path}")
