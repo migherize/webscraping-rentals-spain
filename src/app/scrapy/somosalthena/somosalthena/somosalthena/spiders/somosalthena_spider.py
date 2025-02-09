@@ -39,11 +39,6 @@ class SomosalthenaSpiderSpider(scrapy.Spider):
         """
         Inicio de la pagina principal
         """
-
-        if self.items_spider_output_document["refine"] == "1":
-            self.logger.info("Proceso de Refinado")
-            return None
-
         url = "https://somosalthena.com/inmuebles/"
 
         yield scrapy.Request(

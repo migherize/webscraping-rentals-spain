@@ -1,6 +1,6 @@
 from os import path
 from scrapy import Spider
-from app.scrapy.common import save_to_json_file, read_json
+from app.scrapy.common import save_to_json_file
 from app.scrapy.flipcoliving.flipcoliving.flipcoliving.etl_flipcoliving import etl_data_flipcoliving
 
 
@@ -19,9 +19,5 @@ class FlipcolivingPipeline:
 
     def close_spider(self, spider: Spider):
         spider.logger.info("close_spider")
-        if all([spider.items_spider_output_document['refine'] == '1', path.exists(self.json_path)]):
-            self.items = read_json(self.json_path)
-            etl_data_flipcoliving(self.items, spider)
-        else:
-            save_to_json_file(self.items, self.json_path)
-            etl_data_flipcoliving(self.items, spider)
+        save_to_json_file(self.items, self.json_path)
+        etl_data_flipcoliving(self.items, spider)

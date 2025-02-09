@@ -14,7 +14,6 @@ item_input_output_archive: dict[str, str] = {
     "output_folder_name": r"data",
     "file_name": f"{BASE_NAME_MODEL}.json",
     "processed_name": f"{BASE_NAME_MODEL}" + "_refined.json",
-    "refine": "0",
 }
 
 # ------------------------------------------------------------------------
