@@ -19,6 +19,15 @@ from app.models.schemas import (
 )
 
 
+def save_to_json_file(data: list[dict], output_path: str) -> None:
+    """Guarda datos en formato JSON en un archivo."""
+    try:
+        with open(output_path, "w", encoding="utf-8") as json_file:
+            json.dump(data, json_file, ensure_ascii=False, indent=4)
+    except (OSError, IOError) as e:
+        print(f"Error al guardar el archivo JSON: {e}")
+
+
 def get_all_imagenes(space_images: list) -> list[dict]:
     all_imagenes = []
 
@@ -156,19 +165,22 @@ def parse_elements(
         dict: Un diccionario con los datos parseados.
     """
     elements_dict = {}
-
     for key, model_class in mapping.items():
-        if key in full_json:
-            try:
-                if isinstance(full_json[key], list):
-                    elements_dict[key] = model_class(data=[model_class.__annotations__["data"].__args__[0](**item) for item in full_json[key]])
-                else:
-                    elements_dict[key] = model_class(**full_json[key])
-            except Exception as e:
-                raise ValueError(f"Error al procesar '{key}': {e}")
-        else:
+        if not key in full_json:
             raise KeyError(f"Key '{key}' not found in the provided JSON")
-    
+        try:
+            if isinstance(full_json[key], list):
+                elements_dict[key] = model_class(
+                    data=[
+                        model_class.__annotations__["data"].__args__[0](**item)
+                        for item in full_json[key]
+                    ]
+                )
+            else:
+                elements_dict[key] = model_class(**full_json[key])
+        except Exception as e:
+            raise ValueError(f"Error al procesar '{key}': {e}")
+        
     return elements_dict
 
 def extract_id_name(data):
@@ -264,23 +276,31 @@ def extract_cost(cost_text):
         return float(match.group(1).replace(",", ""))
     return None
 
-def read_json() -> dict:
+def read_json(path_document_json: str) -> list[dict]:
     """
-    Lee un archivo JSON y lo convierte en un diccionario de Python.
+    Lee un archivo JSON y lo convierte en una lista de diccionarios de Python.
+    :param path_document_json: Ruta del archivo JSON.
+    :return: Lista de diccionarios cargados desde el JSON o una lista vacía en caso de error.
     """
     try:
-        with open(ElementsConfig.ELEMENTS_JSON, "r", encoding="utf-8") as file:
-            data = json.load(file)
+        with open(path_document_json, "r", encoding="utf-8") as file:
+            if path_document_json.endswith('.json'):
+                data = json.load(file)
+            elif path_document_json.endswith('.txt'):
+                data = json.loads(file)
+            else:
+                data = []
+            if isinstance(data, dict):
+                data = [data]
         return data
     except FileNotFoundError:
-        print(f"Error: El archivo {ElementsConfig.ELEMENTS_JSON} no se encontró.")
-        return {}
+        print(f"⚠️ Error: El archivo '{path_document_json}' no se encontró.")
     except json.JSONDecodeError:
-        print(f"Error: El archivo {ElementsConfig.ELEMENTS_JSON} no es un JSON válido.")
-        return {}
+        print(f"⚠️ Error: El archivo '{path_document_json}' no es un JSON válido.")
     except Exception as e:
-        print(f"Error inesperado: {e}")
-        return {}
+        print(f"⚠️ Error inesperado: {e}")
+    
+    return []
 
 def create_json(item: Union[RentalUnits, Property, RentalUnitsCalendarItem]) -> None:
     class PathDocument(Enum):
@@ -307,3 +327,27 @@ def create_json(item: Union[RentalUnits, Property, RentalUnitsCalendarItem]) -> 
         json.dump(item.model_dump(), json_file, indent=4)
 
     print(f"Datos guardados en: {json_file_path}")
+
+
+def create_rental_unit_code_with_initials(property_referend_code: str, unit_index: int) -> str:
+
+    """
+        Si presenta guiones el property_referend_code, la salida son las iniciales
+        
+        parametros:
+            - property_referend_code: Codigo del property con guiones
+            - unit_index: Indice de los rental units recorridos en el for
+        
+        return: Iniciales seguido de guiones.
+            Ejemplo:
+            property_referend_code = malaga-Malaga-Centro-001
+            unit_index = 1
+            return 'M-M-C-001'
+    """
+    aux_referend = property_referend_code
+    if not re.search(r'-', property_referend_code):
+        return f"{aux_referend}-{unit_index + 1:03}"
+    
+    aux_referend = list(map(lambda x: x[0].upper(), aux_referend.split('-')[:-1]))
+    aux_referend = "-".join(aux_referend)
+    return f"{aux_referend}-{unit_index + 1:03}"
