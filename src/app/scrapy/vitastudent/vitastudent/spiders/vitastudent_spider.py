@@ -114,9 +114,6 @@ class VitastudentSpiderSpider(scrapy.Spider):
         # "LOG_DATEFORMAT": '%Y-%m-%d %H:%M:%S',
         # "LOGFILE": 'vita_student.log'
     }
-    start_urls = [
-        "https://www.vitastudent.com/en/ciudades/barcelona/",
-    ]
 
     def __init__(self, context=None, *args, **kwargs):
 
@@ -140,6 +137,16 @@ class VitastudentSpiderSpider(scrapy.Spider):
 
         Path(self.items_spider_output_document["output_folder"]).mkdir(
             parents=True, exist_ok=True
+        )
+
+    def start_requests(self):
+        """
+        Inicio de la pagina principal
+        """
+        # start_urls = ["https://www.vitastudent.com/en/ciudades/barcelona/"]
+        url = "https://www.vitastudent.com/en/ciudades/barcelona/"
+        yield scrapy.Request(
+            url=url,
         )
 
     def parse(self, response: Selector):

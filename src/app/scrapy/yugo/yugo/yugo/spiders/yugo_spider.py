@@ -9,8 +9,6 @@ from enum import Enum
 from pathlib import Path
 from scrapy.selector.unified import Selector
 
-from app.scrapy.common import read_json
-
 from .. import items
 from ..constants_spider import item_custom_settings, item_input_output_archive
 

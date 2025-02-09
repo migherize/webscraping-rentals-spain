@@ -7,8 +7,6 @@ from pathlib import Path
 
 import scrapy
 
-from app.scrapy.common import read_json
-
 from .. import items
 from ..constants_spider import item_custom_settings, item_input_output_archive
 from ..enum_path import RegexProperty
