@@ -215,8 +215,6 @@ class PropertyTypeItem(BaseModel):
     label: str
     name_es: str
     name_en: str
-    totalProperties: int
-    totalRentalUnits: int
 
 
 class PropertyTypes(BaseModel):
