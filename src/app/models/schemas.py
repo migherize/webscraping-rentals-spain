@@ -126,16 +126,16 @@ class RentalUnits(BaseModel):
 
 
 class RentalUnitsCalendarItem(BaseModel):
-    summary: str = Field(
-        ...,
+    summary: Optional[str] = Field(
+        None,
         description="Short summary for the date range, e.g., 'Blocked until August 2025'",
     )
-    description: str = Field(
-        ...,
+    description: Optional[str] = Field(
+        None,
         description="Detailed description of availability, e.g., 'Available from August 2025'",
     )
-    startDate: str = Field(..., description="Start date of the blocked range")
-    endDate: str = Field(..., description="End date of the blocked range")
+    startDate: Optional[str] = Field(None, description="Start date of the blocked range")
+    endDate: Optional[str] = Field(None, description="End date of the blocked range")
 
 
 class RentalUnitsCalendar(BaseModel):
@@ -215,8 +215,6 @@ class PropertyTypeItem(BaseModel):
     label: str
     name_es: str
     name_en: str
-    totalProperties: int
-    totalRentalUnits: int
 
 
 class PropertyTypes(BaseModel):

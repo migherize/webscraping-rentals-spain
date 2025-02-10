@@ -7,8 +7,6 @@ from pathlib import Path
 
 import scrapy
 
-from app.scrapy.common import read_json
-
 from .. import items
 from ..constants_spider import item_custom_settings, item_input_output_archive
 from ..enum_path import RegexProperty
@@ -41,11 +39,6 @@ class SomosalthenaSpiderSpider(scrapy.Spider):
         """
         Inicio de la pagina principal
         """
-
-        if self.items_spider_output_document["refine"] == "1":
-            self.logger.info("Proceso de Refinado")
-            return None
-
         url = "https://somosalthena.com/inmuebles/"
 
         yield scrapy.Request(

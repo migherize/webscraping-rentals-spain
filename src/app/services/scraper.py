@@ -74,7 +74,8 @@ def run_webscraping(url: URLs) -> None:
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
-            cwd=str(SCRAPY_DIR / scrapy_path / scrapy_path)
+            cwd=str(SCRAPY_DIR / scrapy_path / scrapy_path),
+            encoding="utf-8",
         )
 
         logger.info(f"Scraping iniciado para {spider_name} (PID: {process.pid})")

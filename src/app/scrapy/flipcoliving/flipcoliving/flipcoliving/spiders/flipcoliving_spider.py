@@ -1,65 +1,70 @@
 # coding=utf-8
-import logging
-import os
-import json
 import re
+import json
+import logging
 from os import path
 from pathlib import Path
 
-import requests
 import scrapy
+import requests
 from scrapy import Selector
 
-import app.models.enums as models
-import app.config.settings as settings
-
 from .. import items
-from ..constants_spider import item_custom_settings, item_input_output_archive
 from ..enum_path import XpathGeneralColiving
+
 
 class FlipcolivingSpiderSpider(scrapy.Spider):
     name = "flipcoliving_spider"
-    custom_settings = item_custom_settings
+    custom_settings = {
+        "ROBOTSTXT_OBEY": False,
+        "AUTOTHROTTLE_ENABLED": True,
+        "LOG_LEVEL": "INFO",
+        # "LOG_FORMAT": '%(asctime)s [%(levelname)s] %(message)s',
+        # "LOG_DATEFORMAT": '%Y-%m-%d %H:%M:%S',
+        # "LOGFILE": 'scrapy_log.log'
+        # "LOG_FILE":"scrapy_log.txt",
+        # "LOG_LEVEL":"DEBUG",
+        # "LOG_LEVEL": "INFO",
+    }
 
     def __init__(self, context=None, *args, **kwargs):
 
         super(FlipcolivingSpiderSpider, self).__init__(*args, **kwargs)
 
+        item_input_output_archive: dict[str, str] = {
+            "output_folder_path": "./",
+            "output_folder_name": "process_data",
+            "output_folder_name": "data",
+            "file_name": f"flipcoliving.json",
+            "processed_name": f"flipcoliving_refined.json",
+        }
+
+        self.items_spider_output_document = {
+            key_data: kwargs.pop(key_data, item_input_output_archive[key_data])
+            for key_data in item_input_output_archive.keys()
+        }
+        self.items_spider_output_document["output_folder"] = path.join(
+            self.items_spider_output_document["output_folder_path"],
+            self.items_spider_output_document["output_folder_name"],
+        )
+
+        Path(self.items_spider_output_document["output_folder"]).mkdir(
+            parents=True, exist_ok=True
+        )
+
         # Obtener LOG_FILE desde los argumentos
-        log_path = kwargs.get("LOG_FILE", None)
+        log_path = kwargs.pop("LOG_FILE", None)
         self.logger.info(f"log_path: {log_path}")
-
-        # -----------------------------------------------------------------
-        # Ruta de la carpeta donde se almancera la data extraida
-        self.output_folder_path = kwargs.pop(
-            "output_folder_path", item_input_output_archive["output_folder_path"]
-        )
-        # Nombre de la carpeta donde se almacenara la data extraida
-        self.output_folder_name = kwargs.pop(
-            "output_folder_name", item_input_output_archive["output_folder_name"]
-        )
-        # Path de la carpeta salida
-        self.output_folder = path.join(self.output_folder_path, self.output_folder_name)
-
-        # -----------------------------------------------------------------
-        # Nombre del documento con la data extraida sin refinar
-        self.output_filename = kwargs.pop(
-            "file_name", item_input_output_archive["file_name"]
-        )
-        # Nombre del documento con la data extraida refinada
-        self.output_filename_processed = kwargs.pop(
-            "processed_name", item_input_output_archive["processed_name"]
-        )
-
-        # -----------------------------------------------------------------
-        # if folder not exists create one
-        Path(self.output_folder).mkdir(parents=True, exist_ok=True)
-        self.context = json.loads(context) if context else {}
+        self.context = json.loads(context) if isinstance(context, str) else {}
 
     def start_requests(self):
         """
         Inicio de la pagina principal
         """
+
+        if self.items_spider_output_document['refine'] == '1':
+            self.logger.info('Inicia proceso de refinado')
+            return []
 
         url = "https://flipcoliving.com/"
 
@@ -90,10 +95,6 @@ class FlipcolivingSpiderSpider(scrapy.Spider):
                 continue
 
             city_name = re.sub(r"[^A-Za-z]", " ", aux_city_url.split("-")[-1]).strip()
-
-            logging.info(
-                "Parseando -> ciudad: %s. url: %s", city_name, aux_city_url
-            )
             yield scrapy.Request(
                 url=aux_city_url,
                 dont_filter=True,
@@ -131,8 +132,6 @@ class FlipcolivingSpiderSpider(scrapy.Spider):
             coliving_name = re.sub(
                 r"[^A-Za-z]", " ", coliving_url.split("/")[-2]
             ).strip()
-
-            logging.info("Parseando -> URL Coliving: %s", coliving_url)
 
             yield scrapy.Request(
                 url=coliving_url,
@@ -289,6 +288,7 @@ class FlipcolivingSpiderSpider(scrapy.Spider):
 
         item = items.FlipcolivingItem()
         item["items_output"] = items_output
+        self.logger.info('Extraida propiedad: %s', items_output['coliving_name'])
         yield item
 
     def parse_coliving_language(self, url):
