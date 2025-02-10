@@ -1,10 +1,13 @@
-import logging
+import re
 import os
-from typing import Any, Dict
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
+import logging
 import app.models.enums as models
-from app.config.settings import LOG_DIR
 import app.services.scraper as scraper
+
+from enum import Enum
+from typing import Any, Dict
+from app.config.settings import LOG_DIR
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 
 router = APIRouter()
 
@@ -23,6 +26,14 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
+
+class ConfigError(Enum):
+    REGEX_ERROR = (
+        r"] ERROR:|"
+        r"Request error occurred"
+    )
+
 
 @router.get("/scrape")
 async def scrape_page(
@@ -62,11 +73,25 @@ def check_log_status(spider_name: models.Pages) -> Dict[str, Any]:
 
         is_running = any("open_spider" in line for line in log_content)
         is_finished = any("close_spider" in line for line in log_content)
-        has_error = any("[app.scrapy.funcs] ERROR:" in line for line in log_content)
+        has_error = any(
+            # "[app.scrapy.funcs] ERROR:" in line 
+            re.search(ConfigError.REGEX_ERROR.value, line) 
+            for line in log_content
+        )
 
         if has_error:
             status = "error"
-        elif is_running and not is_finished:
+            output_details = {
+                f'Error in line: {position_line}. Error: {line}': log_content[position_line-10:position_line+20]
+                for position_line, line in enumerate(log_content)
+                if re.search(ConfigError.REGEX_ERROR.value, line) 
+            }
+            return {
+                "status": "error",
+                "details": output_details
+            }
+        
+        if is_running and not is_finished:
             status = "running"
         elif is_finished:
             status = "finished"
