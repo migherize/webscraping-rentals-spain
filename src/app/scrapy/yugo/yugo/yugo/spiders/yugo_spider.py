@@ -7,10 +7,8 @@ from enum import Enum
 from pathlib import Path
 from scrapy.selector.unified import Selector
 
-from .. import items
-from ..constants_spider import item_custom_settings, item_input_output_archive
-
-from ..utils_refine_data import *
+from app.scrapy.yugo.yugo.yugo import items
+from app.scrapy.yugo.yugo.yugo.utils_refine_data import *
 
 
 class ConfigXpath(Enum):
@@ -69,11 +67,22 @@ class ConfigXpath(Enum):
 
 class YugoSpiderSpider(scrapy.Spider):
     name = "yugo_spider"
-    custom_settings = item_custom_settings
+    custom_settings = {
+        "ROBOTSTXT_OBEY": False,
+        "AUTOTHROTTLE_ENABLED": True,
+        "LOG_LEVEL": "INFO",
+    }
 
     def __init__(self, context=None, *args, **kwargs):
 
         super(YugoSpiderSpider, self).__init__(*args, **kwargs)
+
+        item_input_output_archive: dict[str, str] = {
+            "output_folder_path": r"./",
+            "output_folder_name": r"data",
+            "file_name": f"yugo.json",
+            "processed_name": "yugo_refined.json",
+        }
 
         self.items_spider_output_document = {
             key_data: kwargs.pop(key_data, item_input_output_archive[key_data])

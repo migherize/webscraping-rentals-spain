@@ -1,23 +1,31 @@
 # coding=utf-8
 import re
 import json
+import scrapy
 from ast import literal_eval
 from os import path
 from pathlib import Path
+from app.scrapy.somosalthena.somosalthena.somosalthena import items
 
-import scrapy
-
-from .. import items
-from ..constants_spider import item_custom_settings, item_input_output_archive
-from ..enum_path import RegexProperty
 
 class SomosalthenaSpiderSpider(scrapy.Spider):
     name = "somosalthena_spider"
-    custom_settings = item_custom_settings
+    custom_settings = {
+        "ROBOTSTXT_OBEY": False,
+        "AUTOTHROTTLE_ENABLED": True,
+        "LOG_LEVEL": "INFO",
+    }
 
     def __init__(self, context=None, *args, **kwargs):
 
         super(SomosalthenaSpiderSpider, self).__init__(*args, **kwargs)
+
+        item_input_output_archive: dict[str, str] = {
+            "output_folder_path": "./",
+            "output_folder_name": r"data",
+            "file_name": f"somosalthena.json",
+            "processed_name": "somosalthena_refined.json",
+        }
 
         self.items_spider_output_document = {
             key_data: kwargs.pop(key_data, item_input_output_archive[key_data])
@@ -47,7 +55,7 @@ class SomosalthenaSpiderSpider(scrapy.Spider):
 
     def parse(self, response):
 
-        all_data = re.search(RegexProperty.ALL_DATA_API.value, response.text)
+        all_data = re.search(r"const postData = (\[.+\])", response.text)
 
         if not all_data:
             self.logger.warning("No se presenta una API en la url: %s", response.url)
