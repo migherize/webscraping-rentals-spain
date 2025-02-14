@@ -1,5 +1,5 @@
 from typing import Dict, List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class CounterRU(BaseModel):
@@ -72,7 +72,7 @@ class Property(BaseModel):
     areaM2: Optional[int] = Field(None, description="")
     code: Optional[str] = Field(None, description="")
     createdAt: Optional[str] = Field(None, description="")
-    id: Optional[str] = Field(None, description="")
+    id: Optional[str] = Field(None, description="Identificador de la propiedad")
     isActive: Optional[bool] = Field(None, description="")
     isEntirePropertyRental: Optional[bool] = Field(None, description="")
     isPublished: Optional[bool] = Field(None, description="")
@@ -91,6 +91,15 @@ class Property(BaseModel):
         None, description="URL del tour virtual de la propiedad."
     )
     PropertyTypeId: Optional[int] = Field(None, description="ID del tipo de propiedad.")
+
+    # # ------------------------------------------------------------------
+    # # Validación de campos
+    # @field_validator('referenceCode')
+    # def validate_referenceCode(cls, referenceCode):
+    #     if len(referenceCode) < 3:
+    #         raise ValueError('El código de referencia debe tener al menos 3 caracteres.')
+    #     return referenceCode
+    
 
 class RentalUnits(BaseModel):
     PropertyId: str = Field(

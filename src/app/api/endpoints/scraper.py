@@ -1,11 +1,12 @@
 import re
 import os
 import logging
+import subprocess
 import app.models.enums as models
 import app.services.scraper as scraper
 
 from enum import Enum
-from typing import Any, Dict
+from typing import Any, Dict, List
 from app.config.settings import LOG_DIR
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 
@@ -34,6 +35,25 @@ class ConfigError(Enum):
         r"Request error occurred"
     )
 
+def parse_ps_output(ps_output: str) -> List[Dict[str, str]]:
+    """
+    Analiza la salida del comando ps y retorna una lista de diccionarios.
+    """
+    lines = ps_output.strip().split("\n")
+    
+    if len(lines) < 2:
+        return {'PID': 'No presenta PID'}
+
+    header = [h.strip() for h in lines[0].split()]
+    processes = {}
+    for index, line in enumerate(lines[1:]):
+        values = [v.strip() for v in line.split(None, len(header) - 1)]  # Split only up to the expected number of columns
+        if len(values) != len(header):
+            continue
+        process = dict(zip(header, values))
+        processes[index] = process
+
+    return processes
 
 @router.get("/scrape")
 async def scrape_page(
@@ -74,7 +94,6 @@ def check_log_status(spider_name: models.Pages) -> Dict[str, Any]:
         is_running = any("open_spider" in line for line in log_content)
         is_finished = any("close_spider" in line for line in log_content)
         has_error = any(
-            # "[app.scrapy.funcs] ERROR:" in line 
             re.search(ConfigError.REGEX_ERROR.value, line) 
             for line in log_content
         )
@@ -103,3 +122,30 @@ def check_log_status(spider_name: models.Pages) -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"Error al leer el log: {str(e)}")
         raise HTTPException(status_code=500, detail="Error al procesar el archivo de log.")
+
+
+@router.get("list_PID")
+async def get_list_PID() -> Dict[Any, Any]:
+    """
+    Retorna una lista de diccionarios con información sobre los procesos.
+    """
+    try:
+        result = subprocess.run(["ps", "-l"], capture_output=True, text=True, check=True)
+        processes = parse_ps_output(result.stdout)
+        return processes
+    except subprocess.CalledProcessError as e:
+        raise HTTPException(status_code=500, detail=f"Error al ejecutar ps: {e}")
+    
+@router.post("/kill/{pid}")
+async def kill_process(pid: int):
+    """
+    Fuerza la detención de un proceso mediante su PID.
+    """
+    try:
+        subprocess.run(["kill", "-9", str(pid)], check=True)
+        return {"message": f"Proceso con PID {pid} detenido forzosamente."}
+    except subprocess.CalledProcessError as e:
+        raise HTTPException(status_code=500, detail=f"Error al ejecutar kill: {e}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    

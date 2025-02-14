@@ -11,6 +11,8 @@ COPY --from=BUILDER /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 ENV PYTHONPATH=/app:$PYTHONPATH
 
+RUN apt update && apt install -y procps && apt clean && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 COPY ./src/app /app
 COPY ./data /data

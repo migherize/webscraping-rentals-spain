@@ -28,6 +28,7 @@ services:
       - TOKEN_API_INTERNAL=${TOKEN_API_INTERNAL:-your_secure_token_here}
       - EMAIL_FLIPCOLIVING=${EMAIL_FLIPCOLIVING:-flipcoliving@example.com}
       - EMAIL_SOMOSATHENEA=${EMAIL_SOMOSATHENEA:-somosathenea@example.com}
+      - EMAIL_VITASTUDENTS=${EMAIL_VITASTUDENTS:-vitastudents@example.com}
       - EMAIL_MAPPING_YUGO=${EMAIL_MAPPING_YUGO:-mapping_yugo.json}
       - EMAIL_YUGO_DEFAULT=${EMAIL_YUGO_DEFAULT:-default_yugo@example.com}
       - ELEMENTS_JSON=${ELEMENTS_JSON:-elements.json}
