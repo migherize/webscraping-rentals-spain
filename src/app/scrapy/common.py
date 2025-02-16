@@ -44,7 +44,7 @@ def get_all_imagenes(space_images: list) -> list[dict]:
     return all_imagenes
 
 
-def get_all_images(all_url_images: list) -> list:
+def get_all_images(all_url_images: str) -> list:
 
     if not all_url_images:
         return []

@@ -99,7 +99,7 @@ def get_month_dates(text: str):
         return None, None
 
 
-def find_feature_keys(features_list: str, feature_map: dict):
+def find_feature_keys(features_list: list, feature_map: dict):
     features_text = ", ".join(features_list)
     text = features_text.lower()
     matched_features = []

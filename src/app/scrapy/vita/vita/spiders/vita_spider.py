@@ -15,7 +15,7 @@ class ConfigXpath(Enum):
     BASIC_DATA_PROPERTY = {
         'property_name': "//h1/text()",
         'property_address': "//div[contains(@class, 'address')]/text()",
-        'property_description': "//div[contains(@class, '__excerpt')]//text()",
+        'property_description_en': "//div[contains(@class, '__excerpt')]//text()",
         'property_feature': "//div[contains(@class, 'features__row')]//li//text()",
         'property_plans': "//a[contains(@href, '.pdf')]/@href",
         'property_images': "(//div[contains(@class, 'glide__slides')])[1]//img/@src",
@@ -164,6 +164,10 @@ class VitaSpiderSpider(scrapy.Spider):
         data_property['property_url'] = response.url
         data_property |= get_data_general(response, ConfigXpath.BASIC_DATA_PROPERTY.value)
 
+        data_property['property_description_es'] = get_description_es(
+            response.url, ConfigXpath.BASIC_DATA_PROPERTY.value['property_description_en']
+        )
+
         # ------------------------------------------------------------------------------------------
         # obtener el Costo
         developmentid = response.xpath("//div[contains(@class, '__price')]/div/@data-developmentid").get()
@@ -274,3 +278,15 @@ def extract_room_details(response: Selector) -> dict:
         value = item.xpath('normalize-space(.)').get().strip()
         room_details[label] = value
     return room_details
+
+
+def get_description_es(url: str, xpath_description_es: str) -> str:
+    
+    aux_url = url.replace('/en/', '/es/')
+    response_es = requests.get(aux_url)
+    
+    if not response_es.status_code == 200:
+        return ['']
+    
+    response_es_scrapy = Selector(text=response_es.text)
+    return response_es_scrapy.xpath(xpath_description_es).getall()
