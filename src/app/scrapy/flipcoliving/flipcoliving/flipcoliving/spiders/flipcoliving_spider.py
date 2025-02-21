@@ -62,10 +62,6 @@ class FlipcolivingSpiderSpider(scrapy.Spider):
         Inicio de la pagina principal
         """
 
-        if self.items_spider_output_document['refine'] == '1':
-            self.logger.info('Inicia proceso de refinado')
-            return []
-
         url = "https://flipcoliving.com/"
 
         yield scrapy.Request(

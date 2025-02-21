@@ -47,6 +47,26 @@ class LodgerinInternal:
             logging.info(f"An error occurred: {err}")
         return None
 
+    def search_location(self, query):
+        url = f"{self.base_url_maps}/maps/search"
+        try:
+            response = requests.get(
+                url,
+                headers=self.headers,
+                params={"q": query, "size": 50, "region[]": "ES"},
+            )
+            response.raise_for_status()
+            data = response.json()
+            address = data.get("data", {})[0]
+            if not address:
+                raise Exception("La clave 'address' no se encuentra en la respuesta.")
+            return address
+        except requests.exceptions.HTTPError as err:
+            print(f"HTTP error occurred: {err}")
+        except Exception as err:
+            print(f"An error occurred: {err}")
+        return None
+
 
 class LodgerinAPI:
     def __init__(self, api_key, lang="en"):

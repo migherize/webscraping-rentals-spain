@@ -2,7 +2,7 @@ import logging
 import os
 import re
 from datetime import datetime, timedelta
-
+import json
 import app.config.settings as settings
 from app.models.enums import (
     ContractModels,
@@ -99,7 +99,7 @@ def get_month_dates(text: str):
         return None, None
 
 
-def find_feature_keys(features_list: str, feature_map: dict):
+def find_feature_keys(features_list: list, feature_map: dict):
     features_text = ", ".join(features_list)
     text = features_text.lower()
     matched_features = []
@@ -246,3 +246,11 @@ def clean_image_urls(image_string):
     cleaned_string = image_string.replace("\\/", "/")
     url_list = cleaned_string.split(",")
     return url_list
+
+def open_json_local(ruta):
+    try:
+        with open(ruta, "r", encoding="utf-8") as json_file:
+            return json.load(json_file)
+    except (OSError, IOError, json.JSONDecodeError) as e:
+        print(f"Error al abrir el archivo JSON: {e}")
+        return None

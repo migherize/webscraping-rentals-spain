@@ -4,6 +4,7 @@ import subprocess
 import json
 import traceback
 
+from typing import Callable, Dict, Tuple
 from app.config.settings import EmailConfig, LOG_DIR, BASE_DIR, SCRAPY_DIR
 from app.models.enums import URLs, Pages
 from app.scrapy.common import initialize_scraping_context, initialize_scraping_context_maps
@@ -12,13 +13,13 @@ from app.scrapy.common import initialize_scraping_context, initialize_scraping_c
 from app.scrapy.flipcoliving.flipcoliving.flipcoliving.spiders.flipcoliving_spider import FlipcolivingSpiderSpider
 from app.scrapy.somosalthena.somosalthena.somosalthena.spiders.somosalthena_spider import SomosalthenaSpiderSpider
 from app.scrapy.yugo.yugo.yugo.spiders.yugo_spider import YugoSpiderSpider
-from app.scrapy.vitastudent.vitastudent.spiders.vitastudent_spider import VitastudentSpiderSpider
+from app.scrapy.vita.vita.spiders.vita_spider import VitaSpiderSpider
 
 os.makedirs(LOG_DIR, exist_ok=True)
 
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    format="%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(funcName)s:%(lineno)d - %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
     handlers=[
         logging.StreamHandler(),
@@ -38,39 +39,78 @@ def run_webscraping(url: URLs) -> None:
         url (URLs): URL de la página que será scrapeada.
     """
     try:
-        context = None
-        scrapy_path = None
-
-        if url == URLs.flipcoliving:
-            scrapy_path = Pages.flipcoliving.value
-            context = initialize_scraping_context(EmailConfig.FLIPCOLIVING)
-
-        elif url == URLs.somosalthena:
-            scrapy_path = Pages.somosalthena.value
-            context = initialize_scraping_context(EmailConfig.SOMOSATHENEA)
-
-        elif url == URLs.yugo:
-            scrapy_path = Pages.yugo.value
-            email_map = json.loads(EmailConfig.YUGO_MAPPING)
-            context = initialize_scraping_context_maps(email_map)
-
-        elif url == URLs.vita:
-            scrapy_path = Pages.vita.value
-            context = initialize_scraping_context(EmailConfig.VITASTUDENTS)
-
-        else:
+        scrapy_path, context = get_path_and_context(url)
+        if any([scrapy_path is None, context is None]):
             logger.error(f"No se encontró una araña para la URL: {url}")
-            return
-
+            return None
+        
         spider_name = f"{scrapy_path}_spider"
-        output_folder_path = os.path.join(BASE_DIR, "logs", f"{scrapy_path}.log")
-        logger.info(f"Ejecutando Scrapy con la araña: {spider_name}")
-
+        output_folder_path = os.path.join(BASE_DIR, "logs", f"{scrapy_path}.log")        
         if os.path.exists(output_folder_path):
             os.remove(output_folder_path)
 
+        logger.info(f"Ejecutando Scrapy con la araña: {spider_name}")
+        execute_spider(scrapy_path, spider_name, output_folder_path, context)
+
+    except Exception as e:
+        logger.error(f"Error al hacer scraping para {url}: {str(e)}")
+        logger.error(traceback.format_exc())
+
+
+def get_path_and_context(url: URLs) -> Tuple[None | str | Callable]:
+    """
+    Obtiene la ruta como el contexto de la correspondiente aranha a ejecutar.
+    Args:
+        url (URLs): URL de la página que será scrapeada.
+    """
+
+    try:
+        url_config: Dict[URLs, Dict[str, Callable]] = {
+            URLs.flipcoliving: {
+                "path": Pages.flipcoliving.value,
+                "context": lambda: initialize_scraping_context(EmailConfig.FLIPCOLIVING)
+            },
+            URLs.somosalthena: {
+                "path": Pages.somosalthena.value,
+                "context": lambda: initialize_scraping_context(EmailConfig.SOMOSATHENEA)
+            },
+            URLs.yugo: {
+                "path": Pages.yugo.value,
+                "context": lambda: initialize_scraping_context_maps(json.loads(EmailConfig.YUGO_MAPPING))
+            },
+            URLs.vita: {
+                "path": Pages.vita.value,
+                "context": lambda: initialize_scraping_context(EmailConfig.VITASTUDENTS)
+            }
+        }
+
+        if url not in url_config:
+            logger.error(f"No se encontró una araña para la URL: {url}")
+            return None, None
+        
+        return url_config[url]["path"], url_config[url]["context"]()
+    
+    except Exception as error:
+        logger.error('No se logró obtener el path o el context. Error: %s', error)
+        raise 'No se logró obtener el path o el context'
+
+def execute_spider(
+        scrapy_path: str, 
+        spider_name: str, 
+        output_folder_path: str, 
+        context: Dict[str, list]
+    ) -> None:
+    try:
+
         process = subprocess.Popen(
-            ["scrapy", "crawl", spider_name, "-a", f"context={json.dumps(context)}", "-s", f"LOG_FILE={output_folder_path}"],
+            [
+                "scrapy", "crawl", spider_name,
+                "-a", f"context={json.dumps(context)}",
+                "-s", f"LOG_FILE={output_folder_path}",
+                "-s", f"LOG_FORMAT=%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(funcName)s:%(lineno)d - %(message)s",
+                "-s", f"LOG_LEVEL=INFO",
+                "-s", f"LOG_DATEFORMAT=%Y-%m-%d %H:%M:%S",
+            ],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
@@ -86,6 +126,8 @@ def run_webscraping(url: URLs) -> None:
         if stderr:
             logger.error(f"Scrapy Error para {spider_name}:\n{stderr}")
 
-    except Exception as e:
-        logger.error(f"Error al hacer scraping para {url}: {str(e)}")
-        logger.error(traceback.format_exc())
+    except Exception as error:
+        logger.error('Problemas al ejecutar el spider. Error: %s', error)
+        raise 'Problemas al ejecutar el spider'
+
+    return None
