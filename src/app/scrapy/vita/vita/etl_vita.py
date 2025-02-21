@@ -1,5 +1,6 @@
 import re
 import json
+import stat
 from scrapy import Spider
 from typing import List, Tuple, Dict
 
@@ -88,15 +89,30 @@ def etl_data_vita(items: List[Dict], json_elements: Dict) -> None:
         create_json(property_vita)
 
         print(f"Property ID: {property_id}")
+        list_rental_unit_id = []
 
         for index_rental_unit, rental_unit in enumerate(items_output['all_rental_units']):
-            data_rental_units = retrive_rental_unit(
+            data_rental_units, calendar_unit_list = retrive_rental_unit(
                 rental_unit, tours_rental_units[index_rental_unit], property_vita
             )
             # RentalUnit
             rental_unit_id = save_rental_unit(data_rental_units, api_key)
             data_rental_units.id = rental_unit_id
+            list_rental_unit_id.append(data_rental_units)
             create_json(data_rental_units)
+            
+            # schedule
+            for rental_id, calendar_unit in zip(
+                list_rental_unit_id, calendar_unit_list
+            ):
+                if calendar_unit.startDate == "None":
+                    continue
+                check_and_insert_rental_unit_calendar(
+                    rental_id.id, calendar_unit, api_key
+                )
+
+            for calendar_unit in calendar_unit_list:
+                create_json(calendar_unit)
 
 
 def retrive_property(items_output: Dict[str, str | List]) -> Tuple[Dict[str, str | List], List]:
@@ -161,6 +177,7 @@ def retrive_rental_unit(rental_unit:Dict[str, str | List | Dict], tours_rental_u
 
     rental_unit_room_data = rental_unit.get("rental_unit_room_data",[])[0]
     rental_unit_booking_data = rental_unit.get("rental_unit_booking_data",{})
+    calendar_unit_list = []
 
     try:
         rental_unit = RentalUnits(
@@ -182,16 +199,21 @@ def retrive_rental_unit(rental_unit:Dict[str, str | List | Dict], tours_rental_u
                 paymentCycle=PaymentCycleEnum.MONTHLY.value
             ),
         )
-        return rental_unit
+        
+        start_date = rental_unit_booking_data.get("terms",[])[0].get("startDate")
+        end_date = rental_unit_booking_data.get("terms",[])[0].get("endDate")
+        description = rental_unit_booking_data.get("terms",[])[0].get("name")
+
+        date_items = RentalUnitsCalendarItem(
+            summary=f"Blocked until {start_date} - {end_date}",
+            description=description,
+            startDate=start_date,
+            endDate=end_date,
+        )
+        calendar_unit_list.append(date_items)
+
+        return rental_unit, calendar_unit_list
     except Exception as e:
         pprint(type(e), e)
         pprint(rental_unit)
         pprint(tours_rental_units)
-
-def open_json(ruta):
-    try:
-        with open(ruta, "r", encoding="utf-8") as json_file:
-            return json.load(json_file)
-    except (OSError, IOError, json.JSONDecodeError) as e:
-        print(f"Error al abrir el archivo JSON: {e}")
-        return None

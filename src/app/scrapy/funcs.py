@@ -246,3 +246,11 @@ def clean_image_urls(image_string):
     cleaned_string = image_string.replace("\\/", "/")
     url_list = cleaned_string.split(",")
     return url_list
+
+def open_json_local(ruta):
+    try:
+        with open(ruta, "r", encoding="utf-8") as json_file:
+            return json.load(json_file)
+    except (OSError, IOError, json.JSONDecodeError) as e:
+        print(f"Error al abrir el archivo JSON: {e}")
+        return None
