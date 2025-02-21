@@ -43,9 +43,9 @@ from app.config.settings import GlobalConfig
 from pprint import pprint
 
 
-def etl_data_vita(items: List[Dict], spider: Spider) -> None:
+def etl_data_vita(items: List[Dict], json_elements: Dict) -> None:
 
-    elements_dict = parse_elements(spider.context, mapping)
+    elements_dict = parse_elements(json_elements, mapping)
     api_key = elements_dict["api_key"].data[0].name
 
     for index, item in enumerate(items):
@@ -84,17 +84,19 @@ def etl_data_vita(items: List[Dict], spider: Spider) -> None:
             )
         )
         property_id = save_property(property_vita, api_key)
+        property_vita.id = property_id
         create_json(property_vita)
 
-        # if not items_output['all_rental_units']:
-        #     continue
+        print(f"Property ID: {property_id}")
 
-        # for index_rental_unit, rental_unit in enumerate(items_output['all_rental_units']):
-        #     retrive_rental_unit(
-        #         index_rental_unit, rental_unit, tours_rental_units[index_rental_unit]
-        #     )
-        #     break
-        # break
+        for index_rental_unit, rental_unit in enumerate(items_output['all_rental_units']):
+            data_rental_units = retrive_rental_unit(
+                rental_unit, tours_rental_units[index_rental_unit], property_vita
+            )
+            # RentalUnit
+            rental_unit_id = save_rental_unit(data_rental_units, api_key)
+            data_rental_units.id = rental_unit_id
+            create_json(data_rental_units)
 
 
 def retrive_property(items_output: Dict[str, str | List]) -> Tuple[Dict[str, str | List], List]:
@@ -155,12 +157,41 @@ def clean_data_property(property_data: Dict[str, str | List]) -> None:
     return None
 
 
-def retrive_rental_unit(index_rental_unit: int, rental_unit:Dict[str, str | List | Dict]):
-    pprint(rental_unit)
-    data_rental_vita: Dict[str, str | List] = {
-        "rental_referend_code": '',
-        "rental_cost": '',
-        "rental_room_type": '',
-        "rental_": '',
-        "rental_": '',
-    }
+def retrive_rental_unit(rental_unit:Dict[str, str | List | Dict], tours_rental_units: str, property_data: Property) -> None:
+
+    rental_unit_room_data = rental_unit.get("rental_unit_room_data",[])[0]
+    rental_unit_booking_data = rental_unit.get("rental_unit_booking_data",{})
+
+    try:
+        rental_unit = RentalUnits(
+            PropertyId=property_data.id,
+            referenceCode=rental_unit.get("rental_unit_room_code"),
+            areaM2=rental_unit_room_data.get("size").replace("sqm", ""),
+            Features=find_feature_keys(rental_unit_room_data.get("standard_features"), feature_map),
+            isActive=True,
+            isPublished=True,
+            Texts=property_data.Texts,
+            Images=get_all_imagenes(rental_unit_room_data.get("images")),
+            Price=PriceItem(
+                contractType=PaymentCycleEnum.MONTHLY.value,
+                currency=rental_unit_room_data.get("currency"),
+                amount=int(extract_cost(rental_unit.get("rental_unit_cost"))),
+                depositAmount=int(extract_cost(rental_unit.get("rental_unit_cost"))),
+                reservationAmount=GlobalConfig.INT_ZERO,
+                minPeriod=GlobalConfig.INT_ONE,
+                paymentCycle=PaymentCycleEnum.MONTHLY.value
+            ),
+        )
+        return rental_unit
+    except Exception as e:
+        pprint(type(e), e)
+        pprint(rental_unit)
+        pprint(tours_rental_units)
+
+def open_json(ruta):
+    try:
+        with open(ruta, "r", encoding="utf-8") as json_file:
+            return json.load(json_file)
+    except (OSError, IOError, json.JSONDecodeError) as e:
+        print(f"Error al abrir el archivo JSON: {e}")
+        return None
