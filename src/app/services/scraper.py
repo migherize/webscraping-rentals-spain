@@ -9,11 +9,6 @@ from app.config.settings import EmailConfig, LOG_DIR, BASE_DIR, SCRAPY_DIR
 from app.models.enums import URLs, Pages
 from app.scrapy.common import initialize_scraping_context, initialize_scraping_context_maps
 
-# Spider
-from app.scrapy.flipcoliving.flipcoliving.flipcoliving.spiders.flipcoliving_spider import FlipcolivingSpiderSpider
-from app.scrapy.somosalthena.somosalthena.somosalthena.spiders.somosalthena_spider import SomosalthenaSpiderSpider
-from app.scrapy.yugo.yugo.yugo.spiders.yugo_spider import YugoSpiderSpider
-from app.scrapy.vita.vita.spiders.vita_spider import VitaSpiderSpider
 
 os.makedirs(LOG_DIR, exist_ok=True)
 
@@ -81,6 +76,10 @@ def get_path_and_context(url: URLs) -> Tuple[None | str | Callable]:
             URLs.vita: {
                 "path": Pages.vita.value,
                 "context": lambda: initialize_scraping_context(EmailConfig.VITASTUDENTS)
+            },
+            URLs.nodis: {
+                "path": Pages.nodis.value,
+                "context": lambda: initialize_scraping_context(EmailConfig.NODIS)
             }
         }
 
@@ -106,6 +105,7 @@ def execute_spider(
             [
                 "scrapy", "crawl", spider_name,
                 "-a", f"context={json.dumps(context)}",
+                # "-a", "refine=1",
                 "-s", f"LOG_FILE={output_folder_path}",
                 "-s", f"LOG_FORMAT=%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(funcName)s:%(lineno)d - %(message)s",
                 "-s", f"LOG_LEVEL=INFO",

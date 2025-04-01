@@ -8,6 +8,7 @@ class URLs(str, Enum):
     somosalthena = "https://somosalthena.com/"
     yugo = "https://yugo.com/en-us"
     vita = "https://www.vitastudent.com/en"
+    nodis = "https://nodis.es/"
 
 
 class Pages(str, Enum):
@@ -15,6 +16,7 @@ class Pages(str, Enum):
     somosalthena = "somosalthena"
     yugo = "yugo"
     vita = "vita"
+    nodis = "nodis"
 
 
 class ScrapingBeeParams(str, Enum):
@@ -128,27 +130,27 @@ feature_map = {
     "19": ["spa", "spa"],
     "20": ["garden", "jardín","gardens"],
     "21": ["gym", "gimnasio"],
-    "22": ["iron", "plancha"],
-    "23": ["iron board", "tabla de planchar"],
-    "24": ["living room", "sala de estar"],
-    "25": ["lockable rooms", "habitaciones con cerradura"],
-    "26": ["mailbox access", "acceso a buzón"],
-    "27": ["pillow", "almohada"],
-    "28": ["private bath", "baño privado"],
-    "29": ["recreational room", "sala de recreación", "zona de juegos"],
-    "30": ["room cleaning", "limpieza de habitación"],
-    "31": ["shared baths", "baños compartidos"],
-    "32": ["single bed", "cama individual"],
-    "33": ["smoking alarm", "alarma de humo"],
-    "34": ["sofa bed", "sofá cama"],
-    "35": ["streaming services", "servicios de streaming"],
-    "36": ["study area", "zona de estudio","Private study room"],
-    "37": ["swimming pool", "piscina"],
-    "38": ["table and chair", "mesa y silla"],
-    "39": ["towels", "toallas"],
-    "40": ["tv", "televisión", "CCTV"],
-    "41": ["two single bed", "dos camas individuales"],
-    "42": ["visually impaired accessible", "acceso para personas con discapacidad visual"],
-    "43": ["wardrobe", "armario", "ropero"],
-    "44": ["wheelchair access", "acceso para sillas de ruedas"],
+    "22": ["iron", "plancha", "iron board","tabla de planchar"],
+    "23": ["living room", "sala de estar"],
+    "24": ["lockable rooms", "habitaciones con cerradura"],
+    "25": ["mailbox access", "acceso a buzón"],
+    "26": ["pillow", "almohada"],
+    "27": ["private bath", "baño privado"],
+    "28": ["recreational room", "sala de recreación", "zona de juegos"],
+    "29": ["room cleaning", "limpieza de habitación"],
+    "30": ["shared baths", "baños compartidos"],
+    "31": ["single bed", "cama individual"],
+    "32": ["smoking alarm", "alarma de humo"],
+    "33": ["sofa bed", "sofá cama"],
+    "34": ["streaming services", "servicios de streaming"],
+    "35": ["study area", "zona de estudio","Private study room"],
+    "36": ["swimming pool", "piscina"],
+    "37": ["table and chair", "mesa y silla"],
+    "38": ["towels", "toallas"],
+    "39": ["tv", "televisión", "CCTV"],
+    "40": ["two single bed", "dos camas individuales"],
+    "41": ["accessible housing", "adapted housing", "housing for disabled"],
+    "42": ["wardrobe", "armario", "ropero"],
+    "43": ["accessible room", "adapted room", "room for disabled"],
+    "44": ["heating system", "sistema de calefaccion", "calefacción", "heating"],
 }
