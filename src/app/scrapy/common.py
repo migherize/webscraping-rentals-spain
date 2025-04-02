@@ -271,7 +271,7 @@ def extract_cost(cost_text):
     Returns:
         float or None: El costo en euros si se encuentra, o None si no está presente.
     """
-    match = re.search(r"€\s*([\d,]+\.\d+)", cost_text)
+    match = re.search(r"[€£]\s*([\d,]+\.\d+)", cost_text)
     if match:
         return float(match.group(1).replace(",", ""))
     return None
