@@ -20,4 +20,4 @@ class VitaPipeline:
     def close_spider(self, spider: Spider) -> None:
         save_to_json_file(self.items, self.output_path)
         spider.logger.info('- JSON file created with %d items.', len(self.items))
-        etl_data_vita(self.items, spider.context)
+        etl_data_vita(self.items, spider.context, spider.logger)

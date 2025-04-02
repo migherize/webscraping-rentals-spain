@@ -1,69 +1,16 @@
 # coding=utf-8
+from pprint import pprint
 import scrapy
 import requests
 
 from os import path
-from enum import Enum
 from pathlib import Path
 from scrapy.selector.unified import Selector
 
 from app.scrapy.yugo.yugo.yugo import items
 from app.scrapy.yugo.yugo.yugo.utils_refine_data import *
-
-
-class ConfigXpath(Enum):
-    ARTICLE_DATA = "//article[contains(a/@href, '/spain/')]"
-
-    ITEMS_CITY_DATA = {
-        'city_name': './/h4//text()',
-        'description_city': './/p//text()',
-        'url_city': './/a//@href',
-    }
-
-    ITEMS_YUGO_SPACE_DATA = {
-        'yugo_space_name': './/h4//text()',
-        'description_yugo_space': './/p//text()',
-        'url_yugo_space': './/a//@href',
-    }
-
-    ITEMS_PROPERTY = {
-        "city_name": "//h5[@class='residence__city']/text()",
-        "property_name": "//h1[@class='residence__title']/text()",
-        "residence_description": "//div[@class='residence__description']//p//text()",
-    }
-
-    ITEMS_PROPERTY_GENERAL = {
-        "address_contact_and_email": "//div[@class='residence__contact-details']//p//text()|//div[@class='address-desc']//p//text()",
-        "student_rooms": "//a[contains(text(), 'View all rooms')]/@href",
-        'tour_virtual': "//a[contains(@href, 'noupunt.com')]/@href",
-    }
-
-    ITEMS_PICTURE = "//section[contains(@class, 'media__container')]"
-
-    ITEMS_FEATURE = {
-        'all_feature': "//article[contains(@class, 'icon-logo')]/h6/text()|//div[@class='amenities-desc']/text()"
-    }
-
-    ITEMS_LANGUAGES = "//ul[@id='weglot-listbox']//@href"
-
-    ALL_LINK_RENTAL_UNITS = "//h4[contains(@class, 'product-tile')]/../@href"
-
-    # -----------------------------------------------------------------
-    # Rental units
-
-    ITEMS_RENTAL_UNITS = {
-        "PROPERTY_AND_CITY": "//div[@class='sticky']/h4/text()",
-        "NAME_RENTAL_UNIT": "//div[@class='sticky']/h3/text()",
-        "COST": "//div[@class='sticky']/h6/text()",
-        "DESCRIPTION_RENTAL_UNIT": "//div[contains(@class, 'product__description')]//p//text()",
-        "ALL_INCLUSIVE": "//div[contains(@class, 'product__description')]//ul//text()",
-        "ROOM_FEATURE": "//h2[contains(text(), 'Room features')]/..//article//text()",
-        "SOCIAL_SPACES": "//h2[contains(text(), 'included')]/..//article//h6/text()|//h2[contains(text(), 'Social Space')]/..//article//text()",
-        "STATUS": "//div[@id='cm-placement-product-details']//p[contains(text(), 'SOLD OUT')]/text()",
-    }
-
-    ITEMS_PICTURE_RENTAL_UNITS = "//picture[contains(@class, 'gallery-carousel__item--modal')]"
-
+from app.scrapy.yugo.yugo.yugo.enum_yugo import ConfigXpath
+from ast import literal_eval
 
 class YugoSpiderSpider(scrapy.Spider):
     name = "yugo_spider"
@@ -101,6 +48,7 @@ class YugoSpiderSpider(scrapy.Spider):
 
         self.property_filter_city = (
             'madrid',
+            'sevilla'
         )
 
         self.all_languages = (
@@ -138,8 +86,8 @@ class YugoSpiderSpider(scrapy.Spider):
         
         for article_city in response.xpath(ConfigXpath.ARTICLE_DATA.value):
             data_city = extract_article_data(article_city, ConfigXpath.ITEMS_CITY_DATA.value)
-            
-            if not data_city['url_city'].split('/')[-1] in self.property_filter_city:
+
+            if not self.filter_city_yugo(data_city['url_city']):
                 continue
 
             data_city['url_city'] = self.url_base + data_city['url_city']
@@ -156,13 +104,15 @@ class YugoSpiderSpider(scrapy.Spider):
         # ---------------------------------------
         # Proceso de busqueda de los Property
 
-        if not response.xpath(ConfigXpath.ARTICLE_DATA.value):
+        property_data = response.xpath(ConfigXpath.ARTICLE_DATA_VIEW_ROOMS.value)
+        
+        if not property_data:
             self.logger.warning('No existen espacios (PROPERTY) para: %s', response.url)
             return None
-        
+            
         meta_data = response.meta.get("meta_data")
-
-        for article_yugo_space in response.xpath(ConfigXpath.ARTICLE_DATA.value):
+    
+        for article_yugo_space in property_data:
             data_yugo_space = extract_article_data(article_yugo_space, ConfigXpath.ITEMS_YUGO_SPACE_DATA.value)
             data_yugo_space['url_yugo_space'] = self.url_base + data_yugo_space['url_yugo_space']
             meta_data = meta_data | data_yugo_space
@@ -172,14 +122,25 @@ class YugoSpiderSpider(scrapy.Spider):
                 callback=self.parse_property_space,
                 meta={"meta_data": meta_data}
             )
-
+            # break
+    
     def parse_property_space(self, response: Selector):
 
         # Proceso de extraccion de data correspondiente al Property 
         meta_data = response.meta.get("meta_data")
 
+        address = ''
+        if re.search(r'"translatedWordsList"', response.text):
+            api_property = re.search(r'"translatedWordsList":\s?(\[.+\])}</script>', response.text)
+            if api_property:
+                # Presenta la api con la data de property
+                all_data_property = api_property.group(1)
+                all_data_property = literal_eval(all_data_property)
+                address = self.extractor_address(all_data_property)
+
         items_property = extractor_all_data(response, ConfigXpath.ITEMS_PROPERTY.value)
         items_property_general = extractor_all_data(response, ConfigXpath.ITEMS_PROPERTY_GENERAL.value)
+        items_property_general['address_contact_and_email'] = address.strip()
         items_feature = extractor_all_data(response, ConfigXpath.ITEMS_FEATURE.value)
         items_geo = extraer_lat_long(response)
 
@@ -218,6 +179,7 @@ class YugoSpiderSpider(scrapy.Spider):
                 dont_filter=True
             )
 
+    
     def get_all_rental_units(self, response):
         
         item_output = items.YugoItem()
@@ -289,6 +251,7 @@ class YugoSpiderSpider(scrapy.Spider):
 
         return all_data_rental_units
 
+    
     def get_data_languages(self, url: str):
 
         all_data_languages = []
@@ -315,6 +278,7 @@ class YugoSpiderSpider(scrapy.Spider):
         
         return all_data_languages
 
+   
     def refine_data_property(self, items_output: dict) -> dict:
         
         items = items_output.copy()
@@ -350,3 +314,24 @@ class YugoSpiderSpider(scrapy.Spider):
                 )
             
         return items
+
+
+    def filter_city_yugo(self, url: str) -> bool:
+        """
+        Filtrar solo las ciudades que se encuentran en self.property_filter_city
+        """
+        return True if url.split('/')[-1] in self.property_filter_city else False
+    
+    def extractor_address(self, data_property: list[str]) -> str:
+        address = ''
+        try:
+            for index, data in enumerate(data_property):
+                if data == 'Address':
+                    address = data_property[index + 1: index + 3]
+                    if address[-1].startswith(('Telf:', 'Tel:', 'tel:')):
+                        address.pop()
+                    address = " ".join(address)
+                    break
+        except Exception as error:
+            self.logger.warning('Error en extraer la direccion. Error: %s', error)
+        return address
