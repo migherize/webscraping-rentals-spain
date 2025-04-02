@@ -1,5 +1,5 @@
 import scrapy
 
 
-class FlipcolivingItem(scrapy.Item):
+class NodisItem(scrapy.Item):
     items_output = scrapy.Field()

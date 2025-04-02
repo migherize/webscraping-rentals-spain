@@ -98,7 +98,8 @@ def clean_default_only_data_list(data: str) -> str:
 
 def clean_address_contact_and_email(data: list[str]) -> str:
     """retorna solo la direccion"""
-
+    if data and isinstance(data, str):
+        return data
     if data and isinstance(data, list):
         address = ", ".join(data)
         address = re.sub(r'Tel:.+', '', address).strip()

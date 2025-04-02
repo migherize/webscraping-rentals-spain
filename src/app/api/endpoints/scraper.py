@@ -30,6 +30,9 @@ logger.setLevel(logging.DEBUG)
 
 
 class ConfigError(Enum):
+    """
+    Señales que puede detectar errores en los logs de las arañas
+    """
     REGEX_ERROR = (
         r"] ERROR:|"
         r"Request error occurred"

@@ -90,9 +90,9 @@ def search_location(query) -> LocationMaps:
         return location
     else:
         location = LocationMaps(
-            boundingbox="",
-            lat="",
-            lon="",
+            boundingbox=[],
+            lat=1.0,
+            lon=1.0,
             address="",
             fullAddress="",
             number="",
@@ -271,7 +271,7 @@ def extract_cost(cost_text):
     Returns:
         float or None: El costo en euros si se encuentra, o None si no está presente.
     """
-    match = re.search(r"€\s*([\d,]+\.\d+)", cost_text)
+    match = re.search(r"[€£]\s*([\d,]+\.\d+)", cost_text)
     if match:
         return float(match.group(1).replace(",", ""))
     return None
@@ -323,9 +323,21 @@ def create_json(item: Union[RentalUnits, Property, RentalUnitsCalendarItem]) -> 
 
     os.makedirs(os.path.dirname(json_file_path), exist_ok=True)
 
-    with open(json_file_path, "a", encoding="utf-8-sig") as json_file:
-        json.dump(item.model_dump(), json_file, indent=4)
+    # Leer el JSON si ya existe
+    if os.path.exists(json_file_path):
+        with open(json_file_path, "r", encoding="utf-8-sig") as json_file:
+            try:
+                data = json.load(json_file)
+                if not isinstance(data, list):
+                    data = []
+            except json.JSONDecodeError:
+                data = [] 
+    else:
+        data = []
 
+    data.append(item.model_dump())
+    with open(json_file_path, "w", encoding="utf-8-sig") as json_file:
+        json.dump(data, json_file, indent=4, ensure_ascii=False)
     print(f"Datos guardados en: {json_file_path}")
 
 

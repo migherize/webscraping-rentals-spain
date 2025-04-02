@@ -46,6 +46,7 @@ class EmailConfig:
     SOMOSATHENEA = os.getenv("EMAIL_SOMOSATHENEA", "default_somosathenea@example.com")
     VITASTUDENTS = os.getenv("EMAIL_VITASTUDENTS", "default_vitastudents@example.com")
     YUGO_DEFAULT = os.getenv("EMAIL_YUGO_DEFAULT", "default_yugo@example.com")
+    NODIS = os.getenv("EMAIL_NODIS", "default_nodis@example.com")
 
     # Cargar JSON de EMAIL_MAPPING_YUGO de manera segura
     try:
