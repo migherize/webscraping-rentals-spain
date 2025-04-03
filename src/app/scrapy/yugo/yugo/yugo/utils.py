@@ -85,7 +85,7 @@ class EquivalencesYugo(Enum):
     }
 
 
-def map_property_descriptions(languages, property_descriptions) -> List[Dict]:
+def map_property_descriptions(languages, property_descriptions: list[dict[str, str]]) -> List[Dict]:
     language_dict = {lang.code: lang for lang in languages}
     
     texts = {
@@ -94,18 +94,19 @@ def map_property_descriptions(languages, property_descriptions) -> List[Dict]:
         "description_en": None,
         "description_es": None,
     }
-    
+
     for prop in property_descriptions:
         try:
             lang_code = prop.get("language").split("-")[0].upper()
-            if prop.get("language") in ["en-us", "ca-es"]:
+
+            if not prop.get("language") in ("en-us", "es-es"):
+                # Ignorar aquellos que no son ingles ni espanhol
                 continue
             
             language = language_dict.get(lang_code)
             if language:
                 title = prop.get("property_name")
                 description = prop.get("residence_description")
-                
                 if lang_code == "EN":
                     texts["title_en"] = title
                     texts["description_en"] = description
@@ -119,7 +120,7 @@ def map_property_descriptions(languages, property_descriptions) -> List[Dict]:
         except Exception as e:
             print(f"Error al procesar la propiedad '{prop.get('property_name')}': {e}")
     
-    return {"Texts": Text(**texts).dict()}
+    return {"Texts": Text(**texts)}
 
 
 def get_name_by_location(data: List[ApiKeyItem], location: str) -> str:
@@ -133,6 +134,7 @@ def get_name_by_location(data: List[ApiKeyItem], location: str) -> str:
     Returns:
         str: El valor de 'name' correspondiente a la ubicación, o None si no se encuentra.
     """
+
     for item in data:
         if item.location == location:
             return item.name
@@ -172,7 +174,7 @@ def retrive_lodgerin_property(item, elements, list_api_key):
         Features=features_id,
         tourUrl=tour_url,
         PropertyTypeId=PropertyTypeId,
-        Texts=descriptions,
+        Texts=descriptions.get('Texts'),
         Images=images,
         Location=LocationAddress(
             lat=str(address.lat),
