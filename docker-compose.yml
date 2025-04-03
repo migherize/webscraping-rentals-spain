@@ -30,4 +30,5 @@ services:
       - EMAIL_SOMOSATHENEA=${EMAIL_SOMOSATHENEA:-somosathenea@example.com}
       - EMAIL_MAPPING_YUGO=${EMAIL_MAPPING_YUGO:-mapping_yugo.json}
       - EMAIL_YUGO_DEFAULT=${EMAIL_YUGO_DEFAULT:-default_yugo@example.com}
-      - ELEMENTS_JSON=${ELEMENTS_JSON:-elements.json}
+      - EMAIL_VITASTUDENTS=${EMAIL_VITASTUDENTS:-default_vitastudents@example.com}
+      - EMAIL_NODIS=${EMAIL_NODIS:-default_nodis@example.com}
