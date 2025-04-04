@@ -54,3 +54,13 @@ class ConfigXpath(Enum):
     }
 
     ITEMS_PICTURE_RENTAL_UNITS = "//picture[contains(@class, 'gallery-carousel__item--modal')]"
+
+
+class ConfigXpathOtherCountries(Enum):
+    ARTICLE_DATA_VIEW_ROOMS = '//article[contains(@class, "comparison-carousel__item")]'
+
+    ITEMS_YUGO_SPACE_DATA = {
+        'yugo_space_name': './/h4//text()',
+        'description_yugo_space': './/p//text()',
+        'url_yugo_space': './/a//@href',
+    }
