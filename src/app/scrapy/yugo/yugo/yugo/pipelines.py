@@ -39,6 +39,6 @@ class YugoPipeline:
             spider.logger.info("- JSON file created with %d items.", len(self.items))
             save_to_json_file(self.items, self.output_path)
 
-        # etl_data_yugo(spider, self.output_path)
+        etl_data_yugo(self.output_path, spider.logger, spider.context)
 
         spider.logger.info("close_spider")

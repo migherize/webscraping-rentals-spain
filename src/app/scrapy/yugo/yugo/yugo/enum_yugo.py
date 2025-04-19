@@ -60,7 +60,18 @@ class ConfigXpathOtherCountries(Enum):
     ARTICLE_DATA_VIEW_ROOMS = '//article[contains(@class, "comparison-carousel__item")]'
 
     ITEMS_YUGO_SPACE_DATA = {
+        'city_name': './/h5//text()',
         'yugo_space_name': './/h4//text()',
         'description_yugo_space': './/p//text()',
         'url_yugo_space': './/a//@href',
     }
+
+    VERIFY_MORE_PASS = (
+        "//a[contains(text(), 'Find out more')]"
+        "|"
+        "//a[contains(text(), 'Explore Space')]"
+        "|"
+        "//a[contains(text(), 'Explore space')]"
+        "|"
+        "//a[contains(text(), 'Discover')]"
+    )

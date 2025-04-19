@@ -16,9 +16,15 @@ def extractor_all_data(response: Selector, items_output: dict):
         for key, value in items_output.items()
     }
 
-def extraer_lat_long(response):
+def extraer_lat_long(response: Selector) -> dict:
     # Busca todos los bloques de script que contienen JSON-LD y tienen 'latitude' y 'longitude'
     json_ld_scripts = response.xpath("//script[contains(text(), 'latitude')]/text()").get()
+    if json_ld_scripts is None:
+        return {
+            'latitud': '', 
+            'longitud': '',
+        }
+
     for json_ld in json_ld_scripts:
         try:
             # Carga cada JSON en un diccionario
