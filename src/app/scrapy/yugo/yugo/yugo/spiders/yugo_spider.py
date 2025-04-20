@@ -4,12 +4,13 @@ import requests
 
 from os import path
 from pathlib import Path
+from ast import literal_eval
 from scrapy.selector.unified import Selector
 
 from app.scrapy.yugo.yugo.yugo import items
 from app.scrapy.yugo.yugo.yugo.utils_refine_data import *
 from app.scrapy.yugo.yugo.yugo.enum_yugo import ConfigXpath, ConfigXpathOtherCountries
-from ast import literal_eval
+
 
 class YugoSpiderSpider(scrapy.Spider):
     name = "yugo_spider"
@@ -60,6 +61,13 @@ class YugoSpiderSpider(scrapy.Spider):
             # 'de-de',
             # 'it-it',
         )
+        
+        self.all_urls = {
+            'Spain': "https://yugo.com/en-us/global/spain",
+            "USA": "https://yugo.com/en-us/global/united-states-of-america",
+            "Germany": "https://yugo.com/en-us/global/germany",
+            "italy": "https://yugo.com/en-us/global/italy",
+        }
 
         self.context = json.loads(context) if context else {}
 
@@ -73,14 +81,8 @@ class YugoSpiderSpider(scrapy.Spider):
             return []
 
         self.url_base = "https://yugo.com"
-        all_urls = {
-            'Spain': "https://yugo.com/en-us/global/spain",
-            "USA": "https://yugo.com/en-us/global/united-states-of-america",
-            "Germany": "https://yugo.com/en-us/global/germany",
-            "italy": "https://yugo.com/en-us/global/italy",
-        }
 
-        for country, url_country in all_urls.items():
+        for country, url_country in self.all_urls.items():
 
             if country in ('Spain',):
                 yield scrapy.Request(

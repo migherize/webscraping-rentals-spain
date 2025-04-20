@@ -108,6 +108,13 @@ class Month(Enum):
     DICIEMBRE = 12
 
 
+class ConfigErrorScraper(Enum):
+    """
+    Señales que puede detectar errores en los logs de las arañas
+    """
+    REGEX_ERROR = r"] ERROR:|Request error occurred"
+
+
 feature_map = {
     "1": ["air conditioning", "aire acondicionado"],
     "2": ["balcony", "balcón", "terraza"],
