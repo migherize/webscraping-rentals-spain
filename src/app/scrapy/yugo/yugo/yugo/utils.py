@@ -204,17 +204,22 @@ def retrive_lodgerin_rental_units(
     calendar_unit_list = []
 
     for index, data in enumerate(data_scrapy, start=1):
-        if not data.get("api_data_rental_unit", []).get("error", []):
-            start_date = data.get("api_data_rental_unit", []).get("tenancy-options", [])[0].get("tenancyOption", [])[0].get("startDate", [])
-            end_date = data.get("api_data_rental_unit", []).get("tenancy-options", [])[0].get("tenancyOption", [])[0].get("endDate", [])
-            date_text = data.get("api_data_rental_unit", []).get("tenancy-options", [])[0].get("tenancyOption", [])[0].get("formattedLabel", [])
-            fromYear = data.get("api_data_rental_unit", []).get("tenancy-options", [])[0].get("fromYear", [])
-            toYear = data.get("api_data_rental_unit", []).get("tenancy-options", [])[0].get("toYear", [])
-            
+        if not data.get("api_data_rental_unit", {}).get("error", []):
+            start_date = safe_get(data, ("api_data_rental_unit", "tenancy-options", 0, "tenancyOption", 0, "startDate"))
+            end_date = safe_get(data, ("api_data_rental_unit", "tenancy-options", 0, "tenancyOption", 0, "endDate"))
+            date_text = safe_get(data, ("api_data_rental_unit", "tenancy-options", 0, "tenancyOption", 0, "formattedLabel"))
+            fromYear = safe_get(data, ("api_data_rental_unit", "tenancy-options", 0, "fromYear"))
+            toYear = safe_get(data, ("api_data_rental_unit", "tenancy-options", 0, "toYear"))
+
+            """
             # amenities = data.get("api_data_rental_unit", []).get("residence", []).get("amenities", [])
             # amenities_extras = data.get("api_data_rental_unit", []).get("residence", []).get("amenitiesExternalReference", [])
             # name = data.get("api_data_rental_unit", []).get("room", []).get("name", [])
-            amount = data.get("api_data_rental_unit", []).get("room", []).get("minPriceForBillingCycle", [])
+            """
+
+            amount = safe_get(data, ("api_data_rental_unit", "room", "minPriceForBillingCycle"))
+            if amount == "None":
+                amount = 1
 
         else:
             start_date = "None"
@@ -224,13 +229,13 @@ def retrive_lodgerin_rental_units(
             fromYear = "None"
             toYear = "None"
 
-        description_unit = data.get("response_data_rental_units", []).get("DESCRIPTION_RENTAL_UNIT", [])
+        description_unit = data.get("response_data_rental_units", {}).get("DESCRIPTION_RENTAL_UNIT", [])
         description_text = description_unit[0] if description_unit else ""
 
         area = extract_area(description_text)
         area_m2 = int(area) if area is not None else None
 
-        picture = data.get("response_data_rental_units", []).get("picture", [])
+        picture = data.get("response_data_rental_units", {}).get("picture", [])
         images = get_all_imagenes(picture) if picture else None
 
         data_rental_unit = RentalUnits(
@@ -262,3 +267,30 @@ def retrive_lodgerin_rental_units(
         calendar_unit_list.append(date_items)
 
     return rental_units, calendar_unit_list
+
+
+def safe_get(data: dict, path: tuple[str | int], default="None"):
+    """
+    Acceso seguro a datos anidados.
+    
+    :param data: Diccionario o lista inicial
+    :param path: Lista de claves/índices (ej: ["user", "address", 0, "street"])
+    :param default: Valor a devolver si no existe la ruta
+    :return: Valor encontrado o default
+    """
+    current = data
+
+    if not current:
+        return default
+
+    for key in path:
+        try:
+            if isinstance(current, dict):
+                current = current.get(key, default)
+            elif isinstance(current, list) and isinstance(key, int):
+                current = current[key] if 0 <= key < len(current) else default
+            else:
+                return default
+        except Exception:
+            return default
+    return current

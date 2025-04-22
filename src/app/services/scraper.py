@@ -70,7 +70,7 @@ def get_path_and_context(url: URLs) -> Tuple[None | str | Callable]:
         },
         URLs.yugo: {
             "path": Pages.yugo.value,
-            "context": lambda: initialize_scraping_context_maps(json.loads(EmailConfig.YUGO_MAPPING))
+            "context": lambda: initialize_scraping_context_maps(EmailConfig.YUGO_MAPPING)
         },
         URLs.vita: {
             "path": Pages.vita.value,

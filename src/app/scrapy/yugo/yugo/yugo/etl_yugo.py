@@ -16,7 +16,7 @@ from app.scrapy.yugo.yugo.yugo.utils import (
 
 def etl_data_yugo(output_path: str, logger: Logger, context) -> None:
 
-    items = read_json(output_path)
+    items: list[dict[str, str]] = read_json(output_path)
     if items == []:
         logger.warning('- La data se encuentra vacia')
         return None
@@ -24,16 +24,14 @@ def etl_data_yugo(output_path: str, logger: Logger, context) -> None:
     elements_dict = parse_elements(context, mapping)
     list_api_key = elements_dict["api_key"].data
 
-
-    # pprint(list_api_key)
-
     for index_property, data in enumerate(items):
         data = data["items_output"]
 
         # TODO: Chequear porque no se esta obteniendo la api_key en el retrive_lodgerin_property
-        continue
+        # continue
         # ---------------------------------------------------------------------------------------
         # Property
+        data["yugo_space_name"] = data["yugo_space_name"].replace('Yugo', '').strip()
         data_property, api_key = retrive_lodgerin_property(
             data, elements_dict, list_api_key
         )
