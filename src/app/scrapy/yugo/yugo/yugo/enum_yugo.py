@@ -20,7 +20,7 @@ class ConfigXpath(Enum):
     ITEMS_PROPERTY = {
         "city_name": "//h5[contains(@class, 'residence__city')]/text()",
         "property_name": "//h1[contains(@class, 'residence__title')]/text()",
-        "residence_description": "//div[contains(@class, 'residence__description')]/p/text()",
+        "residence_description": "//div[contains(@class, 'residence__description')]/p//text()",
     }
 
     ITEMS_PROPERTY_GENERAL = {

@@ -253,6 +253,20 @@ def decode_clean_string(url):
     Returns:
         str: El reference_code limpio.
     """
+
+    prefix_map = {
+        "yugo-charlotte": "YC",
+        "yugo-starkville": "YS",
+        "yugo-salt-lake": "YSL",
+        "the-edge-on-oak": "TEOO",
+        "yugo-west-lafayette": "YWL",
+        "yugo-greenville-campus-towers": "YGCT",
+        "beyoo-florentia-living-firenze": "BFLF",
+        "yugo-lexington-campus-court": "YLCPC",
+        "youniq-leipzig-central-east": "YLCE",
+        "yugo-champaign-south-3rd-lofts": "YCS3L",
+    }
+
     parsed_url = urlparse(url)
     reference_code = parsed_url.path.split("/")[-1]
 
@@ -263,7 +277,30 @@ def decode_clean_string(url):
         char for char in normalized_reference_code if not unicodedata.combining(char)
     )
     
+    for prefix, short in prefix_map.items():
+        if reference_code_without_accents.startswith(prefix):
+            reference_code_without_accents = reference_code_without_accents.replace(prefix, short, 1)
+            break
+
     return reference_code_without_accents
+
+
+def format_reference_code(reference_code: str, index: int) -> str:
+    """
+    Formatea el reference_code con un índice.
+    - Si reference_code tiene más de 28 caracteres, solo se le agrega '-1'.
+    - Si no, se le agrega el índice en formato '-NNN'.
+
+    Args:
+        reference_code (str): El código base.
+        index (int): El índice a agregar.
+
+    Returns:
+        str: El reference_code formateado.
+    """
+    if len(reference_code) > 28:
+        return f"{reference_code}-1"
+    return f"{reference_code}-{index:03}"
 
 
 def extract_area(description):

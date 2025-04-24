@@ -7,7 +7,8 @@ from app.scrapy.common import (
     get_all_imagenes,
     decode_clean_string,
     extract_area,
-    search_location
+    search_location,
+    format_reference_code
 )
 from app.models.enums import PaymentCycleEnum, CurrencyCode
 from app.models.schemas import (
@@ -240,7 +241,7 @@ def retrive_lodgerin_rental_units(
 
         data_rental_unit = RentalUnits(
             PropertyId=items_property.id,
-            referenceCode=f"{items_property.referenceCode}-{index:03}",
+            referenceCode=format_reference_code(items_property.referenceCode,index),
             areaM2=area_m2,
             isActive=True,
             isPublished=True,
