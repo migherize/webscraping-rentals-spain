@@ -18,9 +18,9 @@ class ConfigXpath(Enum):
     }
 
     ITEMS_PROPERTY = {
-        "city_name": "//h5[@class='residence__city']/text()",
-        "property_name": "//h1[@class='residence__title']/text()",
-        "residence_description": "//div[@class='residence__description']//p//text()",
+        "city_name": "//h5[contains(@class, 'residence__city')]/text()",
+        "property_name": "//h1[contains(@class, 'residence__title')]/text()",
+        "residence_description": "//div[contains(@class, 'residence__description')]/p/text()",
     }
 
     ITEMS_PROPERTY_GENERAL = {
@@ -54,3 +54,24 @@ class ConfigXpath(Enum):
     }
 
     ITEMS_PICTURE_RENTAL_UNITS = "//picture[contains(@class, 'gallery-carousel__item--modal')]"
+
+
+class ConfigXpathOtherCountries(Enum):
+    ARTICLE_DATA_VIEW_ROOMS = '//article[contains(@class, "comparison-carousel__item")]'
+
+    ITEMS_YUGO_SPACE_DATA = {
+        'city_name': './/h5//text()',
+        'yugo_space_name': './/h4//text()',
+        'description_yugo_space': './/p//text()',
+        'url_yugo_space': './/a//@href',
+    }
+
+    VERIFY_MORE_PASS = (
+        "//a[contains(text(), 'Find out more')]"
+        "|"
+        "//a[contains(text(), 'Explore Space')]"
+        "|"
+        "//a[contains(text(), 'Explore space')]"
+        "|"
+        "//a[contains(text(), 'Discover')]"
+    )

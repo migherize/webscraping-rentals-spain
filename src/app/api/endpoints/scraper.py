@@ -5,8 +5,7 @@ import subprocess
 import app.models.enums as models
 import app.services.scraper as scraper
 
-from enum import Enum
-from typing import Any, Dict, List
+from typing import Any, Dict
 from app.config.settings import LOG_DIR
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 
@@ -29,35 +28,6 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-class ConfigError(Enum):
-    """
-    Señales que puede detectar errores en los logs de las arañas
-    """
-    REGEX_ERROR = (
-        r"] ERROR:|"
-        r"Request error occurred"
-    )
-
-def parse_ps_output(ps_output: str) -> List[Dict[str, str]]:
-    """
-    Analiza la salida del comando ps y retorna una lista de diccionarios.
-    """
-    lines = ps_output.strip().split("\n")
-    
-    if len(lines) < 2:
-        return {'PID': 'No presenta PID'}
-
-    header = [h.strip() for h in lines[0].split()]
-    processes = {}
-    for index, line in enumerate(lines[1:]):
-        values = [v.strip() for v in line.split(None, len(header) - 1)]  # Split only up to the expected number of columns
-        if len(values) != len(header):
-            continue
-        process = dict(zip(header, values))
-        processes[index] = process
-
-    return processes
-
 @router.get("/scrape")
 async def scrape_page(
     background_tasks: BackgroundTasks,
@@ -78,6 +48,25 @@ async def scrape_page(
         logger.error(f"Error al iniciar el scraping: {str(e)}")
         raise HTTPException(status_code=500, detail="Error al iniciar el scraping.")
 
+@router.get("/scrape/refine")
+async def scrape_page_refine(
+    background_tasks: BackgroundTasks,
+    page: models.Pages = Query(..., description="Página a scrapeear"),
+) -> Dict[str, str]:
+    """
+    Inicia el proceso de refinado en segundo plano.
+    """
+    url = getattr(models.URLs, page.value).value
+    logger.info('Inicio de refinado para la url: %s', url)
+    try:
+        background_tasks.add_task(scraper.run_webscraping, url, True)
+        logger.info(f"Tarea de refinado iniciada en segundo plano para {url}")
+        return {"message": "Refinado iniciado, consulta el estado más tarde."}
+    except Exception as e:
+        logger.error(f"Error al iniciar el scraping: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error al iniciar el refinado.")
+
+
 @router.get("/log_status/{spider_name}")
 def check_log_status(spider_name: models.Pages) -> Dict[str, Any]:
     """
@@ -97,7 +86,7 @@ def check_log_status(spider_name: models.Pages) -> Dict[str, Any]:
         is_running = any("open_spider" in line for line in log_content)
         is_finished = any("close_spider" in line for line in log_content)
         has_error = any(
-            re.search(ConfigError.REGEX_ERROR.value, line) 
+            re.search(models.ConfigErrorScraper.REGEX_ERROR.value, line) 
             for line in log_content
         )
 
@@ -106,7 +95,7 @@ def check_log_status(spider_name: models.Pages) -> Dict[str, Any]:
             output_details = {
                 f'Error in line: {position_line}. Error: {line}': log_content[position_line-10:position_line+20]
                 for position_line, line in enumerate(log_content)
-                if re.search(ConfigError.REGEX_ERROR.value, line) 
+                if re.search(models.ConfigErrorScraper.REGEX_ERROR.value, line) 
             }
             return {
                 "status": "error",
@@ -126,19 +115,6 @@ def check_log_status(spider_name: models.Pages) -> Dict[str, Any]:
         logger.error(f"Error al leer el log: {str(e)}")
         raise HTTPException(status_code=500, detail="Error al procesar el archivo de log.")
 
-
-@router.get("list_PID")
-async def get_list_PID() -> Dict[Any, Any]:
-    """
-    Retorna una lista de diccionarios con información sobre los procesos.
-    """
-    try:
-        result = subprocess.run(["ps", "-l"], capture_output=True, text=True, check=True)
-        processes = parse_ps_output(result.stdout)
-        return processes
-    except subprocess.CalledProcessError as e:
-        raise HTTPException(status_code=500, detail=f"Error al ejecutar ps: {e}")
-    
 @router.post("/kill/{pid}")
 async def kill_process(pid: int):
     """

@@ -7,3 +7,4 @@ Scrapy==2.11.2
 uvicorn==0.31.1
 crochet==2.1.1
 cryptography<40
+sentry-sdk==2.20.0

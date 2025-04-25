@@ -1,11 +1,13 @@
-import json
 import re
-from typing import Dict, Type
-from urllib.parse import urlparse, unquote
+import json
 import unicodedata
-from pydantic import BaseModel
 
-from app.config.settings import ElementsConfig, BASE_DIR
+from typing import Dict, Type
+from pydantic import BaseModel
+from urllib.parse import urlparse, unquote
+
+# from app.config.settings import ElementsConfig, BASE_DIR
+from app.config.settings import BASE_DIR
 from app.services.lodgerin import LodgerinAPI, LodgerinInternal
 
 from app.models.schemas import LocationMaps
@@ -110,12 +112,21 @@ def initialize_scraping_context(email: str):
     try:
         lodgerin_api = LodgerinInternal()
         api_key = lodgerin_api.get_api_key(email)
+        if api_key is None:
+            print(f"[warning - initialize_scraping_context] -> El api_key es None para el correo: {email}")
+            raise
+            
         api_client = LodgerinAPI(api_key)
-        mapped_data = api_client.get_elements()['data']
+        mapped_data = api_client.get_elements()
+        if mapped_data is None:
+            print(f"[warning - initialize_scraping_context] -> El mapped_data es None")
+            raise
+        
+        mapped_data = mapped_data.get('data', None)
         mapped_data["api_key"] = [{"id": email, "name": api_key}]
         return mapped_data
     except Exception as e:
-        print(f"Error durante la inicialización del contexto de scraping: {str(e)}")
+        print(f"[warning - initialize_scraping_context] -> Error durante la inicialización del contexto de scraping: {str(e)}")
         raise
 
 def initialize_scraping_context_maps(email_map):
@@ -128,25 +139,34 @@ def initialize_scraping_context_maps(email_map):
     """
     try:
         if not isinstance(email_map, dict) or not all(isinstance(k, str) and isinstance(v, str) for k, v in email_map.items()):
-            raise ValueError("El parámetro email_map debe ser un diccionario con claves y valores de tipo string.")
+            raise ValueError("[warning - initialize_scraping_context_maps] -> El parámetro email_map debe ser un diccionario con claves y valores de tipo string.")
 
         combined_mapped_data = {"api_key": []}
 
         for location, email in email_map.items():
             lodgerin_api = LodgerinInternal()
             api_key = lodgerin_api.get_api_key(email)
+            if api_key is None:
+                print(f"[warning - initialize_scraping_context_maps] -> El api_key es None para el correo: {email}")
+                continue
+
             api_client = LodgerinAPI(api_key)
-            elements =api_client.get_elements()
+            elements = api_client.get_elements()
+            if elements is None:
+                print(f"[warning - initialize_scraping_context_maps] -> El elements es None para el email: {email}")
+                continue
+            
+            elements = elements.get('data', None)
             combined_mapped_data["api_key"].append({
                 "id": email,
                 "location": location,
                 "name": api_key,
             })
-            combined_mapped_data.update(elements['data'])
+            combined_mapped_data.update(elements)
 
         return combined_mapped_data
     except Exception as e:
-        print(f"Error durante la inicialización del contexto de scraping: {str(e)}")
+        print(f"[warning - initialize_scraping_context_maps] -> Error durante la inicialización del contexto de scraping: {str(e)}")
         raise
 
 

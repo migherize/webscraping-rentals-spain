@@ -1,8 +1,8 @@
 import os
-import json
 from dotenv import load_dotenv
 from pathlib import Path
 from typing import Dict
+from ast import literal_eval
 
 # Cargar variables de entorno desde el archivo .env
 load_dotenv()
@@ -50,10 +50,11 @@ class EmailConfig:
 
     # Cargar JSON de EMAIL_MAPPING_YUGO de manera segura
     try:
-        YUGO_MAPPING: Dict[str, str] = (os.getenv("EMAIL_MAPPING_YUGO", "{}"))
-    except json.JSONDecodeError:
+        YUGO_MAPPING: str = os.getenv("EMAIL_MAPPING_YUGO", "{}")
+        YUGO_MAPPING: Dict[str, str] = literal_eval(YUGO_MAPPING)
+    except Exception as error:
         YUGO_MAPPING = {}
-        print("⚠️ Error al cargar EMAIL_MAPPING_YUGO. Se usará un diccionario vacío.")
+        print("⚠️ Error al cargar EMAIL_MAPPING_YUGO. Se usará un diccionario vacío. Error:", error)
 
 # 📌 Configuración de Elementos JSON
 class ElementsConfig:

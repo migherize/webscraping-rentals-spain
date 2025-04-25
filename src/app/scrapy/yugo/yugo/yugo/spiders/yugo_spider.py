@@ -1,16 +1,16 @@
 # coding=utf-8
-from pprint import pprint
 import scrapy
 import requests
 
 from os import path
 from pathlib import Path
+from ast import literal_eval
 from scrapy.selector.unified import Selector
 
 from app.scrapy.yugo.yugo.yugo import items
 from app.scrapy.yugo.yugo.yugo.utils_refine_data import *
-from app.scrapy.yugo.yugo.yugo.enum_yugo import ConfigXpath
-from ast import literal_eval
+from app.scrapy.yugo.yugo.yugo.enum_yugo import ConfigXpath, ConfigXpathOtherCountries
+
 
 class YugoSpiderSpider(scrapy.Spider):
     name = "yugo_spider"
@@ -29,6 +29,7 @@ class YugoSpiderSpider(scrapy.Spider):
             "output_folder_name": r"data",
             "file_name": f"yugo.json",
             "processed_name": "yugo_refined.json",
+            "refine": '1',
         }
 
         self.items_spider_output_document = {
@@ -53,13 +54,20 @@ class YugoSpiderSpider(scrapy.Spider):
 
         self.all_languages = (
             'en-us',
-            'en-gb',
-            'zh-cn',
             'es-es',
-            'ca-es',
-            'de-de',
-            'it-it',
+            # 'en-gb',
+            # 'zh-cn',
+            # 'ca-es',
+            # 'de-de',
+            # 'it-it',
         )
+        
+        self.all_urls = {
+            'Spain': "https://yugo.com/en-us/global/spain",
+            "USA": "https://yugo.com/en-us/global/united-states-of-america",
+            "Germany": "https://yugo.com/en-us/global/germany",
+            "italy": "https://yugo.com/en-us/global/italy",
+        }
 
         self.context = json.loads(context) if context else {}
 
@@ -68,12 +76,29 @@ class YugoSpiderSpider(scrapy.Spider):
         Inicio de la pagina principal
         """
 
-        self.url_base = "https://yugo.com"
-        url = "https://yugo.com/en-us/global/spain"
+        if self.items_spider_output_document['refine'] == "1":
+            self.logger.info('- process refine data')
+            return []
 
-        return [scrapy.Request(
-            url=url,
-        )]
+        self.url_base = "https://yugo.com"
+
+        for country, url_country in self.all_urls.items():
+
+            if country in ('Spain',):
+                yield scrapy.Request(
+                    url=url_country,
+                    dont_filter=True,
+                    callback=self.parse
+                )
+            else:
+                meta = {items_city: '' for items_city in ConfigXpath.ITEMS_CITY_DATA.value.keys()}
+                meta['url_city'] = url_country
+                yield scrapy.Request(
+                    url=url_country,
+                    dont_filter=True,
+                    callback=self.parse_yugo_space_another_countries,
+                    meta={"meta_data": meta}
+                )
 
     def parse(self, response: Selector):
 
@@ -122,7 +147,57 @@ class YugoSpiderSpider(scrapy.Spider):
                 callback=self.parse_property_space,
                 meta={"meta_data": meta_data}
             )
-            # break
+
+    def parse_yugo_space_another_countries(self, response: Selector):
+        # ---------------------------------------
+        # Proceso de busqueda de los Property
+
+        property_data = response.xpath(ConfigXpathOtherCountries.ARTICLE_DATA_VIEW_ROOMS.value)
+        
+        if not property_data:
+            self.logger.warning('No existen espacios (PROPERTY) para: %s', response.url)
+            return None
+            
+        meta_data = response.meta.get("meta_data")
+    
+        for article_yugo_space in property_data:
+            data_yugo_space = extract_article_data(article_yugo_space, ConfigXpathOtherCountries.ITEMS_YUGO_SPACE_DATA.value)
+            data_yugo_space['url_yugo_space'] = self.url_base + data_yugo_space['url_yugo_space']
+            meta_data = meta_data | data_yugo_space
+            yield scrapy.Request(
+                url=data_yugo_space['url_yugo_space'],
+                dont_filter=True,
+                callback=self.verify_search_property,
+                meta={"meta_data": meta_data}
+            )
+
+
+    def verify_search_property(self, response: Selector): 
+        """
+            Verificar si nos encontramos en la informacion de la propiedad o 
+            si es necesario ingresar a otra url para llegar a la propiedad, como es el caso de:
+            https://yugo.com/en-us/global/germany
+            https://yugo.com/en-us/global/germany/darmstadt
+            https://yugo.com/en-us/global/germany/darmstadt/elementum
+        """
+
+        if response.xpath(ConfigXpathOtherCountries.VERIFY_MORE_PASS.value):
+            self.logger.info('Con un paso mas para obtener propiedad: %s', response.url)
+            yield scrapy.Request(
+                url=response.url,
+                dont_filter=True,
+                callback=self.parse_yugo_space_another_countries,
+                meta={"meta_data": response.meta.get("meta_data")}
+            )
+        else:
+            self.logger.info('entrada directa propiedad: %s', response.url)
+            yield scrapy.Request(
+                url=response.url,
+                dont_filter=True,
+                callback=self.parse_property_space,
+                meta={"meta_data": response.meta.get("meta_data")}
+            )
+            
     
     def parse_property_space(self, response: Selector):
 
@@ -256,11 +331,11 @@ class YugoSpiderSpider(scrapy.Spider):
 
         all_data_languages = []
 
-        aux_url = url.split('/spain/')[-1]
+        aux_url = url.split('/global/')[-1]
 
         for index_language, language in enumerate(self.all_languages):
 
-            new_url = f"https://yugo.com/{language}/global/spain/{aux_url}"
+            new_url = f"https://yugo.com/{language}/global/{aux_url}"
             response_with_requests = requests.get(new_url)
             if not response_with_requests.status_code == 200:
                 self.logger.warning('No se obtuvo info en el lenguaje: %s', url)
