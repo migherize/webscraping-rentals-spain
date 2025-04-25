@@ -18,6 +18,12 @@ class NodisPipeline:
         return item
 
     def close_spider(self, spider: Spider) -> None:
-        save_to_json_file(self.items, self.output_path)
-        spider.logger.info('- JSON file created with %d items.', len(self.items))
-        etl_data_nodis(self.items, spider)
+
+        if spider.items_spider_output_document['refine'] == '1':
+            spider.logger.info("- Refining data")
+        else:
+            spider.logger.info("- JSON file created with %d items.", len(self.items))
+            save_to_json_file(self.items, self.output_path)
+
+        etl_data_nodis(self.output_path, spider, spider.logger)
+        spider.logger.info("close_spider")

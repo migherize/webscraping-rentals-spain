@@ -1,3 +1,4 @@
+import json
 from pprint import pprint
 import re
 import scrapy
@@ -30,6 +31,7 @@ class NodisSpiderSpider(scrapy.Spider):
             "output_folder_name": "data",
             "file_name": "nodies.json",
             "processed_name": "nodies_refined.json",
+            "refine": '0',
         }
 
         self.items_spider_output_document = {
@@ -44,9 +46,12 @@ class NodisSpiderSpider(scrapy.Spider):
         Path(self.items_spider_output_document["output_folder"]).mkdir(
             parents=True, exist_ok=True
         )
-        # self.context = json.loads(context) if isinstance(context, str) else {}
+        self.context = json.loads(context) if context else {}
 
     def start_requests(self):
+        if self.items_spider_output_document['refine'] == '1':
+            self.logger.info("Proceso de refinado para: %s", self.name)
+            return []
         return [scrapy.Request(url=ConfigPages.BASE_URL.value)]
 
     def parse(self, response: Selector):

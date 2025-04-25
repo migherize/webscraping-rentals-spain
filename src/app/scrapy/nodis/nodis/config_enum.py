@@ -3,7 +3,9 @@ from enum import Enum
 
 class ConfigPages(Enum):
     BASE_URL = "https://nodis.es/en/home-nodis-student-residences/"
-    URL_PROPERTY = "(//div[contains(@class, 'container p-0')])[1]//a/@href"
+    # URL_PROPERTY = "(//div[contains(@class, 'container p-0')])[1]//a/@href"
+    URL_PROPERTY = "//a[contains(@title, 'The Residences')]/../ul/li/a/@href"
+    
     CONTACT = (
         "//span[contains(text(), 'Contact us')]"
         "|"
