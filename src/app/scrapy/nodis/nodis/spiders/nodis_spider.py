@@ -52,7 +52,7 @@ class NodisSpiderSpider(scrapy.Spider):
         if self.items_spider_output_document['refine'] == '1':
             self.logger.info("Proceso de refinado para: %s", self.name)
             return []
-        return [scrapy.Request(url=ConfigPages.BASE_URL.value)]
+        return [scrapy.Request(ConfigPages.BASE_URL.value, headers=ConfigPages.HEADERS.value)]
 
     def parse(self, response: Selector):
         urls_property = response.xpath(ConfigPages.URL_PROPERTY.value)
@@ -91,12 +91,41 @@ class NodisSpiderSpider(scrapy.Spider):
             'property': property,
             'rental': []
         }
-        if property.get('URL_RENTAL_UNIT', None) is None:
+        aux_url_rental_units = property.get('URL_RENTAL_UNIT', None)
+        if aux_url_rental_units is None:
             # No presenta rental units
             return output
         
-        # TODO: extraer los rental
-        data_hotel_and_rental_units = self.parse_rental_api_data(property.get('URL_RENTAL_UNIT', None))
+        if re.search('stephouse', aux_url_rental_units):
+            # TODO: Paso intermetido para obtener los rentals (casos particuales)
+            self.logger.info("URL de la propiedad: %s URL de los rental units: %s", url_property, aux_url_rental_units)
+            return output
+            # response_property = requests.get(
+            #     aux_url_rental_units,
+            #     headers={
+            #         "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+            #         "accept-language": "es-419,es;q=0.9,en-US;q=0.8,en;q=0.7",
+            #         "if-modified-since": "Thu, 01 May 2025 13:32:04 GMT",
+            #         "sec-ch-ua": "\"Google Chrome\";v=\"135\", \"Not-A.Brand\";v=\"8\", \"Chromium\";v=\"135\"",
+            #         "sec-ch-ua-mobile": "?0",
+            #         "sec-ch-ua-platform": "\"Windows\"",
+            #         "sec-fetch-dest": "document",
+            #         "sec-fetch-mode": "navigate",
+            #         "sec-fetch-site": "none",
+            #         "sec-fetch-user": "?1",
+            #         "upgrade-insecure-requests": "1"
+            #     }
+            # )
+            # # self.logger.info("response_property: %s %s", response_property, response_property.status_code)
+            # # if response_property.status_code != 200:
+            # #     return output    
+            # # response = Selector(text=response_property.text)
+            # # aux_url_rental_units = response.xpath(ConfigXpathProperty.URL_RENTAL_UNIT_NEW_PAGE.value).get()
+            # # if aux_url_rental_units is None:
+            # #     return output
+            # # self.logger.info("URL de la propiedad: %s URL de los rental units: %s", url_property, aux_url_rental_units)
+
+        data_hotel_and_rental_units = self.parse_rental_api_data(aux_url_rental_units)
         if data_hotel_and_rental_units is None:
             return output
 
@@ -111,25 +140,21 @@ class NodisSpiderSpider(scrapy.Spider):
             'property_images': response.xpath(ConfigXpathProperty.IMAGES.value).getall(),
             'property_video': response.xpath(ConfigXpathProperty.VIDEO.value).get(),
             'property_features': response.xpath(ConfigXpathProperty.FEATURES.value).getall(),
-            'property_description_en': {
-                'property_description_1_en': '',
-                'property_description_2_en': '',
-            },
             'property_description_es': {
-                'property_description_1_es': '',
-                'property_description_2_es': '',
+                'property_description_1_es': response.xpath(ConfigXpathProperty.DESCRIPTION_1.value).getall(),
+                'property_description_2_es': response.xpath(ConfigXpathProperty.DESCRIPTION_2.value).getall(),
             },
-            # TODO:
-            # 'property_description_1': response.xpath(ConfigXpathProperty.DESCRIPTION_1.value).getall(),
-            # 'property_description_2': response.xpath(ConfigXpathProperty.DESCRIPTION_2.value).getall(),
+            'property_description_en': {
+                'property_description_1_en': response.xpath(ConfigXpathProperty.DESCRIPTION_1.value).getall(),
+                'property_description_2_en': response.xpath(ConfigXpathProperty.DESCRIPTION_2.value).getall(),
+            },
         }
 
         clean_items(items_property)
         items_property['property_name'] = clean_property_name(items_property['property_name'])
         items_property['property_images'] = check_images(items_property['property_images'])
 
-        # TODO: Extraer el description en espanhol
-        
+        items_property['property_description_en'] = self.parse_description_other_language(response, 'en-GB')
 
         # Existen casos donde solo presenta un formulario
         flag_rental_units = True if not response.xpath(ConfigPages.CONTACT.value) else False
@@ -138,6 +163,38 @@ class NodisSpiderSpider(scrapy.Spider):
             if flag_rental_units else None
         )
         return items_property
+    
+    def parse_description_other_language(self, response: Selector, language_code: str) -> dict[str, str]:
+
+        code = {
+            "en-GB": ("en-GB", "en"),
+        }.get(language_code, None)
+
+
+        if code is None:
+            return {
+                "property_description_1_en": '',
+                "property_description_2_en": '',
+            }
+
+        url_property_language = response.xpath(f"//a[contains(@hreflang, '{code[0]}')]/@href").get()
+
+        response_property_language = requests.get(url_property_language)
+        if response_property_language.status_code != 200:
+            return {
+                f"property_description_1_{code[1]}": '',
+                f"property_description_2_{code[1]}": '',
+            }
+
+        response_language = Selector(text=response_property_language.text)
+
+        description_output = {
+            f"property_description_1_{code[1]}": response_language.xpath(ConfigXpathProperty.DESCRIPTION_1.value).getall(),
+            f"property_description_2_{code[1]}": response_language.xpath(ConfigXpathProperty.DESCRIPTION_2.value).getall(),
+        }
+
+        return description_output
+
 
     def parse_rental_api_data(self, url_base: str) -> Optional[dict]:
         url_base = url_base.replace('/lang/en', '')
@@ -201,7 +258,7 @@ def extract_text_html(text_html: str) -> Optional[str]:
 
 
 def clean_data(data: str) -> str:
-    data = re.sub(r'\n|\t|\r|\xa0', ' ', data).strip()
+    data = re.sub(r'\n|\t|\r|\xa0|\s{2,}', ' ', data).strip()
     return data
 
 

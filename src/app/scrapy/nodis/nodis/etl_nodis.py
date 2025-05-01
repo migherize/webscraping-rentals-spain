@@ -2,7 +2,7 @@ import re
 from scrapy import Spider
 from logging import Logger
 from app.scrapy.common import read_json
-
+from app.scrapy.nodis.nodis.spiders.nodis_spider import clean_data
 
 from pprint import pprint
 
@@ -42,23 +42,38 @@ def etl_data_nodis(output_path: str, spider: Spider, logger: Logger):
 
 def extractor_data_property(data_property: dict):
 
-    output_property: dict[str, str | list] = {
+    output_property: dict[str, str | list | dict] = {
         'property_features': data_property.get('property_features', []),
         'property_images': data_property.get('property_images', []),
-        'property_name': data_property.get('property_name', ''),
-        'property_phone': data_property.get('property_phone', [''])[0],
+        # 'property_name': data_property.get('property_name', ''),  No es seguro
+        'property_phone': data_property.get('property_phone', ['']),
         'property_video': data_property.get('property_video', ''),
-        'description_en': '',
-        'description_es': '',
+        'property_description_en': data_property.get('property_description_en', {}),
+        'property_description_es': data_property.get('property_description_es', {}),
+        'property_name_aux': data_property.get('info_hotel_property', {}).get('name', ''),
+        'property_identity': data_property.get('info_hotel_property', {}).get('identity', ''),
+        'property_telephone': data_property.get('info_hotel_property', {}).get('telephone', ''),
+        'property_mobile': data_property.get('info_hotel_property', {}).get('mobile', ''),
+        'property_email': data_property.get('info_hotel_property', {}).get('email', ''),
+        'property_address': data_property.get('info_hotel_property', {}).get('address', ''),
+        'property_state': data_property.get('info_hotel_property', {}).get('state', ''),
+        'property_city': data_property.get('info_hotel_property', {}).get('city', ''),
+        'property_url': data_property.get('info_hotel_property', {}).get('url', ''),
+        'property_logo_url': data_property.get('info_hotel_property', {}).get('logoUrl', ''),
+        'property_hotel_id': data_property.get('info_hotel_property', {}).get('hotelId', ''),
     }
 
-    description_en_1: str = data_property.get('property_description_en', {}).get('property_description_1_en', '').strip()
-    description_en_2: str = data_property.get('property_description_en', {}).get('property_description_2_en', '').strip()
-    output_property['description_en'] = (description_en_1 + ' ' + description_en_2).strip()
+    output_property['property_phone'] = output_property['property_phone'][0] if output_property['property_phone'] else ''
+
+    output_property['property_description_en'] = " ".join([
+        " ".join(output_property['property_description_en'].get('property_description_1_en', '')).strip(), 
+        " ".join(output_property['property_description_en'].get('property_description_2_en', '')).strip()
+    ]).strip()
     
-    description_es_1: str = data_property.get('property_description_es', {}).get('property_description_1_es', '').strip()
-    description_es_2: str = data_property.get('property_description_es', {}).get('property_description_2_es', '').strip()
-    output_property['description_es'] = (description_es_1 + ' ' + description_es_2).strip()
+    output_property['property_description_es'] = " ".join([
+        " ".join(output_property['property_description_es'].get('property_description_1_es', '')).strip(), 
+        " ".join(output_property['property_description_es'].get('property_description_2_es', '')).strip()
+    ]).strip()
 
     for key, value in output_property.items():
         if all((key in ('property_features', 'property_images'), value in ('', [], None))):
@@ -67,7 +82,10 @@ def extractor_data_property(data_property: dict):
         if value is None:
             output_property[key] = ''
             continue
+        if isinstance(value, str):
+            output_property[key] = clean_data(value)
 
+    pprint(output_property)
     return output_property
 
 
