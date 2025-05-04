@@ -62,7 +62,10 @@ class NodisSpiderSpider(scrapy.Spider):
 
         for index, url_property in enumerate(urls_property.getall()):
             
-            if any([url_property == '', re.search(r'/contact|\.greenlts\.', url_property)]):
+            if any([
+                url_property in ('', 'https://nodis.es/'), 
+                re.search(r'/contact|\.greenlts\.', url_property),
+            ]):
                 # No aplican
                 continue
 
@@ -92,38 +95,24 @@ class NodisSpiderSpider(scrapy.Spider):
             'rental': []
         }
         aux_url_rental_units = property.get('URL_RENTAL_UNIT', None)
-        if aux_url_rental_units is None:
+        if aux_url_rental_units is None or re.search(r'contacto', aux_url_rental_units):
             # No presenta rental units
             return output
         
-        if re.search('stephouse', aux_url_rental_units):
-            # TODO: Paso intermetido para obtener los rentals (casos particuales)
-            self.logger.info("URL de la propiedad: %s URL de los rental units: %s", url_property, aux_url_rental_units)
+        if re.search(r'stephouse', aux_url_rental_units) and re.search('malaga', aux_url_rental_units):
+            # El caso es para Malaga
+            # Caso Particular. Tomado por Default la fuente del rental
+            aux_url_rental_units = "https://stephousemalagaparmenides.greenlts.es/"
+            property['URL_RENTAL_UNIT'] = aux_url_rental_units
+            pass
+
+        elif not re.search(r'greenlts', aux_url_rental_units):
+            self.logger.info(
+                "Formato diferente a 'greenlts'. URL de la propiedad: %s URL de los rental units: %s. Chequearlo!", 
+                url_property, 
+                aux_url_rental_units
+            )
             return output
-            # response_property = requests.get(
-            #     aux_url_rental_units,
-            #     headers={
-            #         "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-            #         "accept-language": "es-419,es;q=0.9,en-US;q=0.8,en;q=0.7",
-            #         "if-modified-since": "Thu, 01 May 2025 13:32:04 GMT",
-            #         "sec-ch-ua": "\"Google Chrome\";v=\"135\", \"Not-A.Brand\";v=\"8\", \"Chromium\";v=\"135\"",
-            #         "sec-ch-ua-mobile": "?0",
-            #         "sec-ch-ua-platform": "\"Windows\"",
-            #         "sec-fetch-dest": "document",
-            #         "sec-fetch-mode": "navigate",
-            #         "sec-fetch-site": "none",
-            #         "sec-fetch-user": "?1",
-            #         "upgrade-insecure-requests": "1"
-            #     }
-            # )
-            # # self.logger.info("response_property: %s %s", response_property, response_property.status_code)
-            # # if response_property.status_code != 200:
-            # #     return output    
-            # # response = Selector(text=response_property.text)
-            # # aux_url_rental_units = response.xpath(ConfigXpathProperty.URL_RENTAL_UNIT_NEW_PAGE.value).get()
-            # # if aux_url_rental_units is None:
-            # #     return output
-            # # self.logger.info("URL de la propiedad: %s URL de los rental units: %s", url_property, aux_url_rental_units)
 
         data_hotel_and_rental_units = self.parse_rental_api_data(aux_url_rental_units)
         if data_hotel_and_rental_units is None:
@@ -226,7 +215,7 @@ class NodisSpiderSpider(scrapy.Spider):
 
         output_rental_units = self.extractor_info_rental_unit(all_rental_units)
 
-        # TODO: Buscar en api_info si existe data relevante de los rental_units
+        # TODO: Buscar en api_info si existe data relevante de los rental_units (Pendiente si es necesario)
 
         return {
                 "info_hotel_property": info_hotel_property, 
