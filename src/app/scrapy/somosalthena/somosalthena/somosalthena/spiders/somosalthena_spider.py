@@ -22,9 +22,10 @@ class SomosalthenaSpiderSpider(scrapy.Spider):
 
         item_input_output_archive: dict[str, str] = {
             "output_folder_path": "./",
-            "output_folder_name": r"data",
+            "output_folder_name": r"somosalthena",
             "file_name": f"somosalthena.json",
             "processed_name": "somosalthena_refined.json",
+            "refine": '0',
         }
 
         self.items_spider_output_document = {
@@ -47,6 +48,10 @@ class SomosalthenaSpiderSpider(scrapy.Spider):
         """
         Inicio de la pagina principal
         """
+        if self.items_spider_output_document['refine'] == '1':
+            self.logger.info("Proceso de refinado para: %s", self.name)
+            return []
+
         url = "https://somosalthena.com/inmuebles/"
 
         yield scrapy.Request(

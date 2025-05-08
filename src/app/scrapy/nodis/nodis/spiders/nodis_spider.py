@@ -28,7 +28,7 @@ class NodisSpiderSpider(scrapy.Spider):
 
         item_input_output_archive: dict[str, str] = {
             "output_folder_path": "./",
-            "output_folder_name": "data",
+            "output_folder_name": "nodis",
             "file_name": "nodies.json",
             "processed_name": "nodies_refined.json",
             "refine": '0',
@@ -159,7 +159,6 @@ class NodisSpiderSpider(scrapy.Spider):
             "en-GB": ("en-GB", "en"),
         }.get(language_code, None)
 
-
         if code is None:
             return {
                 "property_description_1_en": '',
@@ -167,6 +166,12 @@ class NodisSpiderSpider(scrapy.Spider):
             }
 
         url_property_language = response.xpath(f"//a[contains(@hreflang, '{code[0]}')]/@href").get()
+
+        if url_property_language is None:
+            return {
+                "property_description_1_en": '',
+                "property_description_2_en": '',
+            }
 
         response_property_language = requests.get(url_property_language)
         if response_property_language.status_code != 200:

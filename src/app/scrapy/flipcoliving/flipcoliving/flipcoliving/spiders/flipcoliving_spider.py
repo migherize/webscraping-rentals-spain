@@ -33,10 +33,10 @@ class FlipcolivingSpiderSpider(scrapy.Spider):
 
         item_input_output_archive: dict[str, str] = {
             "output_folder_path": "./",
-            "output_folder_name": "process_data",
-            "output_folder_name": "data",
+            "output_folder_name": "flipcoliving",
             "file_name": f"flipcoliving.json",
             "processed_name": f"flipcoliving_refined.json",
+            "refine": '0',
         }
 
         self.items_spider_output_document = {
@@ -61,6 +61,9 @@ class FlipcolivingSpiderSpider(scrapy.Spider):
         """
         Inicio de la pagina principal
         """
+        if self.items_spider_output_document['refine'] == '1':
+            self.logger.info("Proceso de refinado para: %s", self.name)
+            return []
 
         url = "https://flipcoliving.com/"
 

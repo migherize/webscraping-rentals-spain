@@ -5,7 +5,7 @@ import traceback
 import subprocess
 
 from typing import Callable, Dict, Optional, Tuple
-from app.config.settings import EmailConfig, LOG_DIR, BASE_DIR, SCRAPY_DIR
+from app.config.settings import EmailConfig, ElementsConfig, LOG_DIR, BASE_DIR, SCRAPY_DIR
 from app.models.enums import URLs, Pages
 from app.scrapy.common import initialize_scraping_context, initialize_scraping_context_maps
 
@@ -110,6 +110,7 @@ def execute_spider(
         command = [
                 "scrapy", "crawl", spider_name,
                 "-a", f"context={json.dumps(context)}",
+                "-a", f"output_folder_path={ElementsConfig.PATH_DATA}",
                 "-s", f"LOG_FILE={output_folder_path}",
                 "-s", f"LOG_FORMAT=%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(funcName)s:%(lineno)d - %(message)s",
                 "-s", f"LOG_LEVEL=INFO",
