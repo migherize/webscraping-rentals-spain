@@ -64,6 +64,7 @@ class ConfigXpathProperty(Enum):
     )
 
     URL_RENTAL_UNIT_NEW_PAGE = "//a[contains(@href, 'greenlts')]/@href"
+    AUX_ADDRESS_PROPERTY = '//div[@data-id="83b3789"]//p//text()'
     
 
 class CityNameImages(Enum):

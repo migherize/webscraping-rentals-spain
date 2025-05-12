@@ -137,6 +137,7 @@ class NodisSpiderSpider(scrapy.Spider):
                 'property_description_1_en': response.xpath(ConfigXpathProperty.DESCRIPTION_1.value).getall(),
                 'property_description_2_en': response.xpath(ConfigXpathProperty.DESCRIPTION_2.value).getall(),
             },
+            'property_aux_address': response.xpath(ConfigXpathProperty.AUX_ADDRESS_PROPERTY.value).getall()
         }
 
         clean_items(items_property)
