@@ -12,6 +12,7 @@ from scrapy import Selector
 from .. import items
 from ..enum_path import XpathGeneralColiving
 
+from app.models.enums import Pages
 
 class FlipcolivingSpiderSpider(scrapy.Spider):
     name = "flipcoliving_spider"
@@ -19,12 +20,6 @@ class FlipcolivingSpiderSpider(scrapy.Spider):
         "ROBOTSTXT_OBEY": False,
         "AUTOTHROTTLE_ENABLED": True,
         "LOG_LEVEL": "INFO",
-        # "LOG_FORMAT": '%(asctime)s [%(levelname)s] %(message)s',
-        # "LOG_DATEFORMAT": '%Y-%m-%d %H:%M:%S',
-        # "LOGFILE": 'scrapy_log.log'
-        # "LOG_FILE":"scrapy_log.txt",
-        # "LOG_LEVEL":"DEBUG",
-        # "LOG_LEVEL": "INFO",
     }
 
     def __init__(self, context=None, *args, **kwargs):
@@ -33,7 +28,7 @@ class FlipcolivingSpiderSpider(scrapy.Spider):
 
         item_input_output_archive: dict[str, str] = {
             "output_folder_path": "./",
-            "output_folder_name": "flipcoliving",
+            "output_folder_name": f"{Pages.flipcoliving.value}",
             "file_name": f"flipcoliving.json",
             "processed_name": f"flipcoliving_refined.json",
             "refine": '0',

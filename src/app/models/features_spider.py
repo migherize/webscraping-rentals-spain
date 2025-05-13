@@ -165,7 +165,9 @@ class EquivalencesYugo:
 
 
 class EquivalencesFlipColinving:
-    pass
+   FEATURES = {
+   
+   }
 
 
 class EquivalencesVitaStudents:
