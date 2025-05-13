@@ -19,6 +19,7 @@ from app.models.schemas import (
     ApiKeyItem,
     Text
 )
+from app.models.features_spider import EquivalencesYugo
 
 class PropertyTypeColiving(Enum):
     PROPERTY_TYPE = (
@@ -27,63 +28,6 @@ class PropertyTypeColiving(Enum):
         "Edificios",
     )
     OPERATION = "alquiler"
-
-
-class EquivalencesYugo(Enum):
-    FEATURES = {
-        "Gym": "Sports facilities",
-        "Games Room": "Game room",
-        "Common Area": "Common areas",
-        "Study Room": "Study area (Chair & table)",
-        "Full Board": "Full managed",
-        "Wi-Fi": "Wi-fi",
-        "Weekly Cleaning": "Cleaning common areas",
-        "24-Hour Security": "Video surveillance",
-        "On-Site Maintenance": "Maintenance",
-        "Laundry": "",  # TODO
-        "Postal Service": "Mailbox access",
-        "Bike Racks": "Bicycle parking",
-        "Common room": "Common areas",
-        "Study room": "Shared study area",
-        "TV lounge": "Common areas",
-        "Dining room": "",  # TODO
-        "Coffee bar": "",  # TODO
-        "Courtyard": "Terrace / balcony",
-        "Beauty spot": "",  # TODO
-        "Electricity included": "Electricity",
-        "Gas included": "",  # TODO
-        "Water included": "Water",
-        "Contents Insurance": "",  # TODO
-        "Laundry services": "",  # TODO
-        "Cleaning services": "Cleaning common areas",
-        "High speed internet": "Internet",
-        "24-hour hotline": "24hr Concierge Reception",
-        "24-hour reception": "24hr Concierge Reception",
-        "24-hour security": "Video surveillance",
-        "Air conditioning": "Air conditioning",
-        "Heating": "Heating system",
-        "Accessible entrance": "Wheelchair access",
-        "Accessible rooms": "Wheelchair access",
-        "Elevator": "Lift",
-        "Post collection": "Mailbox access",
-        "CCTV": "Video surveillance",
-        "Keycard access": "Lockable door",
-        "Gated community": "",  # TODO
-        "Amazon parcel hub": "Mailbox access",
-        "Half-board catering": "Full managed",
-        "Study rooms": "Shared study area",
-        "Cinema room": "",  # TODO
-        "Communal kitchen": "",  # TODO
-        "Conference room": "",  # TODO
-        "Podcast studio": "",  # TODO
-        "Swimming pool": "Swimming pool",
-        "Underground station": "",  # TODO
-        "Bike storage": "Bicycle parking",
-        "Access ramp": "Wheelchair access",
-        "Parking (fees apply)": "Car parking",
-        "Full-board catering": "Full managed",
-    }
-
 
 def map_property_descriptions(languages, property_descriptions: list[dict[str, str]]) -> List[Dict]:
     language_dict = {lang.code: lang for lang in languages}
@@ -153,7 +97,7 @@ def retrive_lodgerin_property(item, elements, list_api_key):
     features_id = search_feature_with_map(
         item["all_feature"],
         element_feature,
-        EquivalencesYugo.FEATURES.value,
+        EquivalencesYugo.FEATURES,
     )
     address = search_location(item['address_contact_and_email'])
 

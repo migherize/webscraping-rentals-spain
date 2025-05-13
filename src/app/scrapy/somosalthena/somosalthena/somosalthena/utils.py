@@ -13,8 +13,8 @@ import app.config.settings as settings
 import app.scrapy.funcs as funcs
 from app.models.enums import CurrencyCode, PaymentCycleEnum
 from app.models.schemas import Property, RentalUnits, PriceItem
-from app.scrapy.common import clean_information_html, get_all_images, get_id_from_name
-
+from app.scrapy.common import clean_information_html, get_all_images, get_id_from_name, search_feature_with_map
+from app.models.features_spider import FeaturesSomosAlthena
 
 class PropertyTypeColiving(Enum):
     PROPERTY_TYPE = (
@@ -24,48 +24,6 @@ class PropertyTypeColiving(Enum):
     )
     OPERATION = "alquiler"
 
-
-class FeaturesSomosAlthena(Enum):
-    EQUIVALENCES_FEATURES = {
-        # "Habitaciones": "Bedroom lock",
-        "Banos": "Private bath",
-        "AireAcondicionado": "Air conditioning",
-        "Exterior": "Exterior",
-        "Internet": "Wi-fi",
-        "Cocina": "Kitchen",
-        "PiscinaPrivada": "Swimming pool",
-        "AdmiteMascotas": "Pets allowed",
-        "Calefaccion": "Heating system",
-        "Ascensor": "Lift",
-        "Conserje": "24hr Concierge Reception",
-        "Alarma": "Smoke alarm",
-        "Vigilancia24h": "Video surveillance",
-        "AccesoDiscapacitados": "Wheelchair access",
-        "ZonaInfantil": "Playground",
-        "Terrazas": "Terrace / balcony",
-        "Gas": "Gas",
-        "Agua": "Water",
-        "Luz": "Electricity",
-        "Amueblado": "Furnished",
-        "ZonasComunes": "Common areas",
-    }
-    EQUIVALENCES_FURNITURES = {
-        "Armarios": "Wardrobe",
-        "CocinaAmueblada": "Fitted wardrobes",
-        "Lavadero": "Washer",
-        "CajaFuerte": "Closet",
-        "Mesa": "Desk",
-        "Sillas": "Chair",
-        "Televisor": "Television",
-        "Cama": "Double bed",
-        "SofaCama": "Futon",
-        "Horno": "Oven",
-        "Microondas": "Microwave",
-        "Trasteros": "Extra storage",
-        "Despachos": "Filing Cabinet",
-        "Altillo": "Bookshelf/Bookcase",
-        # "Chimeneas": "Iron"
-    }
 
 def get_data_json(json_path_no_refined: str) -> list[dict]:
     """
@@ -221,30 +179,6 @@ def get_address(address: dict) -> dict:
     aux_address["fullAddress"] = aux_address["address"]
     return aux_address
 
-def search_feature_with_map(
-    items_features: dict, elements_features: dict, equivalences: dict
-):
-
-    true_ids = []
-
-    for item_feature, status in items_features.items():
-        if status:
-            if item_feature in equivalences:
-                mapped_feature = equivalences[item_feature]
-                element_id = next(
-                    (
-                        id_
-                        for id_, name in elements_features.items()
-                        if name == mapped_feature
-                    ),
-                    None,
-                )
-                if element_id is not None:
-                    true_ids.append(element_id)
-
-    return true_ids
-
-
 def get_all_multidata(
     multidata: tuple[str],
     data_json: dict,
@@ -261,7 +195,7 @@ def get_all_multidata(
 
 def get_all_features(data_json: dict):
 
-    all_feature_somosalthena = FeaturesSomosAlthena.EQUIVALENCES_FEATURES.value
+    all_feature_somosalthena = FeaturesSomosAlthena.FEATURES
     invalid_values = {0, "0", "", None, "None"}
     output_info_feature = {
         feature: True
@@ -273,8 +207,6 @@ def get_all_features(data_json: dict):
 
 def extract_id_name(data):
     return {item.id: item.name_en for item in data}
-
-
 
 
 def process_descriptions_with_fallback(
@@ -361,7 +293,7 @@ def retrive_lodgerin_property(items, elements):
     features_id = search_feature_with_map(
         items["features"],
         element_feature,
-        FeaturesSomosAlthena.EQUIVALENCES_FEATURES.value,
+        FeaturesSomosAlthena.FEATURES,
     )
 
     property_items = Property(

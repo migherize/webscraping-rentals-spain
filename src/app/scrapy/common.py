@@ -228,6 +228,9 @@ def search_feature_with_map(items_features, elements_features, equivalences):
     for item_feature in items_features:
         if item_feature in equivalences:
             mapped_feature = equivalences[item_feature]
+            if not mapped_feature:
+                continue
+
             element_id = next(
                 (
                     id_
@@ -238,6 +241,10 @@ def search_feature_with_map(items_features, elements_features, equivalences):
             )
             if element_id is not None:
                 true_ids.add(element_id)
+            else:
+                print(f"[WARN] No match found for mapped feature '{mapped_feature}' from original '{item_feature}'")
+        else:
+            print(f"[WARN] Feature '{item_feature}' not found in equivalences")
 
     return list(true_ids)
 

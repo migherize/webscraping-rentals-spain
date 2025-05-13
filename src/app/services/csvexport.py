@@ -8,7 +8,7 @@ class CsvExporter:
     def __init__(self):
         self.custom_map = custom_map
         self.friendly_headers = friendly_headers
-        self.feature_map = feature_map
+        self.feature_headers_map = feature_map
     
     def process_and_export_to_csv(self, property_data, rental_unit_data, output_path):
         property_object = Property(**property_data)
@@ -17,8 +17,8 @@ class CsvExporter:
         property_dict = property_object.model_dump()
         rental_unit_dict = rental_unit_object.model_dump()
 
-        property_dict = self.transform_features(property_dict, self.feature_map)
-        rental_unit_dict = self.transform_features(rental_unit_dict, self.feature_map)
+        property_dict = self.transform_features(property_dict, self.feature_headers_map)
+        rental_unit_dict = self.transform_features(rental_unit_dict, self.feature_headers_map)
 
         property_dict = self.simplify_images_field(property_dict)
         rental_unit_dict = self.simplify_images_field(rental_unit_dict)
@@ -58,7 +58,7 @@ class CsvExporter:
         for fid in ids:
             key = str(fid)
             if key in fmap:
-                label = fmap[key][0]
+                label = fmap[key]
                 new_features[label] = "Yes"
         obj["Features"] = new_features
         return obj
