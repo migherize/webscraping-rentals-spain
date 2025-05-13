@@ -6,8 +6,7 @@ from typing import Dict, Type
 from pydantic import BaseModel
 from urllib.parse import urlparse, unquote
 
-# from app.config.settings import ElementsConfig, BASE_DIR
-from app.config.settings import BASE_DIR
+from app.config.settings import ElementsConfig
 from app.services.lodgerin import LodgerinAPI, LodgerinInternal
 
 from app.models.schemas import LocationMaps
@@ -332,12 +331,11 @@ def read_json(path_document_json: str) -> list[dict]:
 
 def create_json(item: Union[RentalUnits, Property, RentalUnitsCalendarItem], path_spider: str) -> None:
     class PathDocument(Enum):
-        PROPERTY = os.path.join(BASE_DIR, "data", path_spider ,"property.json")
-        RENTAL_UNITS = os.path.join(BASE_DIR, "data", path_spider ,"rental_units.json")
-        CALENDAR = os.path.join(BASE_DIR, "data", path_spider ,"calendar.json")
+        PROPERTY = os.path.join(path_spider ,"property.json")
+        RENTAL_UNITS = os.path.join(path_spider ,"rental_units.json")
+        CALENDAR = os.path.join(path_spider ,"calendar.json")
 
-    current_dir = os.getcwd()
-
+    current_dir = ElementsConfig.PATH_DATA
     if isinstance(item, RentalUnits):
         json_file_path = os.path.join(current_dir, PathDocument.RENTAL_UNITS.value)
     elif isinstance(item, Property):

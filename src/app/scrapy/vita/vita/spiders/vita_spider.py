@@ -13,7 +13,7 @@ from app.scrapy.vita.vita.enum_vita import (
     ConfigAllRentalUnitsRequests,
     ConfigRentalUnitRequests,
 )
-
+from app.models.enums import Pages
 
 class VitaSpiderSpider(scrapy.Spider):
     name = "vita_spider"
@@ -28,9 +28,10 @@ class VitaSpiderSpider(scrapy.Spider):
         super(VitaSpiderSpider, self).__init__(*args, **kwargs)
         item_input_output_archive: dict[str, str] = {
             "output_folder_path": "./",
-            "output_folder_name": "vitastudent",
+            "output_folder_name": f"{Pages.vita.value}",
             "file_name": "vitastudent.json",
             "processed_name": "vitastudent_refined.json",
+            "refine": "0",
         }
 
         self.items_spider_output_document = {
@@ -46,7 +47,6 @@ class VitaSpiderSpider(scrapy.Spider):
             parents=True, exist_ok=True
         )
         self.context = json.loads(context) if isinstance(context, str) else {}
-
 
     def start_requests(self):
         """

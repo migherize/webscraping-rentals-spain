@@ -30,7 +30,10 @@ from app.scrapy.common import (
     search_location,
     extract_area,
     extract_cost,
-    create_json
+    create_json,
+    search_feature_with_map,
+    extract_id_label,
+    filtrar_ids_validos
 )
 from app.scrapy.funcs import (
     check_and_insert_rental_unit_calendar,
@@ -46,22 +49,35 @@ from app.config.settings import GlobalConfig
 
 from pprint import pprint
 
+from app.models.features_spider import EquivalencesVitaStudents
+from app.models.features_spider import EquivalencesVitaStudents
+from app.services.csvexport import CsvExporter
 
 def etl_data_vita(items: List[Dict], json_elements: Dict, logger: Logger) -> None:
 
     elements_dict = parse_elements(json_elements, mapping)
     api_key = elements_dict["api_key"].data[0].name
+    
+    exporter = CsvExporter(Pages.vita.value)
 
     for index, item in enumerate(items):
 
         items_output = item['items_output']
         data_property, tours_rental_units = retrive_property(items_output)
+        
+        element_feature = extract_id_label(elements_dict["features"].data)
+        features_id = search_feature_with_map(
+            data_property["property_features"],
+            element_feature,
+            EquivalencesVitaStudents.FEATURES,
+        )
+
         property_vita = Property(
             referenceCode=re.sub(r'\s','_', data_property['property_referend_code']),
             rentalType=GlobalConfig.RENTAL_TYPE,
             isActive=GlobalConfig.BOOL_TRUE,
             isPublished=GlobalConfig.BOOL_TRUE,
-            Features=find_feature_keys(data_property['property_features'], feature_map), # TODO: Mapear
+            Features=features_id,
             tourUrl=tours_rental_units,
             PropertyTypeId=get_elements_types(GlobalConfig.PROPERTY_TYPE_ID, elements_dict["propertiesTypes"]),
             Texts=Text(
@@ -96,8 +112,7 @@ def etl_data_vita(items: List[Dict], json_elements: Dict, logger: Logger) -> Non
         for index_rental_unit, rental_unit in enumerate(items_output['all_rental_units']):
             try:
 
-                data_rental_units, calendar_unit_list = retrive_rental_unit(rental_unit, property_vita)
-                logger.info([data_rental_units, calendar_unit_list])
+                data_rental_units, calendar_unit_list = retrive_rental_unit(rental_unit, property_vita, element_feature)
 
                 # RentalUnit
                 rental_unit_id = save_rental_unit(data_rental_units, api_key)
@@ -105,6 +120,7 @@ def etl_data_vita(items: List[Dict], json_elements: Dict, logger: Logger) -> Non
                 list_rental_unit_id.append(data_rental_units)
                 create_json(data_rental_units, Pages.vita.value)
                 
+
                 # schedule
                 for rental_id, calendar_unit in zip(
                     list_rental_unit_id, calendar_unit_list
@@ -117,6 +133,9 @@ def etl_data_vita(items: List[Dict], json_elements: Dict, logger: Logger) -> Non
 
                 for calendar_unit in calendar_unit_list:
                     create_json(calendar_unit, Pages.vita.value)
+
+                exporter.process_and_export_to_csv(property_vita, data_rental_units)
+                
             except Exception as error:
                 logger.warning(error)
 
@@ -145,6 +164,7 @@ def retrive_property(items_output: Dict[str, str | List]) -> Tuple[Dict[str, str
     tours_rental_units = data_property_vita['property_tours_360']
     if tours_rental_units == '':
         tours_rental_units = None
+
     clean_data_property(data_property_vita)
     return data_property_vita, tours_rental_units
 
@@ -177,27 +197,38 @@ def clean_data_property(property_data: Dict[str, str | List]) -> None:
     property_data["property_images"] = get_all_imagenes(property_data["property_images"])
 
     # Obtener Cost
-    property_data["property_cost"] = property_data["property_cost"].split('\\u')[0]
-    property_data["property_cost"] = (
-        float(re.sub(r'[."]', '', property_data["property_cost"]).replace(',', '.'))
-        if property_data["property_cost"] else ''
-    )
+    raw = property_data.get("property_cost", "")
+    raw = raw.split(r'\u')[0]
+    clean = raw.strip('"')
+    if clean:
+        num = re.sub(r'\.', '', clean).replace(',', '.')
+        try:
+            property_data["property_cost"] = float(num)
+        except ValueError:
+            property_data["property_cost"] = ''
+    else:
+        property_data["property_cost"] = ''
 
     return None
 
 
-def retrive_rental_unit(rental_unit:Dict[str, str | List | Dict], property_data: Property) -> None:
+def retrive_rental_unit(rental_unit:Dict[str, str | List | Dict], property_data: Property, element_feature) -> None:
 
     rental_unit_room_data = rental_unit.get("rental_unit_room_data",[])[0]
     rental_unit_booking_data = rental_unit.get("rental_unit_booking_data",{})
     calendar_unit_list = []
+
+    features_id = search_feature_with_map(
+        rental_unit_room_data.get("standard_features"),
+        element_feature,
+        EquivalencesVitaStudents.FEATURES,
+    )
 
     try:
         rental_unit = RentalUnits(
             PropertyId=property_data.id,
             referenceCode=rental_unit.get("rental_unit_room_code"),
             areaM2=rental_unit_room_data.get("size").replace("sqm", ""),
-            Features=find_feature_keys(rental_unit_room_data.get("standard_features"), feature_map),
             isActive=True,
             isPublished=True,
             Texts=property_data.Texts,
@@ -211,6 +242,7 @@ def retrive_rental_unit(rental_unit:Dict[str, str | List | Dict], property_data:
                 minPeriod=GlobalConfig.INT_ONE,
                 paymentCycle=PaymentCycleEnum.MONTHLY.value
             ),
+            ExtraFeatures=filtrar_ids_validos(features_id),
         )
         
         start_date = rental_unit_booking_data.get("terms",[])[0].get("startDate")

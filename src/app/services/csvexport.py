@@ -3,7 +3,7 @@ import csv
 import pandas as pd
 from app.models.schemas import Property, RentalUnits
 from app.models.enums import custom_map, friendly_headers,feature_map
-from app.config.settings import BASE_DIR
+from app.config.settings import ElementsConfig
 from typing import Optional
 
 class CsvExporter:
@@ -11,7 +11,7 @@ class CsvExporter:
         self.custom_map = custom_map
         self.friendly_headers = friendly_headers
         self.feature_headers_map = feature_map
-        self.output_path = os.path.join(BASE_DIR, "data", output_path, "CsvExporter.csv")
+        self.output_path = os.path.join(ElementsConfig.PATH_DATA, output_path, "CsvExporter.csv")
 
         if os.path.isfile(self.output_path):
             os.remove(self.output_path)
