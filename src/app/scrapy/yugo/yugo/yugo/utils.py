@@ -1,6 +1,6 @@
 from enum import Enum
 from typing import List, Dict
-from app.scrapy.common import extract_id_name, search_feature_with_map
+from app.scrapy.common import extract_id_label, search_feature_with_map
 from app.config.settings import GlobalConfig
 from app.scrapy.common import (
     get_id_from_name,
@@ -93,7 +93,7 @@ def retrive_lodgerin_property(item, elements, list_api_key):
         elements["languages"].data,
         item["second_items_property"],
     )
-    element_feature = extract_id_name(elements["features"].data)
+    element_feature = extract_id_label(elements["features"].data)
     features_id = search_feature_with_map(
         item["all_feature"],
         element_feature,

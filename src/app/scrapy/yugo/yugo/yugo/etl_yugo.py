@@ -1,10 +1,10 @@
+from app.models.enums import Pages
 import app.scrapy.funcs as funcs
 from pprint import pprint
 from logging import Logger
 from app.models.schemas import mapping
 from app.scrapy.common import (
     parse_elements, 
-    create_json, 
     create_json, 
     read_json
 )
@@ -42,7 +42,7 @@ def etl_data_yugo(output_path: str, logger: Logger, context) -> None:
         property_id = funcs.save_property(data_property, api_key)
         logger.info("property_id: %s", property_id)
         data_property.id = property_id
-        create_json(data_property)
+        create_json(data_property, Pages.yugo.value)
 
         # ---------------------------------------------------------------------------------------
         # RentalUnit
@@ -57,7 +57,7 @@ def etl_data_yugo(output_path: str, logger: Logger, context) -> None:
         )
         list_rental_unit_id = []
         for rental_unit in data_rental_units:
-            create_json(rental_unit)
+            create_json(rental_unit, Pages.yugo.value)
             rental_unit_id = funcs.save_rental_unit(rental_unit, api_key)
             rental_unit.id = rental_unit_id
             list_rental_unit_id.append(rental_unit)
@@ -74,4 +74,4 @@ def etl_data_yugo(output_path: str, logger: Logger, context) -> None:
             )
 
         for calendar_unit in calendar_unit_list:
-            create_json(calendar_unit)
+            create_json(calendar_unit, Pages.yugo.value)

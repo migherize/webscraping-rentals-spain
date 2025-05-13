@@ -172,6 +172,30 @@ class ConfigErrorScraper(Enum):
 #         "heating",
 #     ],
 # }
+
+feature_map_rental_units = {
+    "1": "airConditioning",
+    "4": "bedLinen",
+    "6": "bunkBeds",
+    "14": "cradle",
+    "15": "doubleBed",
+    "17": "exterior",
+    "25": "lockableRooms",
+    "27": "pillow",
+    "28": "privateBath",
+    "30": "roomCleaning",
+    "32": "singleBed",
+    "33": "smokingAlarm",
+    "36": "studyArea",
+    "38": "tableAndChair",
+    "39": "towels",
+    "40": "tv",
+    "41": "twoSingleBed",
+    "43": "wardrobe",
+    "44": "accessibleRoom",
+    "45": "heatingSystem",
+}
+
 feature_map = {
     "1": "airConditioning",
     "2": "balcony",

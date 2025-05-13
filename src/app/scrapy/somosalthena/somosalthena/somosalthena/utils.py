@@ -13,7 +13,7 @@ import app.config.settings as settings
 import app.scrapy.funcs as funcs
 from app.models.enums import CurrencyCode, PaymentCycleEnum
 from app.models.schemas import Property, RentalUnits, PriceItem
-from app.scrapy.common import clean_information_html, get_all_images, get_id_from_name, search_feature_with_map
+from app.scrapy.common import clean_information_html, get_all_images, get_id_from_name, search_feature_with_map, extract_id_label
 from app.models.features_spider import FeaturesSomosAlthena
 
 class PropertyTypeColiving(Enum):
@@ -204,11 +204,6 @@ def get_all_features(data_json: dict):
     }
     return output_info_feature
 
-
-def extract_id_name(data):
-    return {item.id: item.name_en for item in data}
-
-
 def process_descriptions_with_fallback(
     all_descriptions: dict,
     all_titles: dict,
@@ -289,7 +284,7 @@ def retrive_lodgerin_property(items, elements):
         items["all_descriptions_short"],
     )
 
-    element_feature = extract_id_name(elements["features"].data)
+    element_feature = extract_id_label(elements["features"].data)
     features_id = search_feature_with_map(
         items["features"],
         element_feature,

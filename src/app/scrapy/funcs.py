@@ -146,7 +146,6 @@ def save_property(property_item, api_key):
 
 
 def save_rental_unit(rental_unit_item, api_key):
-
     rental_unit_dict = rental_unit_item.model_dump()
     lodgerin_api = LodgerinAPI(api_key)
     response = lodgerin_api.create_or_update_rental_unit(rental_unit_dict)

@@ -6,7 +6,7 @@ from scrapy import Spider
 from pydantic import BaseModel
 
 from app.config.settings import GlobalConfig
-from app.models.enums import CurrencyCode, Languages, PaymentCycleEnum, feature_map
+from app.models.enums import CurrencyCode, Languages, Pages, PaymentCycleEnum, feature_map
 
 from app.scrapy.common import (
     parse_elements, 
@@ -32,7 +32,7 @@ from app.scrapy.funcs import (
     save_property,
     save_rental_unit,
 )
-
+from app.scrapy.common import remove_accents
 
 class RoomData(BaseModel):
     areaM2: int
@@ -102,7 +102,7 @@ class ETLFlipColiving:
             property_id = save_property(property_item, self.api_key)
             property_item.id = property_id
             spider.logger.info(f"property_item creado con éxito: {property_item.id}")
-            create_json(property_item)
+            create_json(property_item, Pages.flipcoliving.value)
             rooms_data = [
                 RoomData(
                     areaM2=int(rental_unit["data_rental_unit"][1].replace(" sqm", "")),
@@ -133,7 +133,7 @@ class ETLFlipColiving:
                 list_rental_unit_id.append(rental_unit)
 
             for unit in rental_units_items:
-                create_json(unit)
+                create_json(unit, Pages.flipcoliving.value)
             spider.logger.info(f"list_rental_unit_id {list_rental_unit_id}")
 
             # schedule
@@ -145,7 +145,7 @@ class ETLFlipColiving:
                 check_and_insert_rental_unit_calendar(rental_id, calendar_unit, self.api_key)
 
             for calendar_unit in calendar_unit_list:
-                create_json(calendar_unit)
+                create_json(calendar_unit, Pages.flipcoliving.value)
 
             return property_item
 
@@ -156,11 +156,6 @@ class ETLFlipColiving:
 def clean_string(text: str) -> str:
     """Limpia la cadena eliminando la palabra 'Bullones' y los caracteres '/'."""
     return re.sub(r"\bBullones\b", "", text).replace("/", "").strip()
-
-
-def remove_accents(text: str) -> str:
-    """Elimina los acentos de una cadena de texto."""
-    return unicodedata.normalize("NFD", text).encode("ascii", "ignore").decode("utf-8")
 
 
 def get_all_descriptions(parse_description: list, parse_coliving_name: str):

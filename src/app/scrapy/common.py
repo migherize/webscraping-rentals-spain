@@ -13,6 +13,7 @@ from app.services.lodgerin import LodgerinAPI, LodgerinInternal
 from app.models.schemas import LocationMaps
 import os
 from enum import Enum
+from app.models.enums import feature_map_rental_units
 from typing import Union
 from app.models.schemas import (
     RentalUnitsCalendarItem,
@@ -203,8 +204,8 @@ def parse_elements(
         
     return elements_dict
 
-def extract_id_name(data):
-    return {item.id: item.name_en for item in data}
+def extract_id_label(data):
+    return {item.id: item.label for item in data}
 
 def get_id_from_name(data_dict: list, name: str, key_name: str) -> int:
     """
@@ -329,11 +330,11 @@ def read_json(path_document_json: str) -> list[dict]:
     
     return []
 
-def create_json(item: Union[RentalUnits, Property, RentalUnitsCalendarItem]) -> None:
+def create_json(item: Union[RentalUnits, Property, RentalUnitsCalendarItem], path_spider: str) -> None:
     class PathDocument(Enum):
-        PROPERTY = os.path.join(BASE_DIR, "data", "property.json")
-        RENTAL_UNITS = os.path.join(BASE_DIR, "data", "rental_units.json")
-        CALENDAR = os.path.join(BASE_DIR, "data", "calendar.json")
+        PROPERTY = os.path.join(BASE_DIR, "data", path_spider ,"property.json")
+        RENTAL_UNITS = os.path.join(BASE_DIR, "data", path_spider ,"rental_units.json")
+        CALENDAR = os.path.join(BASE_DIR, "data", path_spider ,"calendar.json")
 
     current_dir = os.getcwd()
 
@@ -390,3 +391,13 @@ def create_rental_unit_code_with_initials(property_referend_code: str, unit_inde
     aux_referend = list(map(lambda x: x[0].upper(), aux_referend.split('-')[:-1]))
     aux_referend = "-".join(aux_referend)
     return f"{aux_referend}-{unit_index + 1:03}"
+
+def filtrar_ids_validos(lista_ids):
+    return [id_ for id_ in lista_ids if str(id_) in feature_map_rental_units]
+
+def remove_accents(text: str) -> str:
+    """Elimina los acentos de una cadena de texto."""
+    return unicodedata.normalize("NFD", text).encode("ascii", "ignore").decode("utf-8")
+
+def safe_attr(obj, attr, default=""):
+    return getattr(obj, attr, default) if obj else default

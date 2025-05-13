@@ -9,6 +9,7 @@ from logging import Logger
 from app.models.enums import (
     CurrencyCode, 
     Languages,
+    Pages,
     PaymentCycleEnum, 
     feature_map,
 )
@@ -87,7 +88,7 @@ def etl_data_vita(items: List[Dict], json_elements: Dict, logger: Logger) -> Non
         )
         property_id = save_property(property_vita, api_key)
         property_vita.id = property_id
-        create_json(property_vita)
+        create_json(property_vita, Pages.vita.value)
 
         logger.info("Property ID: %s", property_id)
         list_rental_unit_id = []
@@ -102,7 +103,7 @@ def etl_data_vita(items: List[Dict], json_elements: Dict, logger: Logger) -> Non
                 rental_unit_id = save_rental_unit(data_rental_units, api_key)
                 data_rental_units.id = rental_unit_id
                 list_rental_unit_id.append(data_rental_units)
-                create_json(data_rental_units)
+                create_json(data_rental_units, Pages.vita.value)
                 
                 # schedule
                 for rental_id, calendar_unit in zip(
@@ -115,7 +116,7 @@ def etl_data_vita(items: List[Dict], json_elements: Dict, logger: Logger) -> Non
                     )
 
                 for calendar_unit in calendar_unit_list:
-                    create_json(calendar_unit)
+                    create_json(calendar_unit, Pages.vita.value)
             except Exception as error:
                 logger.warning(error)
 
