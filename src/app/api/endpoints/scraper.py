@@ -28,10 +28,11 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-@router.get("/scrape")
+@router.get("/page/")
 async def scrape_page(
     background_tasks: BackgroundTasks,
     page: models.Pages = Query(..., description="Página a scrapeear"),
+    refine: bool = Query(False, description="Indica si se debe refinar el scraping"),
 ) -> Dict[str, str]:
     """
     Inicia el proceso de scraping en segundo plano.
@@ -41,31 +42,17 @@ async def scrape_page(
     logger.info(f"Solicitud de scraping recibida para la URL: {url}")
 
     try:
-        background_tasks.add_task(scraper.run_webscraping, url)
-        logger.info(f"Tarea de scraping iniciada en segundo plano para {url}")
-        return {"message": "Scraping iniciado, consulta el estado más tarde."}
+        if refine:
+            logger.info(f"Se inicia el refinado en segundo plano para {url}")
+            message = {"message": f"Se inicia el refinado en segundo plano para {url}"}
+        else:
+            logger.info(f"Tarea de scraping iniciada en segundo plano para {url}")
+            message = {"message": f"Tarea de scraping iniciada en segundo plano para {url}"}
+        background_tasks.add_task(scraper.run_webscraping, url, refine)
+        return message
     except Exception as e:
         logger.error(f"Error al iniciar el scraping: {str(e)}")
         raise HTTPException(status_code=500, detail="Error al iniciar el scraping.")
-
-@router.get("/scrape/refine")
-async def scrape_page_refine(
-    background_tasks: BackgroundTasks,
-    page: models.Pages = Query(..., description="Página a scrapeear"),
-) -> Dict[str, str]:
-    """
-    Inicia el proceso de refinado en segundo plano.
-    """
-    url = getattr(models.URLs, page.value).value
-    logger.info('Inicio de refinado para la url: %s', url)
-    try:
-        background_tasks.add_task(scraper.run_webscraping, url, True)
-        logger.info(f"Tarea de refinado iniciada en segundo plano para {url}")
-        return {"message": "Refinado iniciado, consulta el estado más tarde."}
-    except Exception as e:
-        logger.error(f"Error al iniciar el scraping: {str(e)}")
-        raise HTTPException(status_code=500, detail="Error al iniciar el refinado.")
-
 
 @router.get("/log_status/{spider_name}")
 def check_log_status(spider_name: models.Pages) -> Dict[str, Any]:

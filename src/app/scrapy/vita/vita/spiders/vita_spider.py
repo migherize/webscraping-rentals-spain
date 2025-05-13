@@ -28,7 +28,7 @@ class VitaSpiderSpider(scrapy.Spider):
         super(VitaSpiderSpider, self).__init__(*args, **kwargs)
         item_input_output_archive: dict[str, str] = {
             "output_folder_path": "./",
-            "output_folder_name": "data",
+            "output_folder_name": "vitastudent",
             "file_name": "vitastudent.json",
             "processed_name": "vitastudent_refined.json",
         }
@@ -49,15 +49,18 @@ class VitaSpiderSpider(scrapy.Spider):
 
 
     def start_requests(self):
-            """
-            Inicio de la pagina principal
-            """
-            BASE_URL = "https://www.vitastudent.com/en/ciudades/"
-            CITIES = ["barcelona", "leeds", "liverpool", "london", "manchester"]
+        """
+        Inicio de la pagina principal
+        """
+        if self.items_spider_output_document['refine'] == '1':
+            self.logger.info("Proceso de refinado para: %s", self.name)
+            return []
 
-            for city in CITIES:
-                yield scrapy.Request(url=f"{BASE_URL}{city}/", callback=self.parse, dont_filter=True)
-                # break
+        BASE_URL = "https://www.vitastudent.com/en/ciudades/"
+        CITIES = ["barcelona", "leeds", "liverpool", "london", "manchester"]
+
+        for city in CITIES:
+            yield scrapy.Request(url=f"{BASE_URL}{city}/", callback=self.parse, dont_filter=True)
 
     def parse(self, response: Selector):
 
@@ -68,7 +71,6 @@ class VitaSpiderSpider(scrapy.Spider):
 
         for url_property in urls_property.getall():
             yield scrapy.Request(url_property, callback=self.parse_property, dont_filter=True)
-            # break
 
     def parse_property(self, response: Selector):
 

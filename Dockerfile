@@ -17,4 +17,4 @@ COPY ./data /data
 
 CMD /opt/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8080
 # ENTRYPOINT ["tail", "-f", "/dev/null"]
-# CMD fastapi dev main.py --host 0.0.0.0 --port 8080
+# CMD fastapi dev src/main.py --host 0.0.0.0 --port 8080

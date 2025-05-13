@@ -18,6 +18,12 @@ class FlipcolivingPipeline:
         return item
 
     def close_spider(self, spider: Spider):
-        spider.logger.info("close_spider")
-        save_to_json_file(self.items, self.json_path)
+
+        if spider.items_spider_output_document['refine'] == '1':
+            spider.logger.info("- Refining data")
+        else:
+            spider.logger.info("- JSON file created with %d items.", len(self.items))
+            save_to_json_file(self.items, self.json_path)
+
         etl_data_flipcoliving(self.items, spider)
+        spider.logger.info("close_spider")

@@ -1,3 +1,4 @@
+import json
 from pprint import pprint
 import re
 import scrapy
@@ -27,9 +28,10 @@ class NodisSpiderSpider(scrapy.Spider):
 
         item_input_output_archive: dict[str, str] = {
             "output_folder_path": "./",
-            "output_folder_name": "data",
+            "output_folder_name": "nodis",
             "file_name": "nodies.json",
             "processed_name": "nodies_refined.json",
+            "refine": '0',
         }
 
         self.items_spider_output_document = {
@@ -44,10 +46,13 @@ class NodisSpiderSpider(scrapy.Spider):
         Path(self.items_spider_output_document["output_folder"]).mkdir(
             parents=True, exist_ok=True
         )
-        # self.context = json.loads(context) if isinstance(context, str) else {}
+        self.context = json.loads(context) if context else {}
 
     def start_requests(self):
-        return [scrapy.Request(url=ConfigPages.BASE_URL.value)]
+        if self.items_spider_output_document['refine'] == '1':
+            self.logger.info("Proceso de refinado para: %s", self.name)
+            return []
+        return [scrapy.Request(ConfigPages.BASE_URL.value, headers=ConfigPages.HEADERS.value)]
 
     def parse(self, response: Selector):
         urls_property = response.xpath(ConfigPages.URL_PROPERTY.value)
@@ -57,7 +62,10 @@ class NodisSpiderSpider(scrapy.Spider):
 
         for index, url_property in enumerate(urls_property.getall()):
             
-            if any([url_property == '', re.search(r'/contact|\.greenlts\.', url_property)]):
+            if any([
+                url_property in ('', 'https://nodis.es/'), 
+                re.search(r'/contact|\.greenlts\.', url_property),
+            ]):
                 # No aplican
                 continue
 
@@ -86,12 +94,27 @@ class NodisSpiderSpider(scrapy.Spider):
             'property': property,
             'rental': []
         }
-        if property.get('URL_RENTAL_UNIT', None) is None:
+        aux_url_rental_units = property.get('URL_RENTAL_UNIT', None)
+        if aux_url_rental_units is None or re.search(r'contacto', aux_url_rental_units):
             # No presenta rental units
             return output
         
-        # TODO: extraer los rental
-        data_hotel_and_rental_units = self.parse_rental_api_data(property.get('URL_RENTAL_UNIT', None))
+        if re.search(r'stephouse', aux_url_rental_units) and re.search('malaga', aux_url_rental_units):
+            # El caso es para Malaga
+            # Caso Particular. Tomado por Default la fuente del rental
+            aux_url_rental_units = "https://stephousemalagaparmenides.greenlts.es/"
+            property['URL_RENTAL_UNIT'] = aux_url_rental_units
+            pass
+
+        elif not re.search(r'greenlts', aux_url_rental_units):
+            self.logger.info(
+                "Formato diferente a 'greenlts'. URL de la propiedad: %s URL de los rental units: %s. Chequearlo!", 
+                url_property, 
+                aux_url_rental_units
+            )
+            return output
+
+        data_hotel_and_rental_units = self.parse_rental_api_data(aux_url_rental_units)
         if data_hotel_and_rental_units is None:
             return output
 
@@ -106,25 +129,22 @@ class NodisSpiderSpider(scrapy.Spider):
             'property_images': response.xpath(ConfigXpathProperty.IMAGES.value).getall(),
             'property_video': response.xpath(ConfigXpathProperty.VIDEO.value).get(),
             'property_features': response.xpath(ConfigXpathProperty.FEATURES.value).getall(),
-            'property_description_en': {
-                'property_description_1_en': '',
-                'property_description_2_en': '',
-            },
             'property_description_es': {
-                'property_description_1_es': '',
-                'property_description_2_es': '',
+                'property_description_1_es': response.xpath(ConfigXpathProperty.DESCRIPTION_1.value).getall(),
+                'property_description_2_es': response.xpath(ConfigXpathProperty.DESCRIPTION_2.value).getall(),
             },
-            # TODO:
-            # 'property_description_1': response.xpath(ConfigXpathProperty.DESCRIPTION_1.value).getall(),
-            # 'property_description_2': response.xpath(ConfigXpathProperty.DESCRIPTION_2.value).getall(),
+            'property_description_en': {
+                'property_description_1_en': response.xpath(ConfigXpathProperty.DESCRIPTION_1.value).getall(),
+                'property_description_2_en': response.xpath(ConfigXpathProperty.DESCRIPTION_2.value).getall(),
+            },
+            'property_aux_address': response.xpath(ConfigXpathProperty.AUX_ADDRESS_PROPERTY.value).getall()
         }
 
         clean_items(items_property)
         items_property['property_name'] = clean_property_name(items_property['property_name'])
         items_property['property_images'] = check_images(items_property['property_images'])
 
-        # TODO: Extraer el description en espanhol
-        
+        items_property['property_description_en'] = self.parse_description_other_language(response, 'en-GB')
 
         # Existen casos donde solo presenta un formulario
         flag_rental_units = True if not response.xpath(ConfigPages.CONTACT.value) else False
@@ -133,6 +153,43 @@ class NodisSpiderSpider(scrapy.Spider):
             if flag_rental_units else None
         )
         return items_property
+    
+    def parse_description_other_language(self, response: Selector, language_code: str) -> dict[str, str]:
+
+        code = {
+            "en-GB": ("en-GB", "en"),
+        }.get(language_code, None)
+
+        if code is None:
+            return {
+                "property_description_1_en": '',
+                "property_description_2_en": '',
+            }
+
+        url_property_language = response.xpath(f"//a[contains(@hreflang, '{code[0]}')]/@href").get()
+
+        if url_property_language is None:
+            return {
+                "property_description_1_en": '',
+                "property_description_2_en": '',
+            }
+
+        response_property_language = requests.get(url_property_language)
+        if response_property_language.status_code != 200:
+            return {
+                f"property_description_1_{code[1]}": '',
+                f"property_description_2_{code[1]}": '',
+            }
+
+        response_language = Selector(text=response_property_language.text)
+
+        description_output = {
+            f"property_description_1_{code[1]}": response_language.xpath(ConfigXpathProperty.DESCRIPTION_1.value).getall(),
+            f"property_description_2_{code[1]}": response_language.xpath(ConfigXpathProperty.DESCRIPTION_2.value).getall(),
+        }
+
+        return description_output
+
 
     def parse_rental_api_data(self, url_base: str) -> Optional[dict]:
         url_base = url_base.replace('/lang/en', '')
@@ -164,7 +221,7 @@ class NodisSpiderSpider(scrapy.Spider):
 
         output_rental_units = self.extractor_info_rental_unit(all_rental_units)
 
-        # TODO: Buscar en api_info si existe data relevante de los rental_units
+        # TODO: Buscar en api_info si existe data relevante de los rental_units (Pendiente si es necesario)
 
         return {
                 "info_hotel_property": info_hotel_property, 
@@ -196,7 +253,7 @@ def extract_text_html(text_html: str) -> Optional[str]:
 
 
 def clean_data(data: str) -> str:
-    data = re.sub(r'\n|\t|\r|\xa0', ' ', data).strip()
+    data = re.sub(r'\n|\t|\r|\xa0|\s{2,}', ' ', data).strip()
     return data
 
 
