@@ -1,6 +1,7 @@
 from enum import Enum
 from math import log
 
+
 class LodgerinFeatures(Enum):
     FEATURE_AIR_CONDITIONING = "airConditioning"
     FEATURE_BALCONY = "balcony"
@@ -137,11 +138,11 @@ class EquivalencesYugo:
         "Bike storage": LodgerinFeatures.FEATURE_BICYCLE_PARKING.value,
         "Access ramp": LodgerinFeatures.FEATURE_ACCESSIBLE_HOUSING.value,
         "Parking (fees apply)": LodgerinFeatures.FEATURE_CAR_PARKING.value,
-        "Gaming stations":LodgerinFeatures.FEATURE_GAMES_COURT.value,
+        "Gaming stations": LodgerinFeatures.FEATURE_GAMES_COURT.value,
         "Outside terrace": LodgerinFeatures.FEATURE_BALCONY.value,
         "Rooftop terrace": LodgerinFeatures.FEATURE_BALCONY.value,
         "Parking (free)": LodgerinFeatures.FEATURE_CAR_PARKING.value,
-        "Movie room":  LodgerinFeatures.FEATURE_RECREATIONAL_ROOM.value,
+        "Movie room": LodgerinFeatures.FEATURE_RECREATIONAL_ROOM.value,
         "Garden": LodgerinFeatures.FEATURE_GARDEN.value,
         "Hot tub": None,
         "Pool": None,
@@ -209,9 +210,54 @@ class EquivalencesYugo:
 
 
 class EquivalencesFlipColinving:
-   FEATURES = {
-   
-   }
+    FEATURES = {
+        "amazing shared spaces": LodgerinFeatures.FEATURE_RECREATIONAL_ROOM.value,
+        "bbq / grill": LodgerinFeatures.FEATURE_BBQ_SPACE.value,
+        "bathroom": LodgerinFeatures.FEATURE_PRIVATE_BATH.value,
+        "bicycle parking": LodgerinFeatures.FEATURE_BICYCLE_PARKING.value,
+        "blazing fast wi-fi": LodgerinFeatures.FEATURE_STREAMING_SERVICES.value,
+        "close to bus station": LodgerinFeatures.FEATURE_ACCESSIBLE_HOUSING.value,
+        "coffee machine": LodgerinFeatures.FEATURE_TABLE_AND_CHAIR.value,
+        "cleaning and maintenance": LodgerinFeatures.FEATURE_ROOM_CLEANING.value,
+        "dryer": LodgerinFeatures.FEATURE_SOFA_BED.value,
+        "exclusive benefits": None,
+        "fitness center": LodgerinFeatures.FEATURE_GYM.value,
+        "flexible leases": LodgerinFeatures.FEATURE_CONCIERGE_RECEPTION.value,
+        "fridge": LodgerinFeatures.FEATURE_TV.value,
+        "hangers": None,
+        "hot and cold a/c": LodgerinFeatures.FEATURE_AIR_CONDITIONING.value,
+        "iron": LodgerinFeatures.FEATURE_IRON.value,
+        "keyless access": LodgerinFeatures.FEATURE_LOCKABLE_ROOMS.value,
+        "linens": LodgerinFeatures.FEATURE_BED_LINEN.value,
+        "microwave": LodgerinFeatures.FEATURE_STREAMING_SERVICES.value,
+        "non smoking": LodgerinFeatures.FEATURE_SMOKING_ALARM.value,
+        "no pets allowed": LodgerinFeatures.FEATURE_CENSUS.value,
+        "on-site laundry": LodgerinFeatures.FEATURE_CLEANING_COMMON_AREAS.value,
+        "oven": LodgerinFeatures.FEATURE_STUDY_AREA.value,
+        "private bedroom": LodgerinFeatures.FEATURE_PRIVATE_BATH.value,
+        "private desk": LodgerinFeatures.FEATURE_STUDY_AREA.value,
+        "quick repairs service": LodgerinFeatures.FEATURE_CLEANING_COMMON_AREAS.value,
+        "shared areas daily cleaning": LodgerinFeatures.FEATURE_CLEANING_COMMON_AREAS.value,
+        "smart tv": LodgerinFeatures.FEATURE_TV.value,
+        "stove": LodgerinFeatures.FEATURE_SOFA_BED.value,
+        "towels": LodgerinFeatures.FEATURE_TOWELS.value,
+        "washer": None,
+        "access exclusive events": None,
+        "fully equipped kitchen": None,
+        "fully furnished": None,
+        "Close to metro station": None,
+        "Coworking": None,
+        "Shared areas weekly cleaning": None,
+        "Hot tub": None,
+        "Dishwasher":None,
+        "Guesthouse":None,
+        "Couples are allowed":None,
+        "Private lockers":None,
+        "Silence":None,
+        "Essential services":None,
+        "Cable TV":None,
+        "Professionals network":None,
+    }
 
 
 class EquivalencesVitaStudents:
@@ -227,20 +273,20 @@ class EquivalencesVitaStudents:
         "Dance studio": LodgerinFeatures.FEATURE_RECREATIONAL_ROOM.value,
         "Exclusive rooftop terrace": LodgerinFeatures.FEATURE_BALCONY.value,
         "Outside terrace": LodgerinFeatures.FEATURE_BALCONY.value,
-        "Air conditioning":LodgerinFeatures.FEATURE_AIR_CONDITIONING.value,
-        "Ensuite bathroom - shower, mirror, sink, toilet":None,
-        "VIP discounts":None,
-        "Kitchen - microwave oven  hob  sink  fridge freezer":None,
-        "Non-opening window":None,
+        "Air conditioning": LodgerinFeatures.FEATURE_AIR_CONDITIONING.value,
+        "Ensuite bathroom - shower, mirror, sink, toilet": None,
+        "VIP discounts": None,
+        "Kitchen - microwave oven  hob  sink  fridge freezer": None,
+        "Non-opening window": None,
         "Kitchenette – sink  microwave  fridge freezer": None,
-        "Pool table":None,
-        "Mahjong tables":None,
-        "Ensuite bathroom":None,
-        "Pinboard":None,
-        "Three quarter bed":None,
-        "Secure key fob access":None,
-        "Ensuite bathroom - shower  mirror  sink  toilet":None,
-        "Kitchenette - sink  microwave  fridge freezer":None,
+        "Pool table": None,
+        "Mahjong tables": None,
+        "Ensuite bathroom": None,
+        "Pinboard": None,
+        "Three quarter bed": None,
+        "Secure key fob access": None,
+        "Ensuite bathroom - shower  mirror  sink  toilet": None,
+        "Kitchenette - sink  microwave  fridge freezer": None,
         "Pool & table tennis tables": None,
         "Private dining room": None,
         "Laundry room": None,

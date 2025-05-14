@@ -88,14 +88,14 @@ def get_path_and_context(url: URLs) -> Tuple[None | str | Callable]:
 
     path_spider = url_config.get("path", None)
     if path_spider is None:
-        logger.error('No se logró obtener el path. Error: %s', error)
-        raise 'No se logró obtener el path'
+        logger.error('No se logró obtener el path. Error: %s', path_spider)
+        raise RuntimeError('No se logró obtener el path') from path_spider
 
     try:
         context = url_config.get("context")()
     except Exception as error:
         logger.error('No se logró obtener el context. Error: %s', error)
-        raise 'No se logró obtener el context'
+        raise RuntimeError('No se logró obtener el context') from error
 
     return path_spider, context
 
@@ -137,6 +137,6 @@ def execute_spider(
 
     except Exception as error:
         logger.error('Problemas al ejecutar el spider. Error: %s', error)
-        raise 'Problemas al ejecutar el spider'
+        raise RuntimeError('Problemas al ejecutar el spider') from error
 
     return None

@@ -1,8 +1,7 @@
 import re
 import unicodedata
 from typing import List
-
-from scrapy import Spider
+from logging import Logger
 from pydantic import BaseModel
 
 from app.config.settings import GlobalConfig
@@ -12,7 +11,8 @@ from app.scrapy.common import (
     parse_elements, 
     get_all_imagenes, 
     create_json, 
-    create_rental_unit_code_with_initials
+    create_rental_unit_code_with_initials,
+    read_json
 
 )
 from app.models.schemas import (
@@ -45,16 +45,24 @@ class RoomData(BaseModel):
     images: List[str]
 
 
-def etl_data_flipcoliving(items: list[dict], spider: Spider):
-    elements_dict = parse_elements(spider.context, mapping)
+def etl_data_flipcoliving(output_path: list[dict], logger: Logger, context) -> None:
+
+    items: list[dict[str, str]] = read_json(output_path)
+
+    if items == []:
+        logger.warning('- La data se encuentra vacia')
+        return None
+
+    elements_dict = parse_elements(context, mapping)
     api_key = elements_dict["api_key"].data[0].name
+    
     for index, item in enumerate(items):
         try:
             flip_coliving = ETLFlipColiving(elements_dict, api_key)
-            flip_coliving.parse_data(item, spider)
+            flip_coliving.parse_data(item, logger)
         except Exception as error:
-            spider.logger.error('error en el item numero %s', index)
-            spider.logger.error('error: %s', error)
+            logger.error('error en el item numero %s', index)
+            logger.error('error: %s', error)
 
 
 class ETLFlipColiving:
@@ -69,7 +77,7 @@ class ETLFlipColiving:
     def save_data_rental_unit(self):
         pass
 
-    def parse_data(self, item: dict, spider: Spider) -> None:
+    def parse_data(self, item: dict, logger: Logger) -> None:
         defaults = get_default_values(self.elements_dict)
         item = item["items_output"]
         _, _, _, areaM2, bedrooms = parse_banner_features(item["banner_features"])
@@ -78,9 +86,6 @@ class ETLFlipColiving:
         reference_code = generate_reference_code(item["city_name"], parse_coliving_name)
         exporter = CsvExporter(Pages.flipcoliving.value)
             
-        # Extraer los features para el EquivalencesFlipColinving
-        print(f'item["all_features"]: {item["all_features"]}')
-
         element_feature = extract_id_label(self.elements_dict["features"].data)
         features_id = search_feature_with_map(
             item["all_features"],
@@ -115,11 +120,10 @@ class ETLFlipColiving:
 
             property_id = save_property(property_item, self.api_key)
             property_item.id = property_id
-            spider.logger.info(f"property_item creado con éxito: {property_item.id}")
             create_json(property_item, Pages.flipcoliving.value)
             rooms_data = [
                 RoomData(
-                    areaM2=int(rental_unit["data_rental_unit"][1].replace(" sqm", "")),
+                    areaM2=int(float(rental_unit["data_rental_unit"][1].replace(" sqm", "").replace(",", ".").strip())),
                     amount=int(
                         rental_unit["data_rental_unit"][0]
                         .split(" to ")[-1]
@@ -150,8 +154,6 @@ class ETLFlipColiving:
                 create_json(unit, Pages.flipcoliving.value)
                 exporter.process_and_export_to_csv(property_item, unit)
             
-            spider.logger.info(f"list_rental_unit_id {list_rental_unit_id}")
-
             # schedule
             for rental_id, calendar_unit in zip(
                 list_rental_unit_id, calendar_unit_list
@@ -166,7 +168,7 @@ class ETLFlipColiving:
             return property_item
 
         except Exception as e:
-            spider.logger.error(f"Error al iniciar el scraping para {str(e)}")
+            logger.error(f"Error al iniciar el scraping para {str(e)}")
 
 
 def clean_string(text: str) -> str:
@@ -176,10 +178,10 @@ def clean_string(text: str) -> str:
 
 def get_all_descriptions(parse_description: list, parse_coliving_name: str):
     descriptions_dict = {
-        "title_en": None,
-        "description_en": None,
-        "title_es": None,
-        "description_es": None,
+        "title_en": "None",
+        "description_en": "None",
+        "title_es": "None",
+        "description_es": "None",
     }
 
     dict_language = {
@@ -188,6 +190,9 @@ def get_all_descriptions(parse_description: list, parse_coliving_name: str):
     }
 
     for description in parse_description:
+        if not description:
+            continue
+
         lang_id = detect_language(description)
         if not lang_id:
             continue
