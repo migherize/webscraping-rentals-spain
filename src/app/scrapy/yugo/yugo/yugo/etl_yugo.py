@@ -12,7 +12,8 @@ from app.scrapy.yugo.yugo.yugo.utils import (
     retrive_lodgerin_property,
     retrive_lodgerin_rental_units,
 )
-
+from app.models.enums import Pages
+from app.services.csvexport import CsvExporter
 
 def etl_data_yugo(output_path: str, logger: Logger, context) -> None:
 
@@ -23,12 +24,11 @@ def etl_data_yugo(output_path: str, logger: Logger, context) -> None:
 
     elements_dict = parse_elements(context, mapping)
     list_api_key = elements_dict["api_key"].data
+    exporter = CsvExporter(Pages.yugo.value)
 
     for index_property, data in enumerate(items):
         data = data["items_output"]
 
-        # TODO: Chequear porque no se esta obteniendo la api_key en el retrive_lodgerin_property
-        # continue
         # ---------------------------------------------------------------------------------------
         # Property
         data["yugo_space_name"] = data["yugo_space_name"].replace('Yugo', '').strip()
@@ -61,6 +61,7 @@ def etl_data_yugo(output_path: str, logger: Logger, context) -> None:
             rental_unit_id = funcs.save_rental_unit(rental_unit, api_key)
             rental_unit.id = rental_unit_id
             list_rental_unit_id.append(rental_unit)
+            exporter.process_and_export_to_csv(data_property, rental_unit)
 
         # ---------------------------------------------------------------------------------------
         # schedule

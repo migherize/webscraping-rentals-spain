@@ -7,7 +7,9 @@ from app.scrapy.common import (
     get_all_imagenes,
     decode_clean_string,
     extract_area,
-    search_location
+    search_location,
+    filtrar_ids_validos,
+    create_rental_unit_code_with_initials
 )
 from app.models.enums import PaymentCycleEnum, CurrencyCode
 from app.models.schemas import (
@@ -33,10 +35,10 @@ def map_property_descriptions(languages, property_descriptions: list[dict[str, s
     language_dict = {lang.code: lang for lang in languages}
     
     texts = {
-        "title_en": None,
-        "title_es": None,
-        "description_en": None,
-        "description_es": None,
+        "title_en": "None",
+        "title_es": "None",
+        "description_en": "None",
+        "description_es": "None",
     }
 
     for prop in property_descriptions:
@@ -53,10 +55,11 @@ def map_property_descriptions(languages, property_descriptions: list[dict[str, s
                 description = prop.get("residence_description")
                 if lang_code == "EN":
                     texts["title_en"] = title
-                    texts["description_en"] = description
+                    texts["description_en"] = description if description else texts.get("description_en")
                 elif lang_code == "ES":
                     texts["title_es"] = title
-                    texts["description_es"] = description
+                    texts["description_es"] = description if description else texts.get("description_es")
+
             else:
                 print(
                     f"Advertencia: No se encontró el idioma para el código '{lang_code}' en la propiedad '{prop.get('property_name')}'."
@@ -103,6 +106,9 @@ def retrive_lodgerin_property(item, elements, list_api_key):
 
     # clean reference_code
     reference_code = decode_clean_string(item["url_yugo_space"])
+    if len(reference_code) > 25:
+        reference_code = reference_code.replace("yugo-", "")
+    
     images = get_all_imagenes(item["all_images"])
 
     if item["tour_virtual"]:
@@ -182,9 +188,13 @@ def retrive_lodgerin_rental_units(
         picture = data.get("response_data_rental_units", {}).get("picture", [])
         images = get_all_imagenes(picture) if picture else None
 
+        reference_code = create_rental_unit_code_with_initials(
+            items_property.referenceCode, index
+        )
+
         data_rental_unit = RentalUnits(
             PropertyId=items_property.id,
-            referenceCode=f"{items_property.referenceCode}-{index:03}",
+            referenceCode=reference_code,
             areaM2=area_m2,
             isActive=True,
             isPublished=True,
@@ -197,9 +207,9 @@ def retrive_lodgerin_rental_units(
                 minPeriod=GlobalConfig.INT_ONE,
                 paymentCycle=PaymentCycleEnum.MONTHLY.value
             ),
-            Features=items_property.Features,
             Texts=items_property.Texts,
-            Images=images
+            Images=images,
+            ExtraFeatures= filtrar_ids_validos(items_property.Features)
         )
         rental_units.append(data_rental_unit)
         date_items = RentalUnitsCalendarItem(

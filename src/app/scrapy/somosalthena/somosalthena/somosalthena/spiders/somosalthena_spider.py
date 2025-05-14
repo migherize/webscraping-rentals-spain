@@ -7,6 +7,7 @@ from os import path
 from pathlib import Path
 from app.scrapy.somosalthena.somosalthena.somosalthena import items
 
+from app.models.enums import Pages
 
 class SomosalthenaSpiderSpider(scrapy.Spider):
     name = "somosalthena_spider"
@@ -22,10 +23,10 @@ class SomosalthenaSpiderSpider(scrapy.Spider):
 
         item_input_output_archive: dict[str, str] = {
             "output_folder_path": "./",
-            "output_folder_name": r"somosalthena",
+            "output_folder_name": f"{Pages.somosalthena.value}",
             "file_name": f"somosalthena.json",
             "processed_name": "somosalthena_refined.json",
-            "refine": '0',
+            "refine": kwargs.pop("refine", "0"),
         }
 
         self.items_spider_output_document = {

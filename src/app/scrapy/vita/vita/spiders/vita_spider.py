@@ -31,7 +31,7 @@ class VitaSpiderSpider(scrapy.Spider):
             "output_folder_name": f"{Pages.vita.value}",
             "file_name": "vitastudent.json",
             "processed_name": "vitastudent_refined.json",
-            "refine": "0",
+            "refine": kwargs.pop("refine", "0"),
         }
 
         self.items_spider_output_document = {

@@ -225,18 +225,25 @@ def get_id_from_name(data_dict: list, name: str, key_name: str) -> int:
 def search_feature_with_map(items_features, elements_features, equivalences):
     true_ids = set()
 
+    # Normalizar claves y valores a minúsculas
+    normalized_equivalences = {
+        key.lower(): value.lower() if isinstance(value, str) else value
+        for key, value in equivalences.items()
+    }
+    normalized_elements = {
+        id_: name.lower() if isinstance(name, str) else name
+        for id_, name in elements_features.items()
+    }
+
     for item_feature in items_features:
-        if item_feature in equivalences:
-            mapped_feature = equivalences[item_feature]
+        feature_key = item_feature.lower()
+        if feature_key in normalized_equivalences:
+            mapped_feature = normalized_equivalences[feature_key]
             if not mapped_feature:
                 continue
 
             element_id = next(
-                (
-                    id_
-                    for id_, name in elements_features.items()
-                    if name == mapped_feature
-                ),
+                (id_ for id_, name in normalized_elements.items() if name == mapped_feature),
                 None,
             )
             if element_id is not None:
@@ -247,6 +254,7 @@ def search_feature_with_map(items_features, elements_features, equivalences):
             print(f"[WARN] Feature '{item_feature}' not found in equivalences")
 
     return list(true_ids)
+
 
 def decode_clean_string(url):
     """

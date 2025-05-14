@@ -11,6 +11,7 @@ from app.scrapy.yugo.yugo.yugo import items
 from app.scrapy.yugo.yugo.yugo.utils_refine_data import *
 from app.scrapy.yugo.yugo.yugo.enum_yugo import ConfigXpath, ConfigXpathOtherCountries
 
+from app.models.enums import Pages
 
 class YugoSpiderSpider(scrapy.Spider):
     name = "yugo_spider"
@@ -26,10 +27,10 @@ class YugoSpiderSpider(scrapy.Spider):
 
         item_input_output_archive: dict[str, str] = {
             "output_folder_path": r"./",
-            "output_folder_name": r"data",
+            "output_folder_name": f"{Pages.yugo.value}",
             "file_name": f"yugo.json",
             "processed_name": "yugo_refined.json",
-            "refine": '1',
+            "refine": kwargs.pop("refine", "0"),
         }
 
         self.items_spider_output_document = {
@@ -182,7 +183,6 @@ class YugoSpiderSpider(scrapy.Spider):
         """
 
         if response.xpath(ConfigXpathOtherCountries.VERIFY_MORE_PASS.value):
-            self.logger.info('Con un paso mas para obtener propiedad: %s', response.url)
             yield scrapy.Request(
                 url=response.url,
                 dont_filter=True,
@@ -190,7 +190,6 @@ class YugoSpiderSpider(scrapy.Spider):
                 meta={"meta_data": response.meta.get("meta_data")}
             )
         else:
-            self.logger.info('entrada directa propiedad: %s', response.url)
             yield scrapy.Request(
                 url=response.url,
                 dont_filter=True,
@@ -236,7 +235,6 @@ class YugoSpiderSpider(scrapy.Spider):
         # Proceso de busqueda de los rental units
 
         if not response.xpath(ConfigXpath.ALL_LINK_RENTAL_UNITS.value):
-            self.logger.warning('No existen espacios o locacles (Rental Units) para: %s', response.url)
             item_output = items.YugoItem()
             meta_data['all_rental_units'] = []
             item_output['items_output'] = meta_data
@@ -265,7 +263,6 @@ class YugoSpiderSpider(scrapy.Spider):
         all_id_rental_units = re.findall(r'"contentId":\d+,', response.text)
         
         if not all_id_rental_units:
-            self.logger.info('No existen Rental Units en la propiedad. %s', meta_data['aux_url_property'])
             item_output['items_output'] = meta_data
             yield item_output
             return None

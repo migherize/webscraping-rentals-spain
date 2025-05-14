@@ -12,6 +12,8 @@ from app.scrapy.somosalthena.somosalthena.somosalthena.utils import (
     retrive_lodgerin_property,
     retrive_lodgerin_rental_units,
 )
+from app.models.enums import Pages
+from app.services.csvexport import CsvExporter
 
 
 class SomosalthenaPipeline:
@@ -40,6 +42,8 @@ class SomosalthenaPipeline:
         write_to_json_file(self.json_path_refined, output_data_json, spider)
         elements_dict = parse_elements(spider.context, mapping)
         api_key = elements_dict["api_key"].data[0].name
+        exporter = CsvExporter(Pages.somosalthena.value)
+
 
         for data in output_data_json:
             # Property
@@ -54,6 +58,7 @@ class SomosalthenaPipeline:
             create_json(data_rental_units,Pages.somosalthena.value)
             rental_unit_id = funcs.save_rental_unit(data_rental_units, api_key)
             data_rental_units.id = rental_unit_id
+            exporter.process_and_export_to_csv(data_property, data_rental_units)
         
         spider.logger.info("close_spider")
            

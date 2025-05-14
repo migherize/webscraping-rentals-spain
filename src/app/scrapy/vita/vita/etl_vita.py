@@ -50,7 +50,6 @@ from app.config.settings import GlobalConfig
 from pprint import pprint
 
 from app.models.features_spider import EquivalencesVitaStudents
-from app.models.features_spider import EquivalencesVitaStudents
 from app.services.csvexport import CsvExporter
 
 def etl_data_vita(items: List[Dict], json_elements: Dict, logger: Logger) -> None:

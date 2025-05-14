@@ -31,7 +31,7 @@ class NodisSpiderSpider(scrapy.Spider):
             "output_folder_name": "nodis",
             "file_name": "nodies.json",
             "processed_name": "nodies_refined.json",
-            "refine": '0',
+            "refine": kwargs.pop("refine", "0"),
         }
 
         self.items_spider_output_document = {

@@ -36,7 +36,7 @@ class FlipcolivingSpiderSpider(scrapy.Spider):
             "output_folder_name": "flipcoliving",
             "file_name": f"flipcoliving.json",
             "processed_name": f"flipcoliving_refined.json",
-            "refine": '0',
+            "refine": kwargs.pop("refine", "0"),
         }
 
         self.items_spider_output_document = {
