@@ -9,8 +9,12 @@ import scrapy
 import requests
 from scrapy import Selector
 
-from .. import items
-from ..enum_path import XpathGeneralColiving
+from app.scrapy.flipcoliving.flipcoliving.flipcoliving import items
+from app.scrapy.flipcoliving.flipcoliving.flipcoliving.enum_path import (
+    XpathGeneralColiving,
+    GENERAL_HEADERS,
+    GENERAL_COOKIES
+)
 
 from app.models.enums import Pages
 
@@ -62,9 +66,11 @@ class FlipcolivingSpiderSpider(scrapy.Spider):
 
         url = "https://flipcoliving.com/"
 
-        yield scrapy.Request(
+        return [scrapy.Request(
             url=url,
-        )
+            headers=GENERAL_HEADERS,
+            cookies=GENERAL_COOKIES,
+        )]
 
     def parse(self, response):
         """
@@ -97,6 +103,7 @@ class FlipcolivingSpiderSpider(scrapy.Spider):
                     "aux_city_url": aux_city_url,
                 },
                 callback=self.parse_all_colivings,
+                headers=GENERAL_HEADERS,
             )
 
     def parse_all_colivings(self, response):
@@ -136,6 +143,7 @@ class FlipcolivingSpiderSpider(scrapy.Spider):
                     "coliving_url": coliving_url,
                     "coliving_name": coliving_name,
                 },
+                headers=GENERAL_HEADERS,
                 callback=self.parse_coliving,
             )
 
