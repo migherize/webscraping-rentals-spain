@@ -9,9 +9,14 @@ import scrapy
 import requests
 from scrapy import Selector
 
-from .. import items
-from ..enum_path import XpathGeneralColiving
+from app.scrapy.flipcoliving.flipcoliving.flipcoliving import items
+from app.scrapy.flipcoliving.flipcoliving.flipcoliving.enum_path import (
+    XpathGeneralColiving,
+    GENERAL_HEADERS,
+    GENERAL_COOKIES
+)
 
+from app.models.enums import Pages
 
 class FlipcolivingSpiderSpider(scrapy.Spider):
     name = "flipcoliving_spider"
@@ -19,12 +24,6 @@ class FlipcolivingSpiderSpider(scrapy.Spider):
         "ROBOTSTXT_OBEY": False,
         "AUTOTHROTTLE_ENABLED": True,
         "LOG_LEVEL": "INFO",
-        # "LOG_FORMAT": '%(asctime)s [%(levelname)s] %(message)s',
-        # "LOG_DATEFORMAT": '%Y-%m-%d %H:%M:%S',
-        # "LOGFILE": 'scrapy_log.log'
-        # "LOG_FILE":"scrapy_log.txt",
-        # "LOG_LEVEL":"DEBUG",
-        # "LOG_LEVEL": "INFO",
     }
 
     def __init__(self, context=None, *args, **kwargs):
@@ -33,7 +32,7 @@ class FlipcolivingSpiderSpider(scrapy.Spider):
 
         item_input_output_archive: dict[str, str] = {
             "output_folder_path": "./",
-            "output_folder_name": "flipcoliving",
+            "output_folder_name": f"{Pages.flipcoliving.value}",
             "file_name": f"flipcoliving.json",
             "processed_name": f"flipcoliving_refined.json",
             "refine": kwargs.pop("refine", "0"),
@@ -67,9 +66,11 @@ class FlipcolivingSpiderSpider(scrapy.Spider):
 
         url = "https://flipcoliving.com/"
 
-        yield scrapy.Request(
+        return [scrapy.Request(
             url=url,
-        )
+            headers=GENERAL_HEADERS,
+            cookies=GENERAL_COOKIES,
+        )]
 
     def parse(self, response):
         """
@@ -102,6 +103,7 @@ class FlipcolivingSpiderSpider(scrapy.Spider):
                     "aux_city_url": aux_city_url,
                 },
                 callback=self.parse_all_colivings,
+                headers=GENERAL_HEADERS,
             )
 
     def parse_all_colivings(self, response):
@@ -141,6 +143,7 @@ class FlipcolivingSpiderSpider(scrapy.Spider):
                     "coliving_url": coliving_url,
                     "coliving_name": coliving_name,
                 },
+                headers=GENERAL_HEADERS,
                 callback=self.parse_coliving,
             )
 

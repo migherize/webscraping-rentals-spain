@@ -32,7 +32,10 @@ from app.scrapy.funcs import (
     save_property,
     save_rental_unit,
 )
-from app.scrapy.common import remove_accents
+from app.scrapy.common import remove_accents, search_feature_with_map, extract_id_label, filtrar_ids_validos
+from app.models.features_spider import EquivalencesFlipColinving
+from app.services.csvexport import CsvExporter
+
 
 class RoomData(BaseModel):
     areaM2: int
@@ -73,6 +76,17 @@ class ETLFlipColiving:
         parse_coliving_name = remove_accents(item["parse_coliving_name"][0]).replace(" ", "-")
         result_description = get_all_descriptions(item["parse_description"], parse_coliving_name)
         reference_code = generate_reference_code(item["city_name"], parse_coliving_name)
+        exporter = CsvExporter(Pages.flipcoliving.value)
+            
+        # Extraer los features para el EquivalencesFlipColinving
+        print(f'item["all_features"]: {item["all_features"]}')
+
+        element_feature = extract_id_label(self.elements_dict["features"].data)
+        features_id = search_feature_with_map(
+            item["all_features"],
+            element_feature,
+            EquivalencesFlipColinving.FEATURES,
+        )
 
         try:
             property_item = Property(
@@ -81,7 +95,7 @@ class ETLFlipColiving:
                 rentalType=defaults["rentalType"],
                 isActive=defaults["isActive"],
                 isPublished=defaults["isPublished"],
-                Features=find_feature_keys(item["all_features"], feature_map),
+                Features=features_id,
                 tourUrl=(
                     item["tour_url"][0]
                     if "tour_url" in item and item["tour_url"]
@@ -134,6 +148,8 @@ class ETLFlipColiving:
 
             for unit in rental_units_items:
                 create_json(unit, Pages.flipcoliving.value)
+                exporter.process_and_export_to_csv(property_item, unit)
+            
             spider.logger.info(f"list_rental_unit_id {list_rental_unit_id}")
 
             # schedule
@@ -224,7 +240,6 @@ def create_rental_units(
                 PropertyId=property_data.id,
                 referenceCode=reference_code,
                 areaM2=int(room_data.areaM2),
-                Features=property_data.Features,
                 isActive=True,
                 isPublished=True,
                 Texts=property_data.Texts,
@@ -238,6 +253,7 @@ def create_rental_units(
                     minPeriod=GlobalConfig.INT_ONE,
                     paymentCycle=PaymentCycleEnum.MONTHLY.value
                 ),
+                ExtraFeatures=filtrar_ids_validos(property_data.Features)
             )
 
             rental_units.append(rental_unit)
