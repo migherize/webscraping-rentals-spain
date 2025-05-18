@@ -1,3 +1,4 @@
+import re
 import json
 import scrapy
 from os import path
@@ -9,6 +10,7 @@ from app.scrapy.livensaliving.livensaliving.config_enum import (
     ConfigPages,
     ConfigCity,
     ConfigProperty,
+    ConfigRentalUnits
 )
 
 
@@ -68,14 +70,14 @@ class LivensalivingSpiderSpider(scrapy.Spider):
             return None
         
         for response_state in response.xpath(ConfigCity.PIVOTE.value):
-            info_state = {
+            info_city = {
                 'state': response_state.xpath(ConfigCity.TITLE.value).get(),
                 'url': response_state.xpath(ConfigCity.URL.value).get(),
                 'description': response_state.xpath(ConfigCity.DESCRIPTION.value).get(),
             }
             yield scrapy.Request(
-                info_state['url'],
-                meta={'info_state': info_state},
+                info_city['url'],
+                meta={'info_city': info_city},
                 dont_filter=True,
                 callback=self.parse_properties
             )
@@ -92,7 +94,7 @@ class LivensalivingSpiderSpider(scrapy.Spider):
             self.logger.warning('No existen ciudades. Chequear url: %s', response.url)
             return None
         
-        info_state = response.meta.get('info_state')
+        info_city = response.meta.get('info_city')
         for response_state in response.xpath(ConfigProperty.PIVOTE.value):
             info_property = {
                 'name': response_state.xpath(ConfigProperty.NAME.value).getall(),
@@ -106,40 +108,23 @@ class LivensalivingSpiderSpider(scrapy.Spider):
             if info_property['url'] is None:
                 self.logger.warning('No existe url para la propiedad: %s', info_property['name'])
                 output_item['items_output'] = {
-                    'info_state': info_state,
+                    'info_city': info_city,
                     'info_property': info_property,
                 }
                 yield output_item
                 continue
 
-            info_property['url'] = "/".join(info_property['url'].split('/')[0:-2])
+            if re.search(r'precios?', info_property['url']):
+                info_property['url'] = "/".join(info_property['url'].split('/')[0:-2])
+            
             output_item['items_output'] = {
-                'info_state': info_state,
+                'info_city': info_city,
                 'info_aux_property': info_property,
             }
 
             yield scrapy.Request(
-                info_state['url'],
+                info_property['url'],
                 meta={'output_item': output_item},
-                headers={
-                    "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-                    "accept-language": "es-419,es;q=0.9,en-US;q=0.8,en;q=0.7",
-                    "cache-control": "max-age=0",
-                    "cookie": ("CookieConsent={stamp:'tRAqq6jQB9Pw64Lqi6DUjAf/IQdZ8421B7qf6XCkcoc0P95P259tHw==',necessary:true,"
-                            "preferences:true,statistics:true,marketing:true,method:'explicit',ver:3,utc:1747001041976,region:'ve'}; "
-                            "_gcl_au=1.1.290786704.1747001040; _ga=GA1.1.2106477809.1747001030; _fbp=fb.1.1747001048730.329454754146935148; "
-                            "_clck=zg7mr|2|fvu|1|1957; wp-wpml_current_language=es; _ga_RD2LSE0G9J=GS2.1.s1747016231$o2$g1$t1747019908$j60$l0$h903351262"),
-                    "priority": "u=0, i",
-                    "sec-ch-ua": '"Chromium";v="136", "Google Chrome";v="136", "Not.A/Brand";v="99"',
-                    "sec-ch-ua-mobile": "?0",
-                    "sec-ch-ua-platform": '"Windows"',
-                    "sec-fetch-dest": "document",
-                    "sec-fetch-mode": "navigate",
-                    "sec-fetch-site": "none",
-                    "sec-fetch-user": "?1",
-                    "upgrade-insecure-requests": "1",
-                    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
-                },
                 dont_filter=True,
                 callback=self.parse_property
             )
@@ -160,8 +145,67 @@ class LivensalivingSpiderSpider(scrapy.Spider):
 
     def parse_property_feature(self, response: Response):
         output_item = response.meta.get('output_item')
-        # extractor_feature_property(response.url)
-        # extractor_rental_units(response.url)
+        output_item['items_output']['main_data_property'] |= extractor_feature_property(response)
+        
+        url_rental = response.xpath(ConfigPages.PATH_RENTAL_UNITS.value).get()
+
+        if url_rental is None:
+            yield output_item
+            return None
+            
+        yield scrapy.Request(
+            url=url_rental,
+            meta={'output_item': output_item},
+            dont_filter=True,
+            callback=self.parse_property_rental_units
+        )
+
+
+    def parse_property_rental_units(self, response: Response):
+        output_item = response.meta.get('output_item')
+
+        search_data_rental = response.xpath(ConfigRentalUnits.PIVOTE.value)
+
+        if not search_data_rental:
+            self.logger.info('Sin rental units para: %s', response.url)
+            yield output_item
+            return None
+
+        output_item['items_output']['main_data_rental'] = {
+            "url_rental_units": response.url,
+            "all_rental_units": []
+        }
+        
+        all_rental_units = []
+        for position_rental, search_rental in enumerate(search_data_rental):
+            # Informacion principal del rental
+            aux_search_images = search_rental.xpath(ConfigRentalUnits.PIVOTE_IMAGES.value)
+            output_main_data_rental = {
+                "name_1": search_rental.xpath(ConfigRentalUnits.NAME_1.value).getall(),
+                "name_2": search_rental.xpath(ConfigRentalUnits.NAME_2.value).getall(),
+                "description": search_rental.xpath(ConfigRentalUnits.DESCRIPTION.value).getall(),
+                "features": search_rental.xpath(ConfigRentalUnits.FEATURES.value).getall(),
+                "images": aux_search_images.xpath(ConfigRentalUnits.IMAGES.value).getall(),
+                "all_types": []
+            }
+            check_search_type = ConfigRentalUnits.PIVOTE_TYPE_RENTAL.value + f"[{position_rental + 1}]/div"
+            for info_type_rental in response.xpath(check_search_type):
+                # Informacion de los tipos que existen para dicho rental
+                all_types = {
+                    'type_and_description_rental_unit': info_type_rental.xpath(ConfigRentalUnits.TYPE_AND_DESCRIPTION_RENTAL_UNIT.value).getall(),
+                    'more_information': info_type_rental.xpath(ConfigRentalUnits.MORE_INFORMATION.value).getall(),
+                    'cost_and_reservation': info_type_rental.xpath(ConfigRentalUnits.COST_AND_RESERVATION.value).getall(),
+                }
+
+                if all_types['type_and_description_rental_unit'] == []:
+                    print('check_search_type:', [check_search_type], [info_type_rental], response.url)
+
+                output_main_data_rental['all_types'].append(all_types)
+
+            all_rental_units.append(output_main_data_rental)
+
+        output_item['items_output']['main_data_rental']["all_rental_units"] = all_rental_units
+
         yield output_item
 
 
@@ -176,11 +220,11 @@ def extractor_info_property(response: Selector):
         "images": response.xpath(ConfigProperty.GALLERY.value).getall(),
     }
 
-def extractor_feature_property(url_property: str):
+def extractor_feature_property(response: Selector):
 
-    
-    pass
-
-def extractor_rental_units(url_property: str):
-    pass
+    output = {
+        'feature': response.xpath(ConfigProperty.FEATURE.value).getall()
+    }
+    # TODO: Elimminar los que tengan el *
+    return output
 
