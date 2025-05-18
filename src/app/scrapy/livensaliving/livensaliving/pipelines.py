@@ -2,6 +2,7 @@ from os import path
 from scrapy import Spider
 from app.scrapy.common import save_to_json_file
 from app.scrapy.livensaliving.livensaliving.items import LivensalivingItem
+from app.scrapy.livensaliving.livensaliving.etl_livensaliving import etl_data_livensaliving
 
 
 class LivensalivingPipeline:
@@ -24,5 +25,5 @@ class LivensalivingPipeline:
             spider.logger.info("- JSON file created with %d items.", len(self.items))
             save_to_json_file(self.items, self.output_path)
 
-        # etl_data_livensaliving(self.output_path, spider, spider.logger)
+        etl_data_livensaliving(self.output_path, spider, spider.logger)
         spider.logger.info("close_spider")
