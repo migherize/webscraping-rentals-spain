@@ -39,6 +39,9 @@ class LodgerinConfig:
 # 📌 Tokens y Seguridad
 class TokenConfig:
     API_INTERNAL = os.getenv("TOKEN_API_INTERNAL", "default_token")
+    USERNAME_NAFSA = os.getenv("USERNAME_NAFSA", "default_username_nafsa_token")
+    PASSWORD_NAFSA = os.getenv("PASSWORD_NAFSA", "default_password_nafsa_token")
+
 
 # 📌 Configuración de Correos
 class EmailConfig:

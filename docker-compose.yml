@@ -26,6 +26,8 @@ services:
       - LODGERIN_INTERNAL=${LODGERIN_INTERNAL:-http://internal.example.com}
       - LODGERIN_MAPS_INTERNAL=${LODGERIN_MAPS_INTERNAL:-http://maps.internal.example.com}
       - TOKEN_API_INTERNAL=${TOKEN_API_INTERNAL:-your_secure_token_here}
+      - USERNAME_NAFSA=${USERNAME_NAFSA:-default_username_nafsa_token}
+      - PASSWORD_NAFSA=${PASSWORD_NAFSA:-default_password_nafsa_token}
       - EMAIL_FLIPCOLIVING=${EMAIL_FLIPCOLIVING:-flipcoliving@example.com}
       - EMAIL_SOMOSATHENEA=${EMAIL_SOMOSATHENEA:-somosathenea@example.com}
       - EMAIL_MAPPING_YUGO=${EMAIL_MAPPING_YUGO:-mapping_yugo.json}
