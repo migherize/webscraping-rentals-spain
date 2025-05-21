@@ -1,3 +1,4 @@
+from os import path
 import re
 import pandas as pd
 from logging import Logger
@@ -32,9 +33,6 @@ def etl_data_nafsa(output_path_data_not_refine: str, spider: Spider, logger: Log
 
     for index, data in enumerate(all_data):
         
-        if index == 50:
-            break
-        
         items_output: dict = data.get('items_output', {})
 
         if items_output == {}:
@@ -64,7 +62,7 @@ def etl_data_nafsa(output_path_data_not_refine: str, spider: Spider, logger: Log
         output_data_lodgerin["url_source_attendee"].append(url_info_attendee)
 
     # Save data csv
-    output_path_data_refine = './output/nafsa_refine.csv'
+    output_path_data_refine = path.join(spider.items_spider_output_document["output_folder"], 'nafsa_refine.csv')
     df = pd.DataFrame(output_data_lodgerin, dtype='string')
     df.to_csv(
         output_path_data_refine,
