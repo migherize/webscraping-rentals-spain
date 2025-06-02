@@ -17,6 +17,7 @@ class Pages(str, Enum):
     yugo = "yugo"
     vita = "vita"
     nodis = "nodis"
+    livensaliving = "livensaliving"
 
 
 class ScrapingBeeParams(str, Enum):

@@ -33,7 +33,8 @@ class LodgerinInternal:
             response = requests.get(
                 url,
                 headers=self.headers,
-                params={"q": query, "size": 50, "region[]": "ES"},
+                params={"q": query, "size": 60, "region[]": "ES"},
+                timeout=10,
             )
             response.raise_for_status()
             data = response.json()

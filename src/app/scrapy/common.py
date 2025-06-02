@@ -2,7 +2,7 @@ import re
 import json
 import unicodedata
 
-from typing import Dict, Type
+from typing import Dict, Type, Any
 from pydantic import BaseModel
 from urllib.parse import urlparse, unquote
 
@@ -19,6 +19,7 @@ from app.models.schemas import (
     Property,
     RentalUnits
 )
+from pathlib import Path
 
 
 def save_to_json_file(data: list[dict], output_path: str) -> None:
@@ -307,8 +308,16 @@ def extract_cost(cost_text):
         float or None: El costo en euros si se encuentra, o None si no está presente.
     """
     match = re.search(r"[€£]\s*([\d,]+\.\d+)", cost_text)
+    if not match:
+        match = re.search(r"(\d[\d.,]*)\s*€", cost_text)
+
     if match:
-        return float(match.group(1).replace(",", ""))
+        amount_str = match.group(1).replace(".", "").replace(",", ".")
+        try:
+            return float(amount_str)
+        except ValueError:
+            return None
+
     return None
 
 def read_json(path_document_json: str) -> list[dict]:
@@ -407,3 +416,10 @@ def remove_accents(text: str) -> str:
 
 def safe_attr(obj, attr, default=""):
     return getattr(obj, attr, default) if obj else default
+
+def load_json(file_path: Path) -> Any:
+    """
+    Carga un archivo JSON y retorna su contenido.
+    """
+    with file_path.open('r', encoding='utf-8') as f:
+        return json.load(f)
