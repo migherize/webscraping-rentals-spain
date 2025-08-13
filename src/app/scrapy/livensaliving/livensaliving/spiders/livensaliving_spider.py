@@ -1,6 +1,7 @@
 import re
 import json
 import scrapy
+import requests
 from os import path
 from pathlib import Path
 from scrapy import Selector
@@ -111,7 +112,7 @@ class LivensalivingSpiderSpider(scrapy.Spider):
                     'info_city': info_city,
                     'info_property': info_property,
                 }
-                yield output_item
+                # yield output_item
                 continue
 
             if re.search(r'precios?', info_property['url']):
@@ -132,6 +133,11 @@ class LivensalivingSpiderSpider(scrapy.Spider):
     def parse_property(self, response: Response):
         output_item = response.meta.get('output_item')
         output_item['items_output']['main_data_property'] = extractor_info_property(response)
+
+        output_item['items_output']['main_data_property']['english_description'] = get_english_description(
+            response.xpath(ConfigProperty.URL_ENGLISH_PROPERTY.value).get(),
+            ConfigProperty.DESCRIPTION_1.value
+        )
         
         yield scrapy.Request(
             url=path.join(
@@ -173,7 +179,8 @@ class LivensalivingSpiderSpider(scrapy.Spider):
 
         output_item['items_output']['main_data_rental'] = {
             "url_rental_units": response.url,
-            "all_rental_units": []
+            "all_rental_units": [],
+            "all_rental_units_english_description": [],
         }
         
         all_rental_units = []
@@ -181,6 +188,7 @@ class LivensalivingSpiderSpider(scrapy.Spider):
             # Informacion principal del rental
             aux_search_images = search_rental.xpath(ConfigRentalUnits.PIVOTE_IMAGES.value)
             output_main_data_rental = {
+                "position_rental": position_rental,
                 "name_1": search_rental.xpath(ConfigRentalUnits.NAME_1.value).getall(),
                 "name_2": search_rental.xpath(ConfigRentalUnits.NAME_2.value).getall(),
                 "description": search_rental.xpath(ConfigRentalUnits.DESCRIPTION.value).getall(),
@@ -189,9 +197,10 @@ class LivensalivingSpiderSpider(scrapy.Spider):
                 "all_types": []
             }
             check_search_type = ConfigRentalUnits.PIVOTE_TYPE_RENTAL.value + f"[{position_rental + 1}]/div"
-            for info_type_rental in response.xpath(check_search_type):
+            for position_rental_type, info_type_rental in enumerate(response.xpath(check_search_type)):
                 # Informacion de los tipos que existen para dicho rental
                 all_types = {
+                    'position_rental_type': position_rental_type,
                     'type_and_description_rental_unit': info_type_rental.xpath(ConfigRentalUnits.TYPE_AND_DESCRIPTION_RENTAL_UNIT.value).getall(),
                     'more_information': info_type_rental.xpath(ConfigRentalUnits.MORE_INFORMATION.value).getall(),
                     'cost_and_reservation': info_type_rental.xpath(ConfigRentalUnits.COST_AND_RESERVATION.value).getall(),
@@ -205,6 +214,9 @@ class LivensalivingSpiderSpider(scrapy.Spider):
             all_rental_units.append(output_main_data_rental)
 
         output_item['items_output']['main_data_rental']["all_rental_units"] = all_rental_units
+        output_item['items_output']['main_data_rental']["all_rental_uall_rental_units_english_descriptionnits"] = get_english_description_rental_units(
+            response.xpath(ConfigProperty.URL_ENGLISH_PROPERTY.value).get()
+        )
 
         yield output_item
 
@@ -219,6 +231,48 @@ def extractor_info_property(response: Selector):
         # "description_3": response.xpath(ConfigProperty.DESCRIPTION_3.value).getall(),
         "images": response.xpath(ConfigProperty.GALLERY.value).getall(),
     }
+
+def get_english_description(url_english: str | None, xpath_description: str) -> list[str]:
+    if url_english is None:
+        return []
+    response_english = requests.get(url_english)
+    if response_english.status_code != 200:
+        return []
+    response_english = Selector(text=response_english.text())
+    return response_english.xpath(xpath_description).getall()
+
+
+def get_english_description_rental_units(url_english: str) -> list[list[str]]:
+    if url_english is None:
+        return []
+    response = requests.get(url_english)
+    if response.status_code != 200:
+        return []
+
+    response_english = Selector(text=response.text())
+    search_data_rental = response_english.xpath(ConfigRentalUnits.PIVOTE.value)
+    if not search_data_rental:
+        return []
+
+    all_rental_units = []
+    for position_rental, search_rental in enumerate(search_data_rental):
+        # Informacion principal del rental
+        output_main_data_rental = {
+            "position_rental": position_rental,
+            "name_1": search_rental.xpath(ConfigRentalUnits.NAME_1.value).getall(),
+            "all_types": []
+        }
+        check_search_type = ConfigRentalUnits.PIVOTE_TYPE_RENTAL.value + f"[{position_rental + 1}]/div"
+        for position_rental_type, info_type_rental in enumerate(response.xpath(check_search_type)):
+            # Informacion de los tipos que existen para dicho rental
+            output_main_data_rental['all_types'].append({
+                'position_rental_type': position_rental_type,
+                'english_description': info_type_rental.xpath(ConfigRentalUnits.TYPE_AND_DESCRIPTION_RENTAL_UNIT.value).getall(),
+            })
+        all_rental_units.append(output_main_data_rental)
+
+    return all_rental_units
+
 
 def extractor_feature_property(response: Selector):
 

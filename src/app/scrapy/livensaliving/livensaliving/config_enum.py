@@ -42,6 +42,9 @@ class ConfigProperty(Enum):
         "|"
         "//div[contains(@class, 'et_pb_text_3 ')]/..//text()"
     )
+
+    URL_ENGLISH_PROPERTY = "//a[@title='EN']/@href"
+
     # DESCRIPTION_3 = "//div[contains(@class, 'et_pb_row_4')][1]//text()"
     GALLERY = "//div[contains(@class, 'gallery_image')]//@href"
 
@@ -51,7 +54,11 @@ class ConfigProperty(Enum):
 
 
 class ConfigRentalUnits(Enum):
-    PIVOTE = "//h3[contains(text(), 'incluye')]/.."
+    PIVOTE = (
+        "//h3[contains(text(), 'incluye')]/.."
+        "|"
+        "//h3[contains(text(), 'included')]/.."
+    )
     NAME_1 = "./h2[1]/text()"
     NAME_2 = "./h3[1]/text()"
     DESCRIPTION = "./p[1]/text()"
@@ -60,7 +67,11 @@ class ConfigRentalUnits(Enum):
     PIVOTE_IMAGES = "//h3[contains(text(), 'incluye')]/../../../../div[2]"
     IMAGES = ".//div[contains(@class, 'dipi-image-gallery-top')]//div[contains(@href, '.jpg')]/@href"
 
-    PIVOTE_TYPE_RENTAL = "//div[re:test(@id, '^mostrar\\d+$')]"
+    PIVOTE_TYPE_RENTAL = (
+        "//div[re:test(@id, '^mostrar\\d+$')]"
+        # "|"
+        # "//div[re:test(@id, '^mostrar\\d+$')]"
+    )
     TYPE_AND_DESCRIPTION_RENTAL_UNIT = "./div[1]//div[contains(@class, 'hds')]//text()"
     MORE_INFORMATION = "./div[1]//div[contains(@class, 'hdi')]//text()"
     COST_AND_RESERVATION = "./div[2]/div[1]//text()"
